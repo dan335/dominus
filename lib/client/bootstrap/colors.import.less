@@ -1,0 +1,97 @@
+// @import url(https://fonts.googleapis.com/css?family=Alegreya+Sans+SC:300);
+// @titleFontFamily: 'Alegreya Sans SC', sans-serif;
+
+@panel-bg: rgba(20,20,20,0.65); // bootstrap panel bg
+@panel_bg: rgba(20,20,20,0.65);
+@panel_padding: 0px 0px 0px 0px;
+@text-color-light: #aaa;
+
+@bodyBackground: hsl(150, 15%, 10%);
+@bodyTextColor: hsl(0, 0%, 90%);
+@text-color-light: #aaa;
+
+@whitePanelBackground: hsl(0, 0%, 93%);
+@whitePanelTextColor: hsl(0, 0%, 30%);
+
+@panelBackground: fadeout(@bodyBackground, 50%);
+
+@primaryColor: darken(#428bca, 6.5%);
+
+@icon_default_fill: #ddd;
+@icon_mine_fill: #6efa4b;
+@icon_king_fill: #9d4bfa;
+@icon_above_fill: #4d97ff;
+@icon_lord_fill: #4bcefa;
+@icon_vassal_fill: #fadd4b;
+@icon_below_fill: #faa24b;
+@icon_foe_fill: #fa4e4b;
+@icon_team_fill: #fa4e4b;
+@icon_team_gradient: linear-gradient(to bottom right, @icon_team_fill, @icon_team_fill 50%, #ffa7a6 55%);
+
+@graphGold: hsl(60, 90%, 60%);
+@graphGrain: hsl(100, 90%, 60%);
+@graphLumber: hsl(40, 90%, 60%);
+@graphOre: hsl(0, 0%, 60%);
+@graphWool: hsl(60, 30%, 80%);
+@graphClay: hsl(20, 90%, 60%);
+@graphGlass: hsl(200, 90%, 60%);
+
+
+
+.icon_team_gradient_mixin {
+   background: @icon_team_gradient;
+   background: -moz-linear-gradient(-45deg,  @icon_team_fill 0%, @icon_team_fill 50%, #ffa7a6 54%, #ffa7a6 100%);
+   background: -webkit-gradient(linear, left top, right bottom, color-stop(0%,@icon_team_fill), color-stop(50%,@icon_team_fill), color-stop(54%,#ffa7a6), color-stop(100%,#ffa7a6));
+   background: -webkit-linear-gradient(-45deg,  @icon_team_fill 0%,@icon_team_fill 50%,#ffa7a6 54%,#ffa7a6 100%);
+   background: -o-linear-gradient(-45deg,  @icon_team_fill 0%,@icon_team_fill 50%,#ffa7a6 54%,#ffa7a6 100%);
+   background: -ms-linear-gradient(-45deg,  @icon_team_fill 0%,@icon_team_fill 50%,#ffa7a6 54%,#ffa7a6 100%);
+   background: linear-gradient(135deg,  @icon_team_fill 0%,@icon_team_fill 50%,#ffa7a6 54%,#ffa7a6 100%);
+   filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='@icon_team_fill', endColorstr='#ffa7a6',GradientType=1 );
+}
+
+.flag {
+	stroke: rgba(0,0,0,0.2);
+	stroke-width: 1;
+	fill: @icon_default_fill;
+	pointer-events: none;
+
+  &.mine {
+    fill: @icon_mine_fill;
+  }
+
+  &.enemy {
+  	fill: @icon_foe_fill;
+  }
+
+  &.king{
+  	fill: @icon_king_fill;
+  }
+
+  &.lord{
+  	fill: @icon_above_fill;
+  }
+
+  &.direct_lord{
+  	fill: @icon_lord_fill;
+  }
+
+  &.direct_vassal {
+  	fill: @icon_vassal_fill;
+  }
+
+  &.vassal {
+  	fill: @icon_below_fill;
+  }
+}
+
+.army_flag.enemy_ally {
+  fill: url("/#teamGradient")
+}
+
+.castle_flag.enemy_ally {
+	fill: url("/#teamCastleGradient")
+}
+
+.village_flag.enemy_ally {
+	fill: url("/#teamCastleGradient")
+}

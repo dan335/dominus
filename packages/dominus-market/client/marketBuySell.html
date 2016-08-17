@@ -1,0 +1,106 @@
+<template name="marketBuySell">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      Buy or Sell Resources
+    </div>
+    <div class="panel-body">
+
+      <table id="resourceTypeTable">
+        <tbody>
+          <tr>
+
+            <td>
+              <div class="radio">
+    						<label>
+    							<input type="radio" name="market_type_radio" class="resourseTypeRadio" value="grain" {{isChecked type="grain"}}>
+    							Grain
+    						</label>
+    					</div>
+            </td>
+            <td style="text-align:center;">
+              <div class="radio">
+    						<label>
+    							<input type="radio" name="market_type_radio" class="resourseTypeRadio" value="ore" {{isChecked type="ore"}}>
+    							Ore
+    						</label>
+    					</div>
+            </td>
+            <td style="text-align:right;">
+              <div class="radio">
+    						<label>
+    							<input type="radio" name="market_type_radio" class="resourseTypeRadio" value="clay" {{isChecked type="clay"}}>
+    							Clay
+    						</label>
+    					</div>
+            </td>
+
+          </tr>
+          <tr>
+
+            <td>
+              <div class="radio">
+    						<label>
+    							<input type="radio" name="market_type_radio" class="resourseTypeRadio" value="lumber" {{isChecked type="lumber"}}>
+    							Lumber
+    						</label>
+    					</div>
+            </td>
+            <td style="text-align:center;">
+              <div class="radio">
+    						<label>
+    							<input type="radio" name="market_type_radio" class="resourseTypeRadio" value="wool" {{isChecked type="wool"}}>
+    							Wool
+    						</label>
+    					</div>
+            </td>
+            <td style="text-align:right;">
+              <div class="radio">
+    						<label>
+    							<input type="radio" name="market_type_radio" class="resourseTypeRadio" value="glass" {{isChecked type="glass"}}>
+    							Glass
+    						</label>
+    					</div>
+            </td>
+
+          </tr>
+        </tbody>
+      </table>
+
+
+      <table style="width:100%;">
+        <tbody>
+          <tr>
+            <td>
+              <input type="number" class="form-control" id="marketQuantityInput" value={{quantity}}>
+            </td>
+            <td style="text-align:right;">
+              <button type="button" class="btn btn-primary" id="maxBuyButton">Max Buy</button>
+  						<button type="button" class="btn btn-primary" id="maxSellButton" >Max Sell</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:30px;">
+        <button type="button" class="btn btn-primary" id="marketBuyButton" disabled="{{canBuy}}">Buy</button>
+        &nbsp;
+        <span class="marketText {{canBuy}}">
+          Buy {{round quantity}} {{resourceType}} for {{round_2 costToBuy}} gold.
+        </span>
+      </div>
+      <div style="margin-top:10px;">
+        <button type="button" class="btn btn-primary" id="marketSellButton" disabled="{{canSell}}">Sell</button>
+        &nbsp;
+        <span class="marketText {{canSell}}">
+          Sell {{round quantity}} {{resourceType}} for {{round_2 valueOfSell}} gold.
+        </span>
+      </div>
+
+      <div class="alert alert-danger" id="marketErrorAlert" style="margin-top:20px;display:none;"></div>
+      <div class="alert alert-success" id="marketSuccessAlert" style="margin-top:20px;display:none;"></div>
+
+      <br>
+      {{tax_precent}}% tax when buying.
+    </div>
+  </div>
+</template>

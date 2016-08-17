@@ -1,0 +1,45 @@
+<template name="chatrooms_panel">
+	<div id="chatrooms_panel" class="leftPanel">
+		<div class="panel_title"><i class="fa fa-comments fa-lg"></i> &nbsp;Chatrooms</div>
+
+		<div class="pad_group">
+			<div class="alert alert-danger" id="chat_error_alert" style="display:none;"></div>
+			<div class="alert alert-success" id="chat_success_alert" style="display:none;"></div>
+
+			<div class="input-group">
+				<input type="text" class="form-control" placeholder="Enter someone's name here." id="chat_start_with_name">
+				<span class="input-group-btn">
+					<button class="btn btn-primary" type="button" id="chat_start_with_button">Create Chatroom</button>
+				</span>
+			</div>
+		</div>
+
+		<br>
+		{{#if chatroomSubscriptionsReady}}
+			{{#each everyoneChatrooms}}
+				{{> chatroom_list}}
+			{{/each}}
+
+			{{#each kingChatrooms}}
+				{{> chatroom_list}}
+			{{/each}}
+
+			{{#each normalChatrooms}}
+				{{> chatroom_list}}
+			{{/each}}
+
+			{{#if selectedChatroom}}
+				{{#with selectedChatroom}}
+					{{> chatroom_open}}
+				{{/with}}
+			{{/if}}
+		{{else}}
+			<div class="pad_group">
+				loading...
+			</div>
+		{{/if}}
+
+
+
+	</div>
+</template>

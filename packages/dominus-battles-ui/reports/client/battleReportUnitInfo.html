@@ -1,0 +1,139 @@
+<template name="battleReportUnitInfo">
+  {{#if isArmy}}
+    {{#if isOnAllyCastle}}
+      <div class="battleReportSection battleReportPad">
+        On Ally Castle
+      </div>
+    {{/if}}
+
+    {{#if isOnAllyVillage}}
+      <div class="battleReportSection battleReportPad">
+        On Ally Village
+      </div>
+    {{/if}}
+
+    {{#if isOnCapital}}
+      <div class="battleReportSection battleReportPad">
+        {{#if isOnAllyCapital}}
+          Ruler of Capital
+        {{else}}
+          On Capital
+        {{/if}}
+      </div>
+    {{/if}}
+  {{/if}}
+
+
+  <div class="battleReportSection battleReportPad">
+    <table class="battleReportInfoTable">
+      <tbody>
+        <tr>
+          <td class="highlight">
+            <div class="light_text">Base Power</div>
+            {{round army.basePower.total}}
+          </td>
+          <td>+</td>
+          <td class="highlight">
+            <div class="light_text">Unit Bonus</div>
+            {{round army.unitBonus.total}}
+          </td>
+          <td>+</td>
+          <td class="highlight">
+            <div class="light_text">Location Bonus</div>
+            {{round army.locationBonus}}
+          </td>
+          <td>=</td>
+          <td class="highlight">
+            <div class="light_text">Final Power</div>
+            {{round army.finalPower}}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <br>
+
+    <table class="battleReportInfoTable">
+      <tbody>
+        <tr>
+          <td class="highlight">
+            <div class="light_text">Final Power</div>
+            {{round army.finalPower}}
+          </td>
+          <td>+</td>
+          <td class="highlight">
+            <div class="light_text">Ally Final Power</div>
+            {{round army.allyFinalPower}}
+          </td>
+          <td>vs</td>
+          <td class="highlight">
+            <div class="light_text">Enemy Final Power</div>
+            {{round army.enemyFinalPower}}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  {{#if hasAllies}}
+    <div class="battleReportSection battleReportPad">
+      <span class="light_text">Allies:</span>
+      {{#each army.allies}}
+        {{#if username}}{{username}}'s{{/if}} {{unitType}} {{name}},
+      {{/each}}
+    </div>
+  {{/if}}
+
+  {{#if hasEnemies}}
+    <div class="battleReportSection battleReportPad">
+      <span class="light_text">Enemies:</span>
+      {{#each army.enemies}}
+        {{#if username}}{{username}}'s{{/if}} {{unitType}} {{name}},
+      {{/each}}
+    </div>
+  {{/if}}
+
+
+  {{#if hasEnemies}}
+    <div class="battleReportSection battleReportPad">
+      <div style="font-size:140%;">
+        {{#if army.isAttacker}}
+          Attacked and
+        {{else}}
+          Defended and
+        {{/if}}
+
+        {{#if won}}
+          <span class="battle_won_color">Won Battle</span>
+        {{else}}
+          <span class="battle_lost_color">Lost Battle</span>
+        {{/if}}
+      </div>
+
+      Lost {{soldiersLost}} soldiers worth {{round powerLost}} power.
+
+      {{#if destroyed}}
+        {{#if isCastle}}
+          <br>Castle was captured.
+        {{/if}}
+
+        {{#if isVillage}}
+          <br>Village was destroyed.
+        {{/if}}
+
+        {{#if isArmy}}
+          <br>Army was destroyed.
+        {{/if}}
+      {{/if}}
+
+      {{#if tookCastle}}
+        <br>Captured castle as vassal.
+      {{/if}}
+
+      {{#if tookCapital}}
+        <br>Captured capital.
+      {{/if}}
+    </div>
+  {{/if}}
+</template>

@@ -1,0 +1,10 @@
+<template name="drawCountryBorders">
+  <g id="svgCountryBorders">
+    {{#each countries}}
+      {{#each paths}}
+        <polygon points="{{pathPoints}}" class="countryBorder" />
+        <polygon points="{{pathPoints}}" class="countryBorder2" />
+      {{/each}}
+    {{/each}}
+  </g>
+</template>

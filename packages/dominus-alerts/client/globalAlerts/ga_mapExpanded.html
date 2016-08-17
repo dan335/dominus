@@ -1,0 +1,13 @@
+<template name="ga_mapExpanded">
+    {{> ga_titleTemplate title=title iconName='fa-globe' date=created_at}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+            <div class="alertBody alertPad">
+                The land of Dominus has grown.  A <a href="" class="newCountryLink">new country</a> has been created.  There are now {{round vars.numCountries}} countries and {{round vars.numHexes}} hexes.
+
+                <br><br>
+                {{> globalAlertShareLink}}
+            </div>
+        {{/if}}
+    </div>
+</template>

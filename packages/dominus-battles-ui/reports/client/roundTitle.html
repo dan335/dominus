@@ -1,0 +1,35 @@
+<template name="roundTitle">
+  <div class="panel panel-default">
+    <div class="panel-heading" style="text-align:left;">
+
+        <table style="width:100%;">
+          <tr>
+            <td>
+              <a href="" class="roundOpenButton">
+                Round {{roundNumber}} Results
+              </a>
+            </td>
+            <td style="text-align:right;">
+              {{date_calendar createdAt}}
+            </td>
+          </tr>
+        </table>
+
+    </div>
+
+    
+    {{#if isOpen}}
+    <div>
+      {{#if Template.subscriptionsReady}}
+        {{#with round}}
+          {{#each armies}}
+            {{> battleReportUnit}}
+          {{/each}}
+        {{/with}}
+      {{else}}
+        {{> loading}}
+      {{/if}}
+    </div>
+    {{/if}}
+  </div>
+</template>

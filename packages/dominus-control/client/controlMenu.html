@@ -1,0 +1,16 @@
+<template name="controlMenu">
+	{{#if currentUser.admin}}
+		<div>
+			<ul class="nav nav-pills">
+				<li><a href="/">Game</a></li>
+				<li><a href="/control">Control</a></li>
+				<li><a href="/control/games">Games</a></li>
+				<li><a href="/control/mailinglist">Mailing List</a></li>
+				<li><a href="/control/onlineUsers">Online Users</a></li>
+				<li><a href="/control/kuestats">Job Queue</a></li>
+				<li><a href="/control/bans">Bans</a></li>
+			</ul>
+		</div>
+		<br>
+	{{/if}}
+</template>

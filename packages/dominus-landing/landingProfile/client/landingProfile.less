@@ -1,0 +1,29 @@
+@import "{dominus-init}/client/colors.import.less";
+@import "{dominus-init}/client/variables.import.less";
+
+
+#landingProfile {
+  .table-striped {
+    > tbody > tr:nth-of-type(even) {
+      background-color: darken(@whitePanelBackground, 5%);
+    }
+    > tbody > tr:nth-of-type(odd) {
+      background-color: darken(@whitePanelBackground, 10%);
+    }
+  }
+}
+
+#profileUserImage {
+  float: left;
+  margin-top:-100px;
+  border: 5px solid @whitePanelBackground;
+  background-color: darken(@whitePanelBackground, 8%);
+  border-radius: 3px;
+  width:150px;
+  height:150px;
+  margin-right: 15px;
+}
+
+#profileUserName {
+  padding-left: 190px;
+}

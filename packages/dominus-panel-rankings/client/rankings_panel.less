@@ -1,0 +1,57 @@
+@import (reference) "{dominus-init}/client/colors.import.less";
+@import (reference) "{dominus-init}/client/variables.import.less";
+
+#rankings_panel {
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: @panel_padding;
+	pointer-events: auto;
+	max-width: 450px;
+}
+
+#rankings_panel .panel {
+	margin-top:15px;
+}
+
+
+.vassalRank_username:before {
+	content: counter(vassal-counter) ". ";
+	counter-increment: vassal-counter;
+	color:#aaa;
+}
+.incomeRank_username:before {
+	content: counter(income-counter) ". ";
+	counter-increment: income-counter;
+	color:#aaa;
+}
+.lostSoldiersRank_username:before {
+	content: counter(lostSoldiers-counter) ". ";
+	counter-increment: lostSoldiers-counter;
+	color:#aaa;
+}
+.villagesRank_username:before {
+	content: counter(villages-counter) ". ";
+	counter-increment: villages-counter;
+	color:#aaa;
+}
+.countriesRank_username:before {
+	content: counter(countries-counter) ". ";
+	counter-increment: countries-counter;
+	color:#aaa;
+}
+
+
+.rank_username {
+	white-space:nowrap;
+}
+
+.rank_numbers {
+	text-align:right;
+	white-space:nowrap;
+}
+
+.rank_buttons {
+	text-align:right;
+	white-space:nowrap;
+	width:83px !important;
+}

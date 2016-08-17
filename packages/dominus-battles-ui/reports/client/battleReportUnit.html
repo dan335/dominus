@@ -1,0 +1,83 @@
+<template name="battleReportUnit">
+  <div class="battleReportUnit">
+
+    <div class="battleReportHeader battleReportPad">
+      <table style="width:100%;">
+        <tr>
+          <td style="width:40px;">
+            <i class="fa {{icon_name}} fa-2x"></i>
+          </td>
+          <td>
+            <div style="font-size:100%;">
+              {{#if username}}<a href="" class="battleReportGotoUser">{{username}}'s</a> {{/if}}{{unitType}}
+            </div>
+            <div style="font-size:150%;">
+              {{name}}
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="battleReportSection battleReportPad">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <td></td>
+            <td></td>
+            <td style="text-align:center;">Base Power</td>
+            <td style="text-align:center;">Unit Bonus</td>
+            <td style="text-align:center;">Dead</td>
+          </tr>
+        </thead>
+
+        <tbody>
+          {{#each s.army.types}}
+            {{#if unitNum}}
+              <tr>
+
+                <td>
+                  {{capitalize this}}
+                </td>
+
+                <td style="text-align:center;">
+                  {{unitNum}}
+                </td>
+
+                <td style="text-align:center;">
+                  {{#if basePowerType}}
+                    {{round basePowerType}}
+                  {{/if}}
+                </td>
+
+                <td style="text-align:center;">
+                  {{#if unitBonusType}}
+                    {{round unitBonusType}}
+                  {{/if}}
+                </td>
+
+                <td style="text-align:center;">
+                  {{#if loses}}
+                    {{round loses}}
+                  {{/if}}
+                </td>
+
+              </tr>
+            {{/if}}
+          {{/each}}
+
+          <tr>
+            <td>Total</td>
+            <td style="text-align:center;">{{numSoldiers}}</td>
+            <td style="text-align:center;">{{#if basePower.total}}{{round basePower.total}}{{/if}}</td>
+            <td style="text-align:center;">{{#if unitBonus.total}}{{round unitBonus.total}}{{/if}}</td>
+            <td style="text-align:center;">{{#if soldiersLost}}{{round soldiersLost}}{{/if}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+
+    {{> battleReportUnitInfo}}
+  </div>
+</template>

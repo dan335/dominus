@@ -1,0 +1,44 @@
+<template name="market_panel">
+	<div id="market_panel" class="leftPanel">
+		<div class="panel_title">
+			<i class="fa fa-money fa-lg"></i> &nbsp;Resource Market
+		</div>
+
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				Current Prices
+			</div>
+			<table class="table table-condensed table-striped">
+				<tbody>
+					<tr>
+						<td><b>Grain</b></td>
+						<td style="text-align:right;">{{round_2 grain}} gold</td>
+
+						<td><b>Wool</b></td>
+						<td style="text-align:right;">{{round_2 wool}} gold</td>
+					</tr>
+					<tr>
+						<td><b>Lumber</b></td>
+						<td style="text-align:right;">{{round_2 lumber}} gold</td>
+
+						<td><b>Clay</b></td>
+						<td style="text-align:right;">{{round_2 clay}} gold</td>
+					</tr>
+					<tr>
+						<td><b>Ore</b></td>
+						<td style="text-align:right;">{{round_2 ore}} gold</td>
+
+						<td><b>Glass</b></td>
+						<td style="text-align:right;">{{round_2 glass}} gold</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+
+		{{> marketBuySell}}
+		{{> marketPriceChart}}
+		{{> marketVolumeChart}}
+
+	</div>
+</template>

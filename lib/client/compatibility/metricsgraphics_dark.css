@@ -1,0 +1,128 @@
+.mg-active-datapoint {
+    fill: #fff;
+}
+
+.mg-area1-color {
+    fill: #ffd300;
+}
+
+.mg-area2-color {
+    fill: #18ff00;
+}
+
+.mg-area3-color {
+    fill: #f57070;
+}
+
+.mg-area4-color {
+    fill: #f8b128;
+}
+
+.mg-area5-color {
+    fill: #f7f7f7;
+}
+
+.mg-barplot .mg-bar-prediction {
+    fill: #5b5b5b;
+}
+
+.mg-barplot .mg-bar-baseline {
+    stroke: #5b5b5b;
+}
+
+.mg-baselines line {
+    stroke: #676767;
+}
+
+.mg-baselines text {
+    fill: #fff;
+}
+
+h2.chart_title span {
+    color: #f1f1f1;
+}
+
+.mg-histogram .axis path,
+.mg-histogram .axis line {
+    opacity: 0.5;
+    stroke: #ccc;
+}
+
+.mg-histogram .mg-bar rect,
+.mg-barplot rect.mg-bar {
+    fill: #d8b307;
+}
+
+.mg-histogram .mg-bar rect.active,
+.mg-barplot rect.mg-bar.active {
+    fill: #b3960f;
+}
+
+.mg-histogram .mg-bar text {
+    fill: #fff;
+}
+
+.mg-histogram .axis .tick line {
+    opacity: 0.3;
+}
+
+.mg-least-squares-line {
+    stroke: #f57070;
+}
+
+#logo g path {
+    fill: #e8e8e8;
+}
+
+.mg-chart-title {
+    fill: #cfcfcf;
+}
+
+.mg-main-area-solid svg .mg-main-area {
+    fill: #52491f;
+}
+
+.mg-markers line {
+    stroke: #676767;
+}
+
+.mg-markers text {
+    fill: #fff;
+}
+
+circle.mg-points-mono {
+    fill-opacity: 0.6;
+    stroke: #a89641;
+    fill: #a89641;
+    stroke-opacity: 1;
+}
+
+circle.mg-points-mono.selected {
+    fill: #a89641;
+    fill-opacity: 1;
+    stroke-opacity: 1;
+}
+
+.mg-x-rug-mono,
+.mg-y-rug-mono {
+    stroke: #cfcfcf;
+}
+
+.mg-x-axis line,
+.mg-y-axis line {
+    stroke: #676767;
+}
+
+.mg-x-axis text,
+.mg-y-axis text,
+.mg-histogram .axis text {
+    fill: #fff;
+}
+
+.mg-year-marker text {
+    fill: #fff;
+}
+
+.mg-year-marker line {
+    stroke: #676767;
+}

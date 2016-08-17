@@ -1,0 +1,158 @@
+<template name="landingGames">
+  {{> topNav}}
+
+  <div class="container-fluid" id="paintingFluid"></div>
+
+  <div class="container-fluid" id="landingGamesFluid">
+    <div class="container" id="landingGames" style="margin-top: -150px;">
+      {{#if Template.subscriptionsReady}}
+        {{#if hasFutureGames}}
+          <div class="sectionTitle">Games Starting Soon</div>
+          <div class="sectionHelp">Sign up for a game and you will get an email when it starts.</div>
+          <div class="row">
+            {{#each futureGames}}
+              {{> landingGame}}
+            {{/each}}
+          </div>
+
+          <br>
+        {{/if}}
+
+        {{#if hasCurrentGames}}
+          <div class="sectionTitle">Current Games</div>
+          <div class="row">
+            {{#each currentGames}}
+              {{> landingGame}}
+            {{/each}}
+          </div>
+        {{/if}}
+      {{else}}
+        <br>
+        {{> loading}}
+      {{/if}}
+
+    </div>
+  </div>
+
+  {{> landingFooter}}
+</template>
+
+
+<template name="landingGame">
+  <div class="col-xs-12">
+    <div class="landingGameContainer">
+      <div class="gameBoxTitle">
+        <table style="width:100%;">
+          <tr>
+            <td>
+              {{#if isSpeed}}
+                <span class="fa-stack gameTypeIcon fa-lg" data-toggle="tooltip" data-placement="top" title="Speed Game: 3x Faster than Normal">
+                  <i class="fa fa-square fa-stack-2x "></i>
+                  <i class="fa fa-forward fa-stack-1x fa-inverse"></i>
+                </span>
+              {{/if}}
+              {{#if isSuperSpeed}}
+                <span class="fa-stack gameTypeIcon fa-lg" data-toggle="tooltip" data-placement="top" title="Crazy Fast Game: 18x Faster than Normal">
+                  <i class="fa fa-square fa-stack-2x "></i>
+                  <i class="fa fa-flash fa-stack-1x fa-inverse"></i>
+                </span>
+              {{/if}}
+              {{#if isProOnly}}
+                <span class="fa-stack gameTypeIcon fa-lg" data-toggle="tooltip" data-placement="top" title="Pro Only Game: Pro Account Required">
+                  <i class="fa fa-square fa-stack-2x"></i>
+                  <i class="fa fa-trophy fa-stack-1x fa-inverse"></i>
+                </span>
+              {{/if}}
+              {{#if isKingOfHill}}
+                <span class="fa-stack gameTypeIcon fa-lg" data-toggle="tooltip" data-placement="top" title="King of the Hill Game: Only One Country">
+                  <i class="fa fa-square fa-stack-2x"></i>
+                  <i class="fa fa-fort-awesome fa-stack-1x fa-inverse"></i>
+                </span>
+              {{/if}}
+              {{#if isNoLargeResources}}
+                <span class="fa-stack gameTypeIcon fa-lg" data-toggle="tooltip" data-placement="top" title="No Large Resource Hexes">
+                  <i class="fa fa-square fa-stack-2x"></i>
+                  <i class="fa fa-photo fa-stack-1x fa-inverse"></i>
+                </span>
+              {{/if}}
+              {{name}}
+            </td>
+            <td style="text-align:right;">
+              {{#if currentUser}}
+                {{#if verifiedEmail}}
+                  {{#if hasStarted}}
+                    {{#if alreadyJoinedGame}}
+                      <button class="btn btn-primary gotoGameButton"><i class="fa fa-play-circle fa-lg"></i>&nbsp; Go to Game</button>
+                    {{else}}
+                      {{#unless dominusAchieved}}
+                        {{#unless isFull}}
+                          <button class="btn btn-primary joinGameButton"><i class="fa fa-pencil-square-o fa-lg"></i>&nbsp; Join Game</button>
+                        {{/unless}}
+                      {{/unless}}
+                    {{/if}}
+                  {{else}}
+                    {{#if alreadySignedUp}}
+                      <button class="btn btn-primary signUpButton"><i class="fa fa-user-times fa-lg"></i>&nbsp; Cancel Sign Up</button>
+                    {{else}}
+                      {{#unless isFull}}
+                        <button class="btn btn-primary signUpButton"><i class="fa fa-user-plus fa-lg"></i>&nbsp; Sign Up For This Game</button>
+                      {{/unless}}
+                    {{/if}}
+                  {{/if}}
+                {{else}}
+                  Email not yet verified.
+                {{/if}}
+              {{else}}
+                <button class="btn btn-primary gameSignInButton"><i class="fa fa-play-circle fa-lg"></i>&nbsp; Sign In</button>
+              {{/if}}
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class="gameBoxBody">
+
+        <table style="width:100%;">
+          <tr>
+            <td style="vertical-align:top;">
+              <div>
+                {{#if isStarting}}
+                  <i class="fa fa-refresh fa-spin"></i>&nbsp;
+                  Creating Game
+                {{else}}
+                  {{#if hasStarted}}
+                    Started
+                  {{else}}
+                    Starts
+                  {{/if}}
+                  {{date_from_now startAt}}
+                {{/if}}
+              </div>
+
+              {{#if hasDescription}}
+                <div style="padding-top:10px;">
+                  {{desc}}
+                </div>
+              {{/if}}
+
+
+
+            </td>
+            <td style="text-align:right;vertical-align:top;">
+              <div>{{numPlayers}} / {{maxPlayers}} &nbsp;<i class="fa fa-users"></i></div>
+
+              <div>
+                {{#if hasStarted}}
+                  Started
+                {{else}}
+                  Starts
+                {{/if}}
+
+                {{date_landingGames startAt}}
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</template>

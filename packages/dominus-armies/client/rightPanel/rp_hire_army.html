@@ -1,0 +1,197 @@
+<template name="rp_hire_army">
+	<div class="rightPanel" id="rp_hire_army">
+
+		{{#if is_ally_below}}
+			<br>
+			<div style="text-align:center;">
+				<div class="panel_title">
+					Hire Soldiers for {{username}}
+				</div>
+				<div class="pad_group">
+					This is your ally's castle.  You can hire soldiers for them.  These soldiers will be under their control, you will not be able to control them.
+					<br><br>
+					Soldiers are {{floatToPercentage s.sendToVassalTax}}% more expensive when hiring at a vassal's castle.
+				</div>
+				<br>
+			</div>
+		{{/if}}
+
+		<div class="alert alert-danger" style="display:none;margin:0 12px 0 12px;" id="hire_error"></div>
+
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				Hire Soldiers
+			</div>
+
+			<table class="table table-condensed">
+				<tbody>
+					{{#each armyTypes}}
+						<tr>
+							<td>{{capitalize this}}</td>
+							<td>
+								<input type="number" class="form-control input-sm hireUnitsInput" style="padding:1px 8px;height:22px;width:80px;display:inline;" value={{num_units this}} />
+							</td>
+							<td style="text-align:right;">
+								selected: {{num_units this}}
+							</td>
+							<td style="text-align:right;">max: {{max_units this}}</td>
+						</tr>
+						<tr>
+							<td colspan="4">
+								<input type="range" data-type="{{this}}" class="hire_units_new_slider" value="0" min="0" step="1" max="1">
+							</td>
+						</tr>
+					{{/each}}
+				</tbody>
+			</table>
+
+			<div class="panel-body">
+				<div class="btn-group btn-group-justified pad_group" role="group">
+					<div class="btn-group" role="group">
+						<button type="button" class="btn btn-sm btn-primary" id="hire_army_hire_button">Hire</button>
+					</div>
+					<div class="btn-group" role="group">
+						<button type="button" class="btn btn-sm btn-primary" id="hire_army_cancel_button">Cancel</button>
+					</div>
+				</div>
+
+			</div>
+		</div>
+
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				Resources
+			</div>
+
+			<table class="table table-condensed table-striped">
+				<thead>
+					<tr>
+						<td></td>
+						<td style="text-align:right;">Current</td>
+						<td style="text-align:right;">Cost</td>
+						<td style="text-align:right;">Final</td>
+						<td></td>
+					</tr>
+				</thead>
+				<tbody>
+					{{#each s.resource.types_plus_gold}}
+						<tr>
+							<td>{{capitalize this}}</td>
+							<td style="text-align:right;">{{cur_res this}}</td>
+							<td style="text-align:right;">{{sel_cost this}}</td>
+							<td style="text-align:right;">{{final_cost this}}</td>
+							<td>
+								{{#unless is_gold this}}
+									<button type="button" class="btn btn-xs btn-primary btn-block sell_all_button" data-type="{{this}}">Sell All</button>
+								{{/unless}}
+							</td>
+						</tr>
+					{{/each}}
+				</tbody>
+			</table>
+		</div>
+
+
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				Prices
+			</div>
+			<table class="table table-condensed table-striped">
+				<thead>
+					<tr>
+						<th></th>
+						<th>Foot</th>
+						<th>Archer</th>
+						<th>Pike</th>
+						<th>Cav</th>
+						<th>Cat</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>Grain</td>
+						<td>{{s.army.cost.footmen.grain}}</td>
+						<td>{{s.army.cost.archers.grain}}</td>
+						<td>{{s.army.cost.pikemen.grain}}</td>
+						<td>{{s.army.cost.cavalry.grain}}</td>
+						<td>{{s.army.cost.catapults.grain}}</td>
+					</tr>
+					<tr>
+						<td>Lumber</td>
+						<td>{{s.army.cost.footmen.lumber}}</td>
+						<td>{{s.army.cost.archers.lumber}}</td>
+						<td>{{s.army.cost.pikemen.lumber}}</td>
+						<td>{{s.army.cost.cavalry.lumber}}</td>
+						<td>{{s.army.cost.catapults.lumber}}</td>
+					</tr>
+					<tr>
+						<td>Ore</td>
+						<td>{{s.army.cost.footmen.ore}}</td>
+						<td>{{s.army.cost.archers.ore}}</td>
+						<td>{{s.army.cost.pikemen.ore}}</td>
+						<td>{{s.army.cost.cavalry.ore}}</td>
+						<td>{{s.army.cost.catapults.ore}}</td>
+					</tr>
+					<tr>
+						<td>Wool</td>
+						<td>{{s.army.cost.footmen.wool}}</td>
+						<td>{{s.army.cost.archers.wool}}</td>
+						<td>{{s.army.cost.pikemen.wool}}</td>
+						<td>{{s.army.cost.cavalry.wool}}</td>
+						<td>{{s.army.cost.catapults.wool}}</td>
+					</tr>
+					<tr>
+						<td>Clay</td>
+						<td>{{s.army.cost.footmen.clay}}</td>
+						<td>{{s.army.cost.archers.clay}}</td>
+						<td>{{s.army.cost.pikemen.clay}}</td>
+						<td>{{s.army.cost.cavalry.clay}}</td>
+						<td>{{s.army.cost.catapults.clay}}</td>
+					</tr>
+					<tr>
+						<td>Glass</td>
+						<td>{{s.army.cost.footmen.glass}}</td>
+						<td>{{s.army.cost.archers.glass}}</td>
+						<td>{{s.army.cost.pikemen.glass}}</td>
+						<td>{{s.army.cost.cavalry.glass}}</td>
+						<td>{{s.army.cost.catapults.glass}}</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				Army Types
+			</div>
+			<div class="panel-body">
+				<p>
+					<b>Footmen</b><br>
+					Offense: {{s.army.stats.footmen.offense}} &nbsp; Defense: {{s.army.stats.footmen.defense}} &nbsp; Speed: {{s.army.stats.footmen.speed}}<br>
+					Footmen are good all-around soldiers.  Bonus against pikemen.<br>
+					{{#if soldierWorth 'footmen'}}One footman is currently worth {{soldierWorth 'footmen'}} gold.<br>{{/if}}
+					<br>
+					<b>Archers</b><br>
+					Offense: {{s.army.stats.archers.offense}} &nbsp; Defense: {{s.army.stats.archers.defense}} &nbsp; Speed: {{s.army.stats.archers.speed}}<br>
+					Good at defense. Bonus against footmen.<br>
+					{{#if soldierWorth 'archers'}}One archer is currently worth {{soldierWorth 'archers'}} gold.<br>{{/if}}
+					<br>
+					<b>Pikemen</b><br>
+					Offense: {{s.army.stats.pikemen.offense}} &nbsp; Defense: {{s.army.stats.pikemen.defense}} &nbsp; Speed: {{s.army.stats.pikemen.speed}}<br>
+					Good at defense. Bonus against cavalry.<br>
+					{{#if soldierWorth 'pikemen'}}One pikeman is currently worth {{soldierWorth 'pikemen'}} gold.<br>{{/if}}
+					<br>
+					<b>Cavalry</b><br>
+					Offense: {{s.army.stats.cavalry.offense}} &nbsp; Defense: {{s.army.stats.cavalry.defense}} &nbsp; Speed: {{s.army.stats.cavalry.speed}}<br>
+					Good at offense. Bonus against archers and footmen.<br>
+					{{#if soldierWorth 'cavalry'}}One cavalry is currently worth {{soldierWorth 'cavalry'}} gold.<br>{{/if}}
+					<br>
+					<b>Catapults</b><br>
+					Offense: {{s.army.stats.catapults.offense}} &nbsp; Defense: {{s.army.stats.catapults.defense}} &nbsp; Speed: {{s.army.stats.catapults.speed}}<br>
+					{{s.army.stats.catapults.bonus_against_buildings}}x bonus when attacking a castle or village.<br>
+					{{#if soldierWorth 'catapults'}}One catapult is currently worth {{soldierWorth 'catapults'}} gold.<br>{{/if}}
+				</p>
+			</div>
+		</div>
+	</div>
+</template>

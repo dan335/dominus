@@ -1,0 +1,101 @@
+@import (reference) url("{dominus-init}/client/colors.import.less");
+@import (reference) url("{dominus-init}/client/variables.import.less");
+
+#tree_panel {
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: @panel_padding;
+	max-width: 600px;
+	pointer-events: auto;
+}
+
+#tree .username {
+	padding-right:10px;
+}
+
+#tree .field {
+	padding-right:10px;
+}
+
+
+.tree_flag {
+	width: 8px;
+	display: inline-block;
+	margin-right: 3px;
+	margin-bottom:2px;
+}
+
+.tree_flag.mine {
+	background-color: @icon_mine_fill;
+}
+
+.tree_flag.enemy {
+	background-color: @icon_foe_fill;
+}
+
+.tree_flag.king{
+	background-color: @icon_king_fill;
+}
+
+.tree_flag.lord{
+	background-color: @icon_above_fill;
+}
+
+.tree_flag.direct_lord{
+	background-color: @icon_lord_fill;
+}
+
+.tree_flag.direct_vassal {
+	background-color: @icon_vassal_fill;
+}
+
+.tree_flag.vassal {
+	background-color: @icon_below_fill;
+}
+
+.tree_flag.enemy_ally {
+	.icon_team_gradient_mixin
+}
+
+#tree ul {
+    padding: 0;
+    margin: 0;
+    list-style-type: none;
+    position: relative;
+}
+
+#tree > ul > li {
+	padding-left:0px;
+	margin-left:0;
+}
+
+#tree li {
+    list-style-type: none;
+    border-left: 2px solid #666;
+    margin-left: 1em;
+}
+
+#tree li div {
+    padding-left: 1em;
+    position: relative;
+}
+
+#tree li div::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -2px;
+    bottom: 50%;
+    width: 1em;
+    border: 2px solid #666;
+    border-top: 0 none transparent;
+    border-right: 0 none transparent;
+}
+
+#tree ul > li:last-child {
+    border-left: 2px solid transparent;
+}
+
+.tree_panel_user {
+	white-space:nowrap;
+}

@@ -1,0 +1,31 @@
+<template name="landingDeleteAccount">
+  {{> topNav}}
+
+  <div class="container-fluid" id="paintingFluid"></div>
+
+  <div class="container-fluid landingLightBg" id="accountFluid">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-3 col-sm-1"></div>
+        <div class="col-xs-12 col-sm-10 col-md-6" id="accountContainer">
+          {{#if currentUser}}
+            <div class="landingTitle">
+              Delete Account
+            </div>
+            <br>
+
+            Are you sure you want to delete your account?  This is not un-doable.<br>
+            <br>
+
+            <button class="btn btn-primary" id="cancelButton">Cancel</button>
+            <button class="btn btn-primary" id="deleteAccountButton">Delete Account</button>
+
+          {{/if}}
+        </div>
+        <div class="col-md-3 col-sm-1"></div>
+      </div>
+    </div>
+  </div>
+
+  {{> landingFooter}}
+</template>

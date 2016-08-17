@@ -1,0 +1,19 @@
+<template name="lp_lords">
+	<table class="table table-condensed table-striped">
+		<tbody>
+			{{#each lords}}
+				{{> lp_lord}}
+			{{/each}}
+		</tbody>
+	</table>
+</template>
+
+
+<template name="lp_lord">
+	<tr>
+		<td>
+			<span class="summaryPanelColorBlock {{relationship _id}}">&nbsp;</span>{{username}}
+		</td>
+		<td style="text-align: right;">{{> center_on_button x=x y=y selected_type='castle' selected_id=castle_id}}</td>
+	</tr>
+</template>

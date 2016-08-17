@@ -1,0 +1,21 @@
+<template name="sharedBattle">
+  <div id="battlePage">
+    <div class="panel panel-body">
+      <h3>Dominus Battle Report</h3>
+      <a href="/game/{{gameId}}" id="returnButton">Return to Game</a>
+    </div>
+    <div class="panel panel-body">
+      {{#if battle}}
+        {{> battleReport battle}}
+      {{else}}
+        No battle found.  Bad link or an old battle.
+      {{/if}}
+    </div>
+  </div>
+</template>
+
+<template name="battleLoading">
+  <div id="battlePage">
+    <i class="fa fa-cog fa-spin"></i> &nbsp; Loading Battle
+  </div>
+</template>

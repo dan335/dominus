@@ -1,0 +1,15 @@
+<template name="ga_nameChange">
+    {{> ga_titleTemplate title=title iconName='fa-user' date=created_at}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+            <div class="alertBody alertPad">
+                {{vars.previousName}}'s new name is
+
+                <a href="" data-x="{{user.x}}" data-y="{{user.y}}" data-castle_id="{{user.castle_id}}" class="userLink">{{vars.newName}}</a>.
+
+                <br><br>
+                {{> globalAlertShareLink}}
+            </div>
+        {{/if}}
+    </div>
+</template>

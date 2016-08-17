@@ -1,0 +1,22 @@
+<template name="markerBox">
+  <li class="markerBox" data-id="{{_id}}">
+    <div style="float:left;">
+      {{#if isSelected}}
+        <i class="fa fa-pencil"></i>&nbsp;
+      {{/if}}
+      {{name}}
+    </div>
+    <div style="float:right;">
+      <button class="btn btn-xs btn-primary editMarkerButton" data-toggle="tooltip" data-placement="top" title="Edit Marker"><i class="fa fa-pencil"></i></button>
+      <button class="btn btn-xs btn-primary selectMarkerButton" data-toggle="tooltip" data-placement="top" title="Select Unit"><i class="fa fa-hand-o-up"></i></button>
+      <button class="btn btn-xs btn-primary viewMarkerButton" data-toggle="tooltip" data-placement="top" title="Center Map on Unit"><i class="fa fa-eye"></i></button>
+      <button class="btn btn-xs btn-primary handleMarker" data-toggle="tooltip" data-placement="top" title="Drag to change order/group."><i class="fa fa-bars"></i></button>
+      <button class="btn btn-xs btn-primary removeMarkerButton" data-toggle="tooltip" data-placement="top" title="Remove Marker"><i class="fa fa-trash"></i></button>
+    </div>
+    <div style="clear:both;"></div>
+
+    <div class="markerBoxDesc">
+      {{description}}
+    </div>
+  </li>
+</template>

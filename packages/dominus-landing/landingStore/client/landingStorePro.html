@@ -1,0 +1,51 @@
+<template name="landingStorePro">
+  <div class="gameBoxTitle">
+    Purchase Pro Account
+  </div>
+  <div class="gameBoxBody">
+    <h2>Upgrade your game.</h2>
+
+    Purchasing pro removes ads and adds features that make the game easier to play but do not change gameplay.<br>
+    <br>
+
+    <ul>
+        <li>Remove ads.</li>
+        <li>Join games that require a pro account.</li>
+        <li>More markers and marker groups.  {{_sMarkers.maxMarkersPro}} markers max instead of {{_sMarkers.maxMarkersNonPro}}.</li>
+        <li>See who is active.  Castles show how many days ago someone was active.</li>
+        <li>Worth of empty hexes.  Clicking on an empty hex will tell you how much a village there would prduce in gold.</li>
+    </ul>
+    <br>
+
+    <div class="alert alert-danger" id="proError" style="display:none;"></div>
+    <div class="alert alert-success" id="proSuccess" style="display:none;"></div>
+
+    <div style="font-size:140%;">
+      Purchase a token for one game.
+    </div>
+    Redeem it in-game or when you join a new game.  You have {{numTokens}} unused single game pro tokens.
+    <br><br>
+    {{#if hasPurchasedAllGames}}
+      <button class="btn btn-primary btn-lg btn-block" disabled="disabled">Pro Purchased</button>
+    {{else}}
+      <button class="btn btn-primary proButton btn-lg btn-block" data-type="singleGame">Purchase Pro for One Game&nbsp; ${{_sStore.pro.singleGame.priceString}}</button>
+    {{/if}}
+    <br>
+
+
+    <br><br>
+
+    <div style="font-size:140%;">
+      Purchase pro for all games.
+    </div>
+    You will get pro features in every Dominus game you play forever.
+    <br><br>
+    {{#if hasPurchasedAllGames}}
+      <button class="btn btn-primary btn-lg btn-block" type="button" disabled="disabled">Pro Purchased</button>
+    {{else}}
+      <button class="btn btn-primary proButton btn-lg btn-block" data-type="allGames" disabled="{{hasPurchasedAllGames}}">Purchase Pro for All Games &nbsp; ${{_sStore.pro.allGames.priceString}}</button>
+    {{/if}}
+
+    <br><br>
+  </div>
+</template>

@@ -1,0 +1,38 @@
+@import "{dominus-init}/client/variables.import.less";
+
+#market_panel {
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: @panel_padding;
+	pointer-events: auto;
+	width: 400px;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+#quantity_input {
+	width: 150px;
+	display:inline-block;
+}
+
+
+#resourceTypeTable {
+	width:100%;
+	margin-bottom:20px;
+
+	td {
+		width: 33%;
+		font-size:110%;
+
+		.radio {
+			margin: 5px 0 5px 0;
+		}
+	}
+}
+
+.marketText.disabled {
+	color: hsl(0, 100%, 0.63);
+}

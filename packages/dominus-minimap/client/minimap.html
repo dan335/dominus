@@ -1,0 +1,73 @@
+<template name="minimap">
+  <div id="minimap_container">
+    <svg id="minimap">
+
+      <defs>
+        <mask id="minimap_clip">
+            <rect width="{{containerSize}}" height="{{containerSize}}" x="0" y="0" class="insideClipPath"/>
+            {{#each countrySvg}}
+              {{#each country}}
+                <polygon points="{{points}}" class="{{isOutside @index}}" />
+              {{/each}}
+            {{/each}}
+        </mask>
+      </defs>
+
+      <g mask="url(#minimap_clip)">
+        {{#each countrySvg}}
+          {{#each country}}
+            <polygon points="{{points}}" class="minimapPath" />
+          {{/each}}
+        {{/each}}
+      </g>
+
+      <!-- <image height="{{containerSize}}" width="{{containerSize}}" x="0" xlink:href="{{backgroundClipUrl}}" y="0"/> -->
+
+      <!-- <defs>
+        <mask id="minimapclip">
+          <image xlink:href="{{backgroundClipUrl}}" x="0" y="0" height="{{containerSize}}px" width="{{containerSize}}px"/>
+        </mask>
+      </defs>
+
+      <image xlink:href="{{backgroundUrl}}" id="minimap_bg" mask="url(#minimapclip)" x="0" y="0" height="{{containerSize}}px" width="{{containerSize}}px"/> -->
+
+      <!-- <polygon points="{{bgPathPoints}}" id="minimap_bg" /> -->
+
+      {{#each villages}}
+        <circle cx="{{minimap_coord_to_pixel_x x y 0}}" cy="{{minimap_coord_to_pixel_y x y 0}}" r="4" class="minimap_village {{relationship playerId}}" />
+      {{/each}}
+
+      {{#each castles}}
+        <circle cx="{{minimap_coord_to_pixel_x x y 0}}" cy="{{minimap_coord_to_pixel_y x y 0}}" r="4" class="minimap_castle {{relationship playerId}}" />
+      {{/each}}
+
+      {{#each countries}}
+        <rect x="{{minimap_coord_to_pixel_x x y -4}}" y="{{minimap_coord_to_pixel_y x y -4}}" width="8" height="8" class="minimap_capital {{capitalRelationship}}" />
+      {{/each}}
+
+      {{#each lords}}
+        <circle cx="{{minimap_coord_to_pixel_x x y 0}}" cy="{{minimap_coord_to_pixel_y x y 0}}" r="4" class="minimap_castle {{relationship _id}}" />
+      {{/each}}
+
+      {{#each allies}}
+        <circle cx="{{minimap_coord_to_pixel_x x y 0}}" cy="{{minimap_coord_to_pixel_y x y 0}}" r="4" class="minimap_castle {{relationship _id}}" />
+      {{/each}}
+
+      <g id="minimap_armies">
+        {{#each armies}}
+        <circle cx="{{minimap_coord_to_pixel_x x y 0}}" cy="{{minimap_coord_to_pixel_y x y 0}}" r="2" class="minimap_army" />
+        {{/each}}
+      </g>
+
+      {{#each markers}}
+        <circle cx="{{minimap_coord_to_pixel_x x y 0}}" cy="{{minimap_coord_to_pixel_y x y 0}}" r="4.5" class="minimap_marker" />
+      {{/each}}
+
+      <rect x="{{viewport_position.x}}" y="{{viewport_position.y}}" width="{{viewport_size.width}}" height="{{viewport_size.height}}" id="minimap_viewport" mask="url(#minimap_clip)" />
+
+      <g id="minimap_armyPaths"></g>
+
+
+    </svg>
+  </div>
+</template>

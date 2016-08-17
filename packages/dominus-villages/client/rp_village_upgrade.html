@@ -1,0 +1,41 @@
+<template name="rp_village_upgrade">
+    <div id="rp_village_upgrade" style="max-width:250px;" class="rightPanel">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Upgrade Village
+            </div>
+
+            <div class="panel-body">
+                {{{upgradeText}}}<br>
+                <br>
+                Upgrading will take {{upgradeTime}}.
+            </div>
+
+            <div class="panel-heading">
+                Cost to Upgrade
+            </div>
+            <table class="table table-condensed table-striped">
+                <tbody>
+                    {{#each s.resource.types}}
+                        {{#if costGreaterThanZero this}}
+                            <tr class="{{hasEnoughType this}}">
+                                <td>{{this}}</td>
+                                <td style="text-align:right;">{{cost this}}</td>
+                            </tr>
+                        {{/if}}
+                    {{/each}}
+                </tbody>
+            </table>
+
+            <div class="panel-body">
+                <div class="alert alert-danger" id="upgradeVillageAlert" style="display:none;">adf</div>
+                <button type="button" class="btn btn-sm btn-primary btn-block" id="upgradeVillageButton" {{hasEnough}}>Upgrade Village</button>
+                <button type="button" class="btn btn-sm btn-primary btn-block" id="cancelButton">Cancel</button>
+            </div>
+
+            <div class="panel-body">
+                Villages do not receive income while upgrading.
+            </div>
+        </div>
+    </div>
+</template>

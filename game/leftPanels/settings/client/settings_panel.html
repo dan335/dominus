@@ -1,0 +1,81 @@
+<template name="settings_panel">
+	<div id="settings_panel" class="leftPanel">
+		<div class="panel_title"><i class="fa fa-wrench fa-lg"></i> &nbsp;Settings</div>
+
+		<div class="panel panel-default">
+			<div class="panel-heading">Activate Pro</div>
+			<div class="panel-body">
+				{{#if isPro}}
+					Pro account already activated in this game.
+				{{else}}
+					{{#if numProTokens}}
+						You have {{numProTokens}} pro account tokens available.  Click the button below to use one for this game.<br>
+						<br>
+						<div class="alert alert-danger" id="activateProAlert" style="display:none;"></div>
+						<button class="btn btn-primary btn-block" id="activateProButton">Activate Pro</button>
+					{{else}}
+						If you would like to upgrade to a pro account <a href="/store" class="gotoStoreLink">click here</a> to go to the store.
+					{{/if}}
+				{{/if}}
+			</div>
+		</div>
+
+		<div class="panel panel-default">
+			<div class="panel-body">
+				<button type="button" class="btn btn-sm btn-primary btn-block" id="toggle_coords_button">Toggle Hex Coordinates</button>
+				<button type="button" class="btn btn-sm btn-primary btn-block" id="toggle_minimap_button">Toggle Mini-Map</button>
+			</div>
+		</div>
+
+		<div class="panel panel-default">
+			<div class="panel-heading">Change Username</div>
+			<div class="panel-body">
+
+				<div class="alert alert-danger" id="change_username_alert" style="display:none;"></div>
+
+
+				<div class="form-group">
+					<input type="text" class="form-control" id="change_username_input" value="{{username}}">
+				</div>
+
+				<div class="form-group">
+					<button class="btn btn-primary btn-block" type="button" id="change_username_button">Save New Name</button>
+				</div>
+			</div>
+		</div>
+
+
+		<div class="panel panel-default">
+			<div class="panel-body">
+				<div id="deleteAccountConfirmationContainer" style="display:none;">
+					Are you sure you want to delete your account?  This is not un-doable.<br>
+					<br>
+					<button type="button" class="btn btn-sm btn-primary btn-block" id="deleteAccountConfirmButton">Yes, delete my account.</button>
+					<button type="button" class="btn btn-sm btn-primary btn-block" id="deleteAccountCancelButton">Cancel</button>
+				</div>
+
+				<div id="deleteAccountButtonContainer">
+					<button type="button" class="btn btn-sm btn-primary btn-block" id="deleteAccountButton">Delete Account</button>
+				</div>
+			</div>
+		</div>
+
+
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				Hide Alerts
+			</div>
+			<div class="panel-body">
+				{{#each myAlertList}}
+					<div class="checkbox">
+						<label>
+							<input type="checkbox" class="hideAlertCheckbox" {{isChecked}}> {{name}}
+						</label>
+					</div>
+				{{/each}}
+			</div>
+		</div>
+
+
+	</div>
+</template>

@@ -1,0 +1,43 @@
+@import "{dominus-init}/client/colors.import.less";
+@import "{dominus-init}/client/variables.import.less";
+
+.gameResultContainer {
+  background-color: @whitePanelBackground;
+  color: @whitePanelTextColor;
+  padding: 12px 20px 12px 20px;
+  box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
+  border-radius: 3px;
+  margin-bottom:1px;
+
+  .fa-stack:last-child {
+    margin-right: 12px;
+  }
+
+  .gameResultName {
+    font-size:160%;
+  }
+}
+
+.gameResultContainer.openDetails {
+  border-bottom-right-radius: 0px;
+  margin-bottom:0px;
+}
+
+.gameResultDetailsContainer {
+  background-color: darken(@whitePanelBackground, 8%);
+  margin-left:50px;
+  color: @whitePanelTextColor;
+  padding: 20px 20px 20px 20px;
+  border-bottom-left-radius: 3px;
+  border-bottom-right-radius: 3px;
+  margin-bottom:6px;
+
+  .table-striped {
+    > tbody > tr:nth-of-type(even) {
+      background-color: darken(@whitePanelBackground, 9%);
+    }
+    > tbody > tr:nth-of-type(odd) {
+      background-color: darken(@whitePanelBackground, 14%);
+    }
+  }
+}

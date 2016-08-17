@@ -1,0 +1,37 @@
+<template name="markersPanel">
+  <div id="markersPanel" class="leftPanel">
+    <div class="panel_title"><i class="fa fa-map-marker fa-lg"></i> &nbsp;Markers</div>
+
+    {{> markerGroup groupId=0 name="Default Group"}}
+
+    {{#each groups}}
+      {{> markerGroup groupId=_id name=name}}
+    {{/each}}
+
+    <br>
+
+    <div class="panel panel-default panel-body">
+      <div class="alert alert-danger" id="addGroupAlert" style="display:none;"></div>
+
+      <div class="form-group">
+        <input class="form-control" id="groupNameInput" placeholder="Group Name">
+      </div>
+      <div class="form-group">
+        <button class="btn btn-primary btn-block" id="addGroupButton">Add Group</button>
+      </div>
+
+      <br>
+      {{numMarkers}} markers / {{maxMarkers}} max
+      <br>
+      {{numGroups}} groups / {{maxGroups}} max
+
+      {{#unless isPro}}
+        <br><br>
+        <a href="" id="markerProUpgradeButton">Upgrade to pro</a> to increase your max.
+      {{/unless}}
+    </div>
+
+    <br>
+
+  </div>
+</template>

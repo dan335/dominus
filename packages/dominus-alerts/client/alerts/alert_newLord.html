@@ -1,0 +1,14 @@
+<template name="alert_newLord">
+    {{> alert_titleTemplate title=title iconName='fa-sitemap' date=created_at read=read}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+        <div class="alertBody alertPad">
+
+            <a href="" data-x="{{lord.x}}" data-y="{{lord.y}}" data-castle_id="{{lord.castle_id}}" class="userLink">{{lord.username}}</a>
+
+            is your new lord.
+
+        </div>
+        {{/if}}
+    </div>
+</template>

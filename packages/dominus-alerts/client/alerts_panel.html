@@ -1,0 +1,49 @@
+<template name="alerts_panel">
+    <div id="alerts_panel" class="leftPanel">
+        <div class="panel_title"><i class="fa fa-bullhorn fa-lg"></i> &nbsp;Alerts</div>
+
+        <!-- {{#unless isGameOver}}
+            {{#if isGameEndDateSet}}
+                <div class="panel panel-body">
+                    {{#if dominus}}
+                        <a href="" data-x="{{dominus.x}}" data-y="{{dominus.y}}" data-castle_id="{{dominus.castle_id}}" class="userLink">
+                            {{dominus.username}}
+                        </a>
+                    {{else}}
+                        <a href="" data-x="{{previousDominus.x}}" data-y="{{previousDominus.y}}" data-castle_id="{{previousDominus.castle_id}}" class="userLink">
+                            {{previousDominus.username}}
+                        </a>
+                    {{/if}}
+
+                    will win {{date_calendar gameEndDate}} {{date_from_now gameEndDate}} unless someone new becomes the Dominus.
+
+                    <br><br>
+
+                    <div class="light_text">If someone wins the game will end.  Everything will be reset and a new game will start.  If someone new becomes the Dominus before then the countdown will be reset to {{timeTilGameEndWhenNewDominus}}.</div>
+                </div>
+            {{/if}}
+        {{/unless}} -->
+
+        <div class="pad_group">
+            <div class="btn-group btn-group-justified" role="group">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-default btn-primary {{mineActive}}" id="mineButton">
+                        Mine
+                        <span class="badge">{{#if numUnreadAlerts}}{{numUnreadAlerts}}{{/if}}</span>
+                    </button>
+                </div>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-default btn-primary {{globalActive}}" id="globalButton">Global</button>
+                </div>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-default btn-primary {{battlesActive}}" id="battlesButton">Battles</button>
+                </div>
+            </div>
+        </div>
+
+        {{#if mineActive}}{{> alerts_mine}}{{/if}}
+        {{#if globalActive}}{{> alerts_global}}{{/if}}
+        {{#if battlesActive}}{{> alerts_battles}}{{/if}}
+
+    </div>
+</template>

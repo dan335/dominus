@@ -1,0 +1,168 @@
+<template name="rp_info_village">
+	<div class="rightPanel" id="rp_info_village">
+		{{> rp_closeButton}}
+
+		{{#if infoLoaded}}
+			<div class="panel panel-default" style="margin-top:0;">
+				<div class="panel-body">
+					<div class="rpNameContainer">
+						<div class="rpNameType">Level {{level}} Village</div>
+						<div class="rpName">{{name}}</div>
+						{{#if is_owner}}
+							<div class="rpEditName">{{> edit_name_button}}</div>
+						{{/if}}
+						<div style="clear:both;"></div>
+						{{#unless is_owner}}
+							<div style="margin-top:8px;">
+								<div style="float:left;">
+									<span class="light_text">
+										{{#if male}}
+											Lord
+										{{else}}
+											Lady
+										{{/if}}
+									</span>
+									{{username}}
+								</div>
+
+								<div style="float:right;">
+									{{> center_on_button x=castle_x y=castle_y selected_type='castle' selected_id=castle_id}}
+								</div>
+								<div style="clear:both;"></div>
+							</div>
+						{{/unless}}
+					</div>
+				</div>
+			</div>
+
+			{{#if unitRelationType}}
+				<div class="panel panel-default panel-body" style="text-align:center;">
+					{{username}} is your {{unitRelationType}}
+				</div>
+			{{/if}}
+
+			{{#if under_construction}}
+				<div class="panel panel-default">
+					<div class="panel-body">
+						Level {{levelPlusOne}} village is under construction and will be finished {{timeTilFinishedBuilding}}.
+						<br><br>
+						<div class="progress">
+							<div class="progress-bar" role="progressbar" aria-valuenow="{{villageUpgradeProgress}}" aria-valuemin="0" aria-valuemax="100" style="width: {{villageUpgradeProgress}}%;">
+								<span class="sr-only">{{villageUpgradeProgress}}% Complete</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			{{/if}}
+
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					Village Garrison
+				</div>
+				{{#if no_soldiers}}
+					<div class="panel-body">
+						Empty
+					</div>
+				{{else}}
+					<table class="table table-condensed table-striped">
+						<tbody>
+							{{#each s.army.types}}
+								{{#if hasSoldierType}}
+								<tr>
+									<td>{{capitalize this}}</td>
+									<td style="text-align:right;">{{round numSoldierType}}</td>
+								</tr>
+								{{/if}}
+							{{/each}}
+
+							<tr>
+								<td>Defense Power</td>
+								<td style="text-align:right;">{{round defensePower}}</td>
+							</tr>
+						</tbody>
+					</table>
+				{{/if}}
+			</div>
+
+
+			{{#if is_owner}}
+				<div class="pad_group">
+					{{#unless under_construction}}
+							<button type="button" class="btn btn-sm btn-primary btn-block" id="hireArmyButton">Hire Soldiers</button>
+					{{/unless}}
+
+					<button type="button" class="btn btn-sm btn-primary btn-block" id="send_army_from_village_button" disabled="{{no_soldiers}}">Create Army</button>
+				</div>
+			{{/if}}
+
+			{{#unless under_construction}}
+				 <div class="panel panel-default">
+					<div class="panel-heading">
+						Resource Collection
+					</div>
+					<table class="table table-condensed table-striped">
+						<tbody>
+							{{#each s.resource.types_plus_gold}}
+								{{#if incomeTypeGreaterThanZero}}
+									<tr>
+										<td>{{capitalize this}}</td>
+										<td style="text-align:right;">{{resourcesTypePerInterval this}}</td>
+									</tr>
+								{{/if}}
+							{{/each}}
+							<!-- <tr>
+								<td>Production Bonus</td>
+								<td style="text-align:right;">{{productionBonus}}x</td>
+							</tr> -->
+							<tr>
+								<td>Worth In Gold</td>
+								<td style="text-align:right;">{{round incomeInGold}}</td>
+							</tr>
+							{{#if is_owner}}
+								<tr>
+									<td>Next Update</td>
+									<td style="text-align:right;">{{duration_shortDetailed nextIncomeUpdate}}</td>
+								</tr>
+							{{/if}}
+						</tbody>
+					</table>
+				</div>
+			{{/unless}}
+
+			<div class="panel panel-default panel-body">
+				{{#if is_owner}}
+					{{#if canUpgrade}}
+						<button type="button" class="btn btn-sm btn-primary btn-block" id="upgradeVillageButton">Upgrade Village</button>
+					{{/if}}
+					<button type="button" class="btn btn-sm btn-primary btn-block" id="destroy_village_button">Destroy Village</button>
+				{{else}}
+					<button class="btn btn-primary btn-block" id="createChatButton">Create chatroom</button>
+				{{/if}}
+				{{> infoPanelMarkerButton}}
+			</div>
+
+
+
+			{{#if battleInfoLoaded}}
+				{{#if battle}}
+					<div class="panel panel-default">
+						<div class="panel-heading">
+							Battle
+						</div>
+						<div class="panel-body">
+							{{> battleReport battle}}
+						</div>
+					</div>
+				{{/if}}
+			{{/if}}
+
+		{{else}}
+			<div class="pad_group" style="text-align:center;">
+				<i class="fa fa-refresh fa-spin"></i>
+				&nbsp;
+				Loading
+			</div>
+		{{/if}}
+
+	</div>
+</template>

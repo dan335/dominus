@@ -1,0 +1,29 @@
+<template name="markerGroup">
+
+  <div class="panel panel-default">
+    <div class="markerGroupHeading">
+      <div style="float:left;">
+        {{#if isSelected}}
+          <i class="fa fa-pencil"></i>&nbsp;
+        {{/if}}
+        {{name}}
+      </div>
+      <div style="float:right;">
+        {{#unless isDefault}}
+          <button class="btn btn-xs btn-primary editGroupButton" data-toggle="tooltip" data-placement="top" title="Edit Group"><i class="fa fa-pencil"></i></button>
+          <button class="btn btn-xs btn-primary upGroupButton" data-toggle="tooltip" data-placement="top" title="Move Up"><i class="fa fa-angle-up"></i></button>
+          <button class="btn btn-xs btn-primary downGroupButton" data-toggle="tooltip" data-placement="top" title="Move Down"><i class="fa fa-angle-down"></i></button>
+          <button class="btn btn-xs btn-primary removeGroupButton" data-toggle="tooltip" data-placement="top" title="Remove Group"><i class="fa fa-trash"></i></button>
+        {{/unless}}
+      </div>
+      <div style="clear:both;"></div>
+    </div>
+    <div class="markerGroupBody">
+      <ul class="markerList" data-groupid="{{groupId}}">
+
+      </ul>
+    </div>
+  </div>
+
+  <br>
+</template>

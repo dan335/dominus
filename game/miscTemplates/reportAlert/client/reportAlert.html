@@ -1,0 +1,21 @@
+<template name="reportAlert">
+    {{#if show}}
+        <div id="reportAlertContainer" class="popupPanelContainer">
+
+            <h3>You've Been Reported</h3>
+
+            You are unable to post in chatrooms or forums for {{timeLeft}}.
+
+            <div style="text-align:left;">
+
+                {{#each reports}}
+                    <blockquote>
+                        <p>{{reason}} &nbsp;&nbsp;<span class="light_text">{{date_calendar createdAt}}</span></p>
+                    </blockquote>
+                {{/each}}
+
+            </div>
+
+        </div>
+    {{/if}}
+</template>

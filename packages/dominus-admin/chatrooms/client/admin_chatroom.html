@@ -1,0 +1,14 @@
+<template name="admin_chatroom">
+    {{#each chats}}
+        <div>
+            <span class="light_text" data-userId="{{user_id}}">
+                {{date_calendar created_at}} -
+            </span>
+            <span style="font-weight:bold;">
+                {{username}}:
+            </span>
+            &nbsp;&nbsp;
+            {{text}}
+        </div>
+    {{/each}}
+</template>

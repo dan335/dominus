@@ -1,0 +1,53 @@
+<template name="control_games">
+
+  <button class="btn btn-primary btn-sm" id="addGameButton">Add Game</button>
+  <br><br>
+
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <td>_id</td>
+        <td>name</td>
+        <td>description</td>
+        <td>start date</td>
+        <td>players</td>
+        <td>3x speed</td>
+        <td>10x speed</td>
+        <td>pro</td>
+        <td>king of hill</td>
+        <td>noLargeResources</td>
+        <td>started</td>
+        <td>ended</td>
+        <td></td>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each games}}
+        {{> control_game}}
+      {{/each}}
+    </tbody>
+  </table>
+</template>
+
+
+
+<template name="control_game">
+  <tr>
+    <td>{{_id}}</td>
+    <td>{{name}}</td>
+    <td>{{desc}}</td>
+    <td>{{dateFormat}}</td>
+    <td>{{numPlayers}} / {{maxPlayers}}</td>
+    <td>{{isSpeed}}</td>
+    <td>{{isSuperSpeed}}</td>
+    <td>{{isProOnly}}</td>
+    <td>{{isKingOfHill}}</td>
+    <td>{{isNoLargeResources}}</td>
+    <td>{{hasStarted}}</td>
+    <td>{{hasEnded}}</td>
+    <td>
+      <button class="btn btn-primary btn-sm" id="editGameButton">edit</button>
+      <button class="btn btn-primary btn-sm" id="removeGameButton">remove</button>
+    </td>
+  </tr>
+</template>

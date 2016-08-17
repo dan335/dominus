@@ -1,0 +1,25 @@
+<template name="admin_chatrooms">
+  <table>
+		<tbody>
+			<tr>
+				<td style="vertical-align:top;padding-right:20px;">
+					{{#each chatrooms}}
+						<div>
+							<a href="" class="openRoomButton" data-id="{{_id}}">
+								{{name}}
+							</a>
+							&nbsp; {{numMembers}}
+							{{#if latestChatDate}}
+								&nbsp; {{date_calendar latestChatDate}}
+							{{/if}}
+						</div>
+					{{/each}}
+				</td>
+				<td style="vertical-align:top;">
+					<h4>{{room.name}}</h4>
+					{{> admin_chatroom memberData=room.memberData}}
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</template>

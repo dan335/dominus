@@ -1,0 +1,14 @@
+<template name="ga_inactiveAccountDeleted">
+    {{> ga_titleTemplate title=title iconName='fa-times' date=created_at}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+        <div class="alertBody alertPad">
+
+            {{vars.username}}'s account was deleted.
+
+            <br><br>
+            {{> globalAlertShareLink}}
+        </div>
+        {{/if}}
+    </div>
+</template>

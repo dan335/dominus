@@ -1,0 +1,12 @@
+<template name="noPlayerFound">
+  {{#if show}}
+    <div id="gamePausedContainer" class="popupPanelContainer">
+      {{#if loggingIn}}
+        <div><i class="fa fa-refresh fa-spin"></i>&nbsp; Logging In</div>
+      {{else}}
+        {{> loading}}
+        <!-- <div><a href="/game/{{gameId}}/join" id="noPlayerJoinGameLink">Click here</a> to join this game.</div> -->
+      {{/if}}
+    </div>
+  {{/if}}
+</template>

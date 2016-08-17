@@ -1,0 +1,25 @@
+@import "{dominus-init}/client/variables.import.less";
+
+#calculatorPanel {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: @panel_padding;
+  pointer-events: auto;
+  width: 400px;
+
+  table.calcArmyTable {
+    width:100%;
+
+    td {
+      padding:0 4px 0 4px;
+
+      .armyUnitInput {
+        width:80px;
+      }
+    }
+
+    tr:nth-child(even) {
+      background-color:fadeIn(lighten(@panel_bg, 13%), 10%);
+    }
+  }
+}

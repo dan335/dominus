@@ -1,0 +1,13 @@
+<template name="drawCountries">
+  <g id="svgCountries">
+    {{#each countries}}
+      {{#each paths}}
+        {{#if isFirstPath}}
+          <polygon class="countryMouseCatcher" points="{{pathPoints}}" />
+        {{else}}
+          <polygon class="waterMouseCatcher" points="{{pathPoints}}" />
+        {{/if}}
+      {{/each}}
+    {{/each}}
+  </g>
+</template>

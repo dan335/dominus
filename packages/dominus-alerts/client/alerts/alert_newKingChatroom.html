@@ -1,0 +1,10 @@
+<template name="alert_newKingChatroom">
+    {{> alert_titleTemplate title=title iconName='fa-comments' date=created_at read=read}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+        <div class="alertBody alertPad">
+            A chatroom has been created for you and your vassals.
+        </div>
+        {{/if}}
+    </div>
+</template>

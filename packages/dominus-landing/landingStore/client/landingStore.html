@@ -1,0 +1,28 @@
+<template name="landingStore">
+  {{> topNav}}
+
+  <div class="container-fluid" id="paintingFluid"></div>
+
+  <div class="container-fluid" style="margin-top:-150px;">
+    <div class="container">
+      <div class="row">
+        <div class="col-xs-12">
+
+          <div class="landingTitleAboveContainer">
+            Store
+          </div>
+
+          <div class="landingGameContainer">
+            {{> landingStorePro}}
+            <br>
+            {{> landingStoreShop}}
+            <br>
+            {{> landingStoreDonate}}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{> landingFooter}}
+</template>

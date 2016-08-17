@@ -1,0 +1,26 @@
+<template name="connection_lost_alert">
+    <div id="connectionLostPositioner" class="popupPanelContainer">
+        {{#if show}}
+            <div id="connection_lost_modal">
+                <h3>Lost Connection to Server</h3>
+
+                {{#if isConnecting}}
+                    Reconnecting...
+                {{/if}}
+
+                {{#if isFailed}}
+                    Failed to connect. {{status.reason}}  Try reloading the web page.
+                {{/if}}
+
+                {{#if isWaiting}}
+                    <div>Tried {{status.retryCount}} times to connect.  Trying again in {{retryTime}} seconds.</div>
+                    <div class="light_text">Could be happening because the game was just updated and is restarting.</div>
+                {{/if}}
+
+                {{#if isOffline}}
+                    Offline.  Try reloading the web page andcheck internet connection.
+                {{/if}}
+            </div>
+        {{/if}}
+    </div>
+</template>

@@ -1,0 +1,40 @@
+<template name="rp_split_armies">
+	<div class="rightPanel" id="rp_split_armies">
+		<div class="panel panel-default">
+			<div class="panel-body">
+				<h4>Split Army</h4>
+				<div class="alert alert-danger" style="display: none;" id="split_error"></div>
+				<table class="table table-condensed">
+					<thead>
+						<tr>
+							<td></td>
+							<td>Old Army</td>
+							<td>New Army</td>
+						</tr>
+					</thead>
+					<tbody>
+						{{#each s.army.types}}
+							<tr>
+								<td>{{capitalize this}}</td>
+								<td>{{old_army}}</td>
+								<td>{{num_units}}</td>
+							</tr>
+						{{/each}}
+					</tbody>
+				</table>
+				<br>
+				<div class="form-group">
+					{{#each s.army.types}}
+						<label>{{capitalize this}}</label>
+						<input type="range" data-type="{{this}}" class="split_units_slider" value="0" min="0" step="1" max="1">
+					{{/each}}
+				</div>
+
+				<div class="form-group">
+					<button class="btn btn-primary btn-block" type="button" id="split_confirm_button">Split Army</button>
+					<button class="btn btn-primary btn-block" type="button" id="split_cancel_button">Cancel</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</template>

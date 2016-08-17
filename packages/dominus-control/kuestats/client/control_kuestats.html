@@ -1,0 +1,45 @@
+<template name="control_kuestats">
+
+  <form class="form-inline">
+    <input class="form-control" type="text" placeholder="job name" id="runJobNameInput">
+    <input class="form-control" type="text" id="runJobDataInput" style="width:400px;" value="{}">
+    <button class="btn btn-primary" id="runBullJobButton">Run Job</button>
+  </form>
+  <br><br>
+
+  <form class="form-inline">
+    <input class="form-control" type="text" placeholder="job name" id="clearUniquesInput">
+    <button class="btn btn-primary" id="runClearUniquesButton">Clear Unique IDs for Job</button>
+  </form>
+  <br><br>
+
+  <button class="btn btn-primary" id="startKueButton">Unpause Kue</button>
+  <button class="btn btn-primary" id="stopKueButton">Pause Kue</button>
+  <button class="btn btn-primary" id="resetQueueStatsButton">Reset Stats</button>
+  <br><br>
+
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <td>title</td>
+        <td>times run</td>
+        <td>duration</td>
+        <td>avg duration</td>
+        <td>total duration</td>
+        <td>last date</td>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each kuestats}}
+        <tr>
+          <td>{{type}}</td>
+          <td>{{round timesRun}}</td>
+          <td>{{humanizeDuration lastDuration}}</td>
+          <td>{{humanizeDuration average}}</td>
+          <td>{{humanizeDuration totalDuration}}</td>
+          <td>{{lastRunCalendar lastDate}}</td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</template>

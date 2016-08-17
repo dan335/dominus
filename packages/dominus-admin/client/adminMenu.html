@@ -1,0 +1,16 @@
+<template name="adminMenu">
+	{{#if currentUser.admin}}
+		<div>
+			<ul class="nav nav-pills">
+				<li><a href="/">Game</a></li>
+				<li><a href="/admin">Admin Home</a></li>
+				<li><a href="/admin/gamestats">Game Stats</a></li>
+				<li><a href="/admin/facts">Server Facts</a></li>
+				<li><a href="/admin/commands">Commands</a></li>
+				<li><a href="/admin/chatrooms">Chatrooms</a></li>
+				<li><a href="/admin/settings">Settings</a></li>
+			</ul>
+		</div>
+		<br>
+	{{/if}}
+</template>

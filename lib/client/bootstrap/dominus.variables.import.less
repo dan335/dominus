@@ -1,0 +1,119 @@
+@import "colors.import.less";
+@import "variables.import.less";
+
+.panel-heading {
+   padding: 5px 15px 5px 15px !important;
+   text-align: center;
+   font-size: 120%;
+}
+.panel {
+   margin: 5px 0 0px 0 !important;
+   border:0 !important;
+}
+
+html {
+    -ms-touch-action: manipulation;
+    touch-action: manipulation;
+}
+
+@navbar-default-bg: @bodyBackground;
+@navbar-default-color: hsl(0, 0%, 80%);
+@navbar-default-border: @navbar-default-bg;
+@navbar-default-link-color: hsl(0, 0%, 80%);
+@navbar-default-link-hover-color: lighten(@navbar-default-link-color, 50%);
+@navbar-default-link-active-color: @navbar-default-link-color;
+@navbar-default-link-active-bg: darken(@navbar-default-bg, 50%);
+
+
+blockquote {
+   padding: 0px 18px;
+}
+
+@body-bg: @bodyBackground;
+body {
+   overflow-x:hidden;
+}
+
+p {
+   margin-bottom: 14px;
+}
+
+.light_text {
+   color: @text-color-light
+}
+
+@default_border_radius: 5px;
+
+dd {
+   margin-bottom:15px;
+}
+
+/* login */
+
+.accounts-dialog {
+   width: 250px;
+}
+
+#login-buttons .login-button, .accounts-dialog .login-button {
+   background: @brand-primary;
+   border: 0;
+
+   &:hover {
+      background: lighten(@brand-primary, 10%);
+   }
+   &:active {
+      background: lighten(@brand-primary, 10%);
+   }
+}
+
+.pad_group {
+   padding: 5px 15px 5px 15px;
+}
+
+
+input[type="range"]::-ms-thumb {
+   background-color: #fff;
+}
+
+input[type="range"]::-ms-fill-upper {
+   background-color: #555;
+}
+
+@progress-bg: #444;
+
+
+.navbar-toggle {
+  padding: 6px 8px !important;
+  margin-top: 2px !important;
+
+  // Bars
+  .icon-bar {
+    width: 22px;
+    height: 2px;
+  }
+  .icon-bar + .icon-bar {
+    margin-top: 3px !important;
+  }
+}
+
+@link-color:            saturate(lighten(@brand-primary, 15%), 50%);
+@link-hover-color:      darken(@link-color, 15%);
+@link-hover-decoration: underline;
+
+@table-bg-accent: lighten(@panel-bg, 15%);
+@table-border-color:            rgba(0,0,0,0);
+@table-cell-padding:            8px;
+@table-condensed-cell-padding:  3px 10px;
+
+@panel-default-text:          @text-color;
+@panel-default-border:        rgba(255,255,255,0);
+@panel-default-heading-bg:    @panel-bg;
+@panel-body-padding:          15px;
+@panel-heading-padding:       5px;
+@panel-border-radius:         0px;
+
+@state-danger-bg: hsl(0, 50%, 50%);
+@state-danger-text: hsl(0, 0%, 100%);
+
+@state-success-text:  hsl(0, 0%, 100%);
+@state-success-bg:    hsl(125, 50%, 35%);

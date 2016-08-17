@@ -1,0 +1,18 @@
+<template name="gameLeftMenu">
+  <div id="gameLeftMenu" class="leftPanel">
+    {{#each _sPanels.leftPanels}}
+      {{> gameLeftMenuPanelIcon}}
+    {{/each}}
+
+    <div id="utctime">
+      {{utctime}}
+    </div>
+  </div>
+</template>
+
+
+<template name="gameLeftMenuPanelIcon">
+  <div class="gameLeftMenuPanelIcon {{isOpen}} {{isHighlighted}} {{hasUnreadAlerts}}">
+    <i class="fa {{icon}} fa-2x"></i>
+  </div>
+</template>

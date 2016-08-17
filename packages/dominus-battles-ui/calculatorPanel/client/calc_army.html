@@ -1,0 +1,104 @@
+<template name="calculatorArmy">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      {{#if isRealArmy}}
+        {{player.username}} :
+      {{/if}}
+      {{name}}
+      &nbsp;
+      {{#if isArmy}}
+        <button class="btn btn-primary btn-xs armyUpButton"><i class="fa fa-sort-up"></i></button>
+        <button class="btn btn-primary btn-xs armyDownButton"><i class="fa fa-sort-down"></i></button>
+      {{/if}}
+      <button class="btn btn-primary btn-xs removeArmyButton"><i class="fa fa-close"></i></button>
+    </div>
+    <div class="panel-body">
+
+
+      <div class="form-group">
+        <div class="alert alert-danger calcArmyAlert" style="display:none;"></div>
+
+        <div class="btn-group btn-group-justified" role="group">
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-primary {{isTypeSelected "army"}} unitTypeButton" data-type="army">Army</button>
+          </div>
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-primary {{isTypeSelected "castle"}} unitTypeButton" data-type="castle">Castle</button>
+          </div>
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-primary {{isTypeSelected "village"}} unitTypeButton" data-type="village">Village</button>
+          </div>
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-primary {{isTypeSelected "capital"}} unitTypeButton" data-type="capital">Capital</button>
+          </div>
+        </div>
+      </div>
+
+
+      {{#unless isCapital}}
+        {{#if isOnCapital}}
+          <div class="checkbox">
+            <label>
+              <input type="checkbox" class="onAllyCapitalCheckbox" {{isOnAllyCapitalChecked}}> Is Ruler of Capital
+            </label>
+          </div>
+        {{/if}}
+      {{/unless}}
+
+
+      <table class="calcArmyTable">
+        <thead>
+          <tr>
+            <td></td>
+            <td></td>
+            <td style="text-align:right;">Base Power</td>
+            <td style="text-align:right;">Unit Bonus</td>
+            <td style="text-align:right;">Dead</td>
+          </tr>
+        </thead>
+
+        {{#each _sArmies.types}}
+          <tr>
+
+            <td>
+              {{capitalize this}}
+            </td>
+
+            <td>
+              <input type="number" class="armyUnitInput form-control" data-type="{{this}}" value="{{unitNum}}" min="0" step="1">
+            </td>
+
+            <td style="text-align:right;">
+              {{#if basePower}}
+                {{round basePower}}
+              {{/if}}
+            </td>
+
+            <td style="text-align:right;">
+              {{#if unitBonus}}
+                {{round unitBonus}}
+              {{/if}}
+            </td>
+
+            <td style="text-align:right;">
+              {{#if loses}}
+                {{round loses}}
+              {{/if}}
+            </td>
+
+          </tr>
+        {{/each}}
+
+        <tr>
+          <td>Total</td>
+          <td><input type="number" class="form-control armyUnitInput" value="{{numSoldiers}}" readonly></td>
+          <td style="text-align:right;">{{#if basePower.total}}{{round basePower.total}}{{/if}}</td>
+          <td style="text-align:right;">{{#if unitBonus.total}}{{round unitBonus.total}}{{/if}}</td>
+          <td style="text-align:right;">{{#if soldiersLost}}{{round soldiersLost}}{{/if}}</td>
+        </tr>
+      </table>
+
+      {{> battleReportUnitInfo}}
+    </div>
+  </div>
+</template>

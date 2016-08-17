@@ -1,0 +1,17 @@
+<template name="rp_closeButton">
+    <div id="rp_closeButtonContainer">
+
+        <div style="float:left;">
+            {{> hex_location}}
+            {{> center_on_button x=selected.x y=selected.y selected_type=selected.type selected_id=selected.id}}
+        </div>
+
+        <div style="float:right;">
+            <button class="btn btn-primary btn-xs" id="closeRpButton">
+                <i class="fa fa-close"></i>
+            </button>
+        </div>
+
+        <div style="clear:both;"></div>
+    </div>
+</template>

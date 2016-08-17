@@ -1,0 +1,131 @@
+<template name="rp_info_capital">
+	<div class="rightPanel" id="rp_info_capital">
+		{{> rp_closeButton}}
+
+		{{#if capitalInfoLoaded}}
+
+			<div class="panel panel-default" style="margin-top:0;">
+				{{#if is_owner}}
+
+					<div class="panel-body">
+						<div class="rpNameContainer">
+							<div class="rpNameType">Country</div>
+							<div class="rpName">{{name}}</div>
+							<div class="rpEditName">{{> edit_name_button}}</div>
+							<div style="clear:both;"></div>
+						</div>
+					</div>
+
+				{{else}}
+
+					<div class="panel-body">
+						<div class="rpNameContainer">
+							<div class="rpNameType">Country</div>
+							<div class="rpName">{{name}}</div>
+							<div style="clear:both;"></div>
+						</div>
+					</div>
+
+				{{/if}}
+			</div>
+
+			{{#if player}}
+				<div class="panel panel-default panel-body">
+					<div style="font-size:70%;" class="light_text">Ruled by</div>
+					<div style="float:left;">{{player.username}}</div>
+					<div style="float:right;">
+						{{> center_on_button x=player.x y=player.y selected_type='castle' selected_id=player.castle_id}}
+					</div>
+					<div style="clear:both;"></div>
+				</div>
+			{{else}}
+				<div class="panel panel-default panel-body">
+					<div>No Ruler</div>
+				</div>
+			{{/if}}
+
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					Capital Garrison
+				</div>
+				{{#if no_soldiers}}
+					<div class="panel-body">
+						Empty
+					</div>
+				{{else}}
+					<table class="table table-condensed table-striped">
+						<tbody>
+							{{#each _s.armies.types}}
+								{{#if hasSoldierType}}
+								<tr>
+									<td>{{capitalize this}}</td>
+									<td style="text-align:right;">{{round numSoldierType}}</td>
+								</tr>
+								{{/if}}
+							{{/each}}
+
+							<tr>
+								<td>Defense Power</td>
+								<td style="text-align:right;">{{round defensePower}}</td>
+							</tr>
+						</tbody>
+					</table>
+				{{/if}}
+			</div>
+
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					Country Income
+				</div>
+				<table class="table table-condensed table-striped">
+					<tbody>
+						{{#each _s.market.types}}
+							{{#if income}}
+								<tr>
+									<td>
+										{{capitalize this}}
+									</td>
+									<td style="text-align:right;">
+										{{round income}}
+									</td>
+								</tr>
+							{{/if}}
+						{{/each}}
+						{{#if worth}}
+							<tr>
+								<td>
+									Worth in Gold
+								</td>
+								<td style="text-align:right;">
+									{{round worth}}
+								</td>
+							</tr>
+							{{#if is_owner}}
+								<tr>
+									<td>Next Update</td>
+									<td style="text-align:right;">{{duration_shortDetailed nextIncomeUpdate}}</td>
+								</tr>
+							{{/if}}
+						{{/if}}
+					</tbody>
+				</table>
+			</div>
+
+			<div class="panel panel-default panel-body">
+				{{> infoPanelMarkerButton}}
+			</div>
+
+		{{else}}
+			<div class="pad_group" style="text-align:center;">
+				<i class="fa fa-refresh fa-spin"></i>
+				&nbsp;
+				Loading
+			</div>
+		{{/if}}
+
+		<div class="pad_group">
+			Capitals give their ruler {{sIncome.grain}} of each resource plus {{floatToPercentage _s.capitals.villagePercentageIncome}}% of each village's income in the country.
+		</div>
+
+  </div>
+</template>

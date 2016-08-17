@@ -1,0 +1,76 @@
+<template name="left_panel">
+	<div id="summary_panel" class="leftPanel">
+		<div class="panel_title">
+			<i class="fa fa-list-alt fa-lg"></i> &nbsp;Summary
+		</div>
+
+		<div class="panel panel-default">
+			<table class="table table-condensed table-striped">
+				<tbody>
+					{{#each sMarket.types_plus_gold}}
+						<tr>
+							<td>{{capitalize this}}</td>
+							<td style="text-align: right;padding-left: 2px;">
+								<span data-toggle="tooltip" data-placement="top" title="{{resources}} {{this}}">
+									{{round resources}}
+								</span>
+							</td>
+						</tr>
+					{{/each}}
+				</tbody>
+			</table>
+		</div>
+
+		{{> edSquare}}
+
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				Castle
+			</div>
+			{{> lp_castle}}
+		</div>
+
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				Villages &nbsp; <span class="light_text">{{num_villages}}/{{maxVillages}}</span>
+			</div>
+			{{> lp_villages}}
+		</div>
+
+
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<a href="" id="armies_group_link">Armies</a>
+			</div>
+			{{#if show_armies_group}}
+				{{> lp_armies}}
+			{{/if}}
+		</div>
+
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<a href="" id="lords_group_link">Lords</a>
+			</div>
+			{{#if show_lords_group}}
+				{{> lp_lords}}
+			{{/if}}
+		</div>
+
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<a href="" id="allies_group_link">Vassals</a> &nbsp; <span class="light_text">{{num_vassals}}</span>
+			</div>
+			{{#if show_allies_group}}
+				{{> lp_allies}}
+			{{/if}}
+		</div>
+
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				Countries
+			</div>
+			{{> lp_countries}}
+		</div>
+
+	</div>
+</template>

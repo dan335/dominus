@@ -1,0 +1,57 @@
+<template name="topNav">
+  <nav class="navbar navbar-default navbar-fixed-top">
+    <div class="container-fluid">
+      <!-- Brand and toggle get grouped for better mobile display -->
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand topNavButton" href="/">Dominus</a>
+      </div>
+
+      <!-- Collect the nav links, forms, and other content for toggling -->
+      <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+        <ul class="nav navbar-nav">
+          <li {{active '/games'}}><a href="/games" class="topNavButton">Game List</a></li>
+          <li {{active '/forum'}}><a href="/forum" class="topNavButton">Forum</a></li>
+          <li {{active '/results'}}><a href="/results" class="topNavButton">Results</a></li>
+          <li {{active '/rankings'}}><a href="/rankings" class="topNavButton">Rankings</a></li>
+        </ul>
+        {{#if currentUser}}
+          <ul class="nav navbar-nav navbar-right">
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                {{currentGameString}}
+                <span class="caret"></span>
+              </a>
+              <ul class="dropdown-menu">
+                {{#each myGames}}
+                  <li><a href="/game/{{gameId}}" class="gameListLink">{{gameName}}</a></li>
+                {{else}}
+                  <li><a href="/" id="noGamesLink">Join a Game</a></li>
+                {{/each}}
+              </ul>
+            </li>
+            <li {{active '/store'}}><a href="/store" class="topNavButton">Store</a></li>
+            <li {{active '/settings'}}><a href="/settings" class="topNavButton">Settings</a></li>
+            <li><a href="" id="topNavSignoutButton">Sign Out</a></li>
+          </ul>
+        {{else}}
+          <ul class="nav navbar-nav navbar-right">
+            {{#if loggingIn}}
+              <p class="nav navbar-text"><i class="fa fa-refresh fa-spin"></i>&nbsp; Logging In</p>
+            {{else}}
+              <li {{active '/signin'}}><a href="/signin" class="topNavButton">Sign In</a></li>
+              <li {{active '/createaccount'}}><a href="/createaccount" class="topNavButton">Create Account</a></li>
+            {{/if}}
+          </ul>
+        {{/if}}
+      </div><!-- /.navbar-collapse -->
+    </div><!-- /.container-fluid -->
+  </nav>
+
+  <div class="container-fluid" id="navSpacerFluid"></div>
+</template>

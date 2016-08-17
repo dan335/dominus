@@ -1,0 +1,10 @@
+<template name="alert_noLongerDominusNewUser">
+    {{> alert_titleTemplate title=title iconName='fa-trophy' date=created_at read=read}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+        <div class="alertBody alertPad">
+            You are no longer the Dominus.  A new user has joined the game.
+        </div>
+        {{/if}}
+    </div>
+</template>

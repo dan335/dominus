@@ -1,0 +1,10 @@
+<template name="control">
+  <div id="control_container">
+    {{#if currentUser.admin}}
+  		{{> controlMenu}}
+  		{{> Template.dynamic template=route}}
+    {{else}}
+      {{> control_login}}
+  	{{/if}}
+  </div>
+</template>

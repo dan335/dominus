@@ -1,0 +1,46 @@
+<template name="calculatorPanel">
+  <div id="calculatorPanel" class="leftPanel">
+    <div class="panel_title"><i class="fa fa-calculator fa-lg"></i> &nbsp;Battle Calculator</div>
+
+    <div class="pad_group">
+      <div class="alert alert-danger" id="calcBattleAlert" style="display:none;"></div>
+
+      <div class="btn-group btn-group-justified" role="group">
+        <div class="btn-group" role="group">
+          <button class="btn btn-primary" id="addButton">Add</button>
+        </div>
+        <div class="btn-group" role="group">
+          <button class="btn btn-primary" id="addSelectedButton">Add Selected</button>
+        </div>
+      </div>
+    </div>
+
+    {{#if showOnCapitalCheckbox}}
+      <div class="checkbox pad_group">
+        <label>
+          <input type="checkbox" class="onCapitalCheckbox" {{isOnCapitalChecked}}> Battle is at a Capital Building
+        </label>
+      </div>
+    {{/if}}
+
+    {{#each armies}}
+      {{> calculatorArmy}}
+    {{/each}}
+
+    <br>
+    <div class="pad_group">
+      Want to see who would win in a fight?  Select an army on the map the click add selected.  Do this again for another army.  The battle calculator will tell you who would win.
+      <br><br>
+      Armies are listed in order of arrival.  Use up/down buttons to change order.  The first army at the hex is the defender.
+      <br>
+      <br>
+    </div>
+
+    {{#if calcBattle.battleHasRun}}
+      <div class="pad_group">
+        <div class="light_text">Battle fought in {{round calcBattle.msBattleTook}}ms.</div>
+      </div>
+    {{/if}}
+
+  </div>
+</template>

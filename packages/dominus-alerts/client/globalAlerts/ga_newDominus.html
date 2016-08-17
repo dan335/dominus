@@ -1,0 +1,21 @@
+<template name="ga_newDominus">
+    {{> ga_titleTemplate title=title iconName='fa-trophy' date=created_at}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+        <div class="alertBody alertPad">
+            <a href="" data-x="{{user.x}}" data-y="{{user.y}}" data-castle_id="{{user.castle_id}}" class="userLink">{{user.username}}</a>
+
+            is now the Dominus.
+
+            {{#if previousDominus}}
+            <a href="" data-x="{{previousDominus.x}}" data-y="{{previousDominus.y}}" data-castle_id="{{previousDominus.castle_id}}" class="userLink">{{previousDominus.username}}</a>
+
+                is no longer the Dominus.
+            {{/if}}
+
+            <br><br>
+            {{> globalAlertShareLink}}
+        </div>
+        {{/if}}
+    </div>
+</template>

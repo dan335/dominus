@@ -1,0 +1,41 @@
+<template name="landingSignin">
+  {{> topNav}}
+
+  <div class="container-fluid" id="paintingFluid"></div>
+
+  <div class="container-fluid" id="accountFluid">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-3 col-sm-1"></div>
+        <div class="col-xs-12 col-sm-10 col-md-6" id="accountContainer">
+          {{#if currentUser}}
+            <button class="btn btn-primary" id="signOutButton">Sign Out</button>
+          {{else}}
+            <div class="landingTitle">
+              Sign In
+            </div>
+            <br>
+            {{> aSocialError}}
+            {{> aGoogleButton}}
+            {{> aFacebookButton}}
+            <br>
+            <div class="divider">
+              <hr class="left">or<hr class="right"><div class="after"></div>
+            </div>
+            <br>
+            {{> aSignin}}
+            <br>
+            <a href="/createaccount" id="createaccountLink">Create Account</a>
+            <br>
+            <a href="/forgotpassword" id="forgotPassLink">Forgot Password</a>
+            <br>
+            <br>
+          {{/if}}
+        </div>
+        <div class="col-md-3 col-sm-1"></div>
+      </div>
+    </div>
+  </div>
+
+  {{> landingFooter}}
+</template>

@@ -1,0 +1,70 @@
+@import "{dominus-init}/client/colors.import.less";
+
+#hexmapContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+#leftPanels {
+  position: absolute;
+  pointer-events: none;
+  overflow: hidden;
+  height: 100%;
+}
+
+#rightPanels {
+  position: absolute;
+  right: 0px;
+  top: 30px;
+  text-align: right;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.leftPanel {
+  //pointer-events: none;
+  max-width: 400px;
+  overflow-y: auto;
+	overflow-x: hidden;
+  height: 100%;
+  display: inline-block;
+  background-color: @panelBackground;
+  vertical-align: top;
+
+  button {
+    pointer-events: auto;
+  }
+
+  .panel {
+    pointer-events: auto;
+  }
+
+  table {
+    pointer-events: auto;
+  }
+
+  input {
+    pointer-events: auto;
+  }
+
+  a {
+    pointer-events: auto;
+  }
+}
+
+.rightPanel {
+  background-color: @panelBackground;
+  //pointer-events: none;
+	min-width: 160px;
+	max-width: 450px;
+  padding-top: 5px;
+  text-align:left;
+  float:right;
+  overflow-y: auto;
+	overflow-x: hidden;
+  height: 100%;
+  margin-left:5px;
+  pointer-events: auto;
+  vertical-align: top;
+}

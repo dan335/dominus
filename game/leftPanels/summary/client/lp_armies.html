@@ -1,0 +1,29 @@
+<template name="lp_armies">
+	<table class="table table-condensed table-striped">
+		<tbody>
+			{{#each armies}}
+				{{> lp_army}}
+			{{/each}}
+		</tbody>
+	</table>
+</template>
+
+
+<template name="lp_army">
+	<tr>
+		<td>
+			{{#if onAllyBuilding}}
+				<i class="fa fa-shield" title="Army is at ally building."></i>&nbsp;
+			{{/if}}
+			{{name}}
+			<br>
+			<small class="light_text">{{unit_count}}  Soldiers</small>
+			{{#if time_to_destination}}
+				<br><small class="light_text">Arrive in {{duration_shortDetailed time_to_destination}}</small>
+			{{/if}}
+		</td>
+		<td style="text-align:right;">
+			{{> center_on_button x=x y=y selected_type='army' selected_id=_id}}
+		</td>
+	</tr>
+</template>

@@ -1,0 +1,23 @@
+<template name="lp_countries">
+	<table class="table table-condensed table-striped">
+		<tbody>
+			{{#each countries}}
+				{{> lp_country}}
+			{{/each}}
+		</tbody>
+	</table>
+</template>
+
+
+<template name="lp_country">
+	<tr>
+		<td c>
+			{{name}}
+      <br>
+			<small class="light_text">Income {{round income.worth}}</small>
+		</td>
+		<td style="text-align:right;">
+			{{> center_on_button x=x y=y selected_type='army' selected_id=_id}}
+		</td>
+	</tr>
+</template>

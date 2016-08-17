@@ -1,0 +1,94 @@
+<template name="forumList">
+
+  <div class="container-fluid" id="forumListMenu">
+    <div class="row">
+      <div class="col-xs-12 col-sm-5">
+
+        <div class="btn-group btn-group-justified" role="group">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-primary {{isNewPostsSelected}}" data-toggle="tooltip" data-placement="bottom" title="Sorted by latest post." id="forumLatestButton">Newest Posts</button>
+            </div>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-primary {{isNewTopicsSelected}}" data-toggle="tooltip" data-placement="bottom" title="Sorted by newest topic." id="forumNewButton">Newest Topics</button>
+            </div>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-primary {{isMostPostsSelected}}" data-toggle="tooltip" data-placement="bottom" title="The most active topics in the past month." id="forumTopButton">Most Posts</button>
+            </div>
+        </div>
+
+      </div>
+      <div class="col-xs-12 col-sm-3">
+
+        <select class="form-control" id="forumCategorySelect">
+            <option value="all" {{isAllSelectedCategory}}>All Dominus Forums</option>
+            <option disabled></option>
+            {{#each forumSettings.categories}}
+                <option value="{{id}}" {{isSelectedCategory}}>{{name}}</option>
+            {{/each}}
+        </select>
+
+      </div>
+      <div class="col-xs-12 col-sm-4" style="text-align:right;">
+
+        {{#if currentUser}}
+          <button id="newTopicButton" class="btn btn-primary">
+            <i class="fa fa-plus-circle fa-lg"></i>
+            &nbsp;
+            New Topic
+          </button>
+          <button id="markAllReadButton" class="btn btn-primary">
+            <i class="fa fa-check-square-o fa-lg"></i>&nbsp;
+            Mark All Read
+          </button>
+        {{/if}}
+
+      </div>
+    </div>
+  </div>
+
+
+  <div>
+      <table class="table" id="forumTopicTable">
+          <thead>
+              <tr>
+                  <td>Topic</td>
+                  <td>Category</td>
+                  <td style="text-align:center;">Posts</td>
+                  <td style="text-align:center;">Views</td>
+                  <td>Last Post By</td>
+              </tr>
+          </thead>
+          <tbody>
+            {{#each topics}}
+              {{> forumListTopic}}
+            {{/each}}
+          </tbody>
+      </table>
+  </div>
+
+  <div class="pad_group" id="forumListBottom">
+      <button type="button" class="btn btn-primary btn-block" id="showMoreButton">
+        <i class="fa fa-toggle-down fa-lg"></i>&nbsp;
+        Show More
+      </button>
+  </div>
+
+</template>
+
+
+<template name="forumListTopic">
+  <tr>
+    <td class="forumTopicListTitle">
+      {{#if isUnread}}
+        <i class="fa fa-exclamation-circle"></i>&nbsp;
+      {{/if}}
+      <a href="/forum/topic/{{_id}}" class="forumTopicLink">{{title}}</a>
+    </td>
+    <td>{{topic.name}}</td>
+    <td style="text-align:center;">{{numPosts}}</td>
+    <td style="text-align:center;">{{numViews}}</td>
+    <td>
+      {{lastPostUsername}} {{date_from_now lastPostDate}}
+    </td>
+  </tr>
+</template>

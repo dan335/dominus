@@ -1,0 +1,8 @@
+<template name="mapCanvas">
+  {{#unless Template.subscriptionsReady}}
+    <div id="mapLoadingAlert">
+      <i class="fa fa-refresh fa-spin"></i>
+    </div>
+  {{/unless}}
+  <canvas id="mapCanvas"></canvas>
+</template>

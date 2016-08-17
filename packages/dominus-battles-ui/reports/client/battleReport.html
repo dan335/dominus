@@ -1,0 +1,52 @@
+<template name="battleReport">
+  <div class="battleReportHeader battleReportPad">
+    Battle at <a href="/game/{{gameId}}/hex/{{x}}/{{y}}" class="battleReportGotoHex">hex {{x}}, {{y}}</a>.<br>
+    Battle started {{date_calendar createdAt}}.<br>
+    Fought {{roundNumber}} rounds.<br>
+    {{#if next_fight_in}}Next fight {{next_fight_in}}.<br>{{/if}}
+    <a href="/game/{{gameId}}/battle/{{_id}}" class="shareButton">link for sharing</a><br>
+  </div>
+
+  {{#if loses}}
+    <div class="panel panel-default">
+      <div class="panel-heading" style="text-align:left;">
+        <a data-toggle="collapse" class="losesOpenButton" href="#losses{{_id}}">
+          Losses From All Rounds
+        </a>
+      </div>
+      {{#if losesOpen}}
+        <div>
+          {{#each loses}}
+            <div class="battleReportHeader battleReportPad">
+              {{#if username}}{{username}}'s {{/if}}{{unitType}} {{name}}
+              <ul>
+                {{#each s.army.types}}
+                  {{#if greater_than_zero numLost}}
+                    <li>
+                      {{capitalize this}}: {{numLost}}
+                    </li>
+                  {{/if}}
+                {{/each}}
+
+                <li>
+                  {{total}} soldiers worth {{round power}} power.
+                </li>
+              </ul>
+            </div>
+          {{/each}}
+        </div>
+      {{/if}}
+    </div>
+  {{/if}}
+
+
+  {{#if Template.subscriptionsReady}}
+    {{#if roundTitles}}
+      {{#each roundTitles}}
+        {{> roundTitle}}
+      {{/each}}
+    {{/if}}
+  {{else}}
+    {{> loading}}
+  {{/if}}
+</template>

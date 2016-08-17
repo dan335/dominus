@@ -1,0 +1,53 @@
+<template name="rp_createArmy">
+  <div class="rightPanel" id="rp_createArmy">
+
+    <div class="panel panel-default" style="margin-top:0;">
+      <div class="panel-body">
+        <div class="rpNameContainer">
+          <div class="rpName">Create Army</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel panel-default">
+      <div class="panel-body">
+        <div class="alert alert-danger" id="createArmyAlert" style="display:none;"></div>
+      </div>
+
+      <table class="table table-condensed">
+        <tbody>
+          {{#each _sArmies.types}}
+            <tr>
+
+              <td>{{capitalize this}}</td>
+              <td>
+                <input type="number" class="form-control input-sm setNumSoldierInput" style="padding:1px 8px;height:22px;width:80px;display:inline;" value={{selectedArmy}} />
+              </td>
+              <td style="text-align:right;">
+                selected: {{selectedArmy}}
+              </td>
+              <td style="text-align:right;">
+                max: {{maxArmy}}
+              </td>
+
+            </tr>
+            <tr>
+
+              <td></td>
+              <td colspan="3">
+                <input type="range" data-type="{{this}}" class="setNumSoldierSlider" value="0" min="0" step="1" max="1">
+              </td>
+
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel panel-default panel-body">
+      <button type="button" class="btn btn-primary btn-block" id="createArmyButton">Create Army</button>
+      <button type="button" class="btn btn-primary btn-block" id="createArmyCancelButton">Cancel</button>
+    </div>
+
+  </div>
+</template>

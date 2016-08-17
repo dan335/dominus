@@ -1,0 +1,41 @@
+<template name="control_gamesAdd">
+
+  <button class="btn btn-primary btn-sm" id="backToGamesButton">Back to Games</button>
+  <br><br>
+
+  <div class="form-group">
+    <label>Game Name</label>
+    <input class="form-control" type="text" id="nameInput">
+  </div>
+
+  <div class="form-group">
+    <label>Game Description</label>
+    <input class="form-control" type="text" id="descInput">
+  </div>
+
+  <div class="form-group">
+    <label>Start Date - UTC timezone - {{utctime}}</label>
+    <input type="date" class="form-control" id="gameStartDateInput" value="" style="width:200px;">
+    <input type="time" class="form-control" id="gameStartTimeInput" value="" style="width:200px;">
+  </div>
+
+  <div class="form-group">
+    <label>Max Players</label>
+    <input class="form-control" type="number" style="width:200px;" id="maxPlayers">
+  </div>
+
+  <div class="checkbox">
+    <label>
+      <input type="checkbox" id="isSpeedCheckbox"> Speed Game - 3x faster<br>
+      <input type="checkbox" id="isSuperSpeedCheckbox"> Speed Game - 10x faster<br>
+      <input type="checkbox" id="isProOnlyCheckbox"> Pro Only<br>
+      <input type="checkbox" id="isKingOfHillCheckbox"> King of the Hill<br>
+      <input type="checkbox" id="isNoLargeResourcesCheckbox"> No Large Resources
+    </label>
+  </div>
+
+
+  <button class="btn btn-primary btn-sm" id="addGameButton">Add Game</button>
+
+
+</template>

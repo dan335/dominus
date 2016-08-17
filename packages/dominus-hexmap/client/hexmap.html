@@ -1,0 +1,94 @@
+<template name="hexmap">
+	{{> mapCanvas}}
+
+	<div id="mapEvents">
+		{{> hover_box}}
+
+		<svg id="svg_container" >
+
+			<defs>
+
+				<linearGradient xml:id="teamGradient" gradientTransform="rotate(45)">
+					<stop offset="75%" stop-color="#fa4e4b" stop-opacity="1"/>
+					<stop offset="76%" stop-color="#ffa7a6" stop-opacity="1"/>
+				</linearGradient>
+
+				<linearGradient xml:id="teamCastleGradient">
+					<stop offset="20%" stop-color="#ffa7a6" stop-opacity="1"/>
+					<stop offset="25%" stop-color="#fa4e4b" stop-opacity="1"/>
+				</linearGradient>
+			</defs>
+
+
+			<g id="hexes">
+
+				<g id="hex_container"></g>
+
+				{{> drawCountries}}
+
+				<g id="castles">
+					{{#each castles}}
+						{{> castleMapObject}}
+					{{/each}}
+				</g>
+
+				<g id="villages">
+					{{#each villages}}
+						{{> villageMapObject}}
+					{{/each}}
+				</g>
+
+				<g id="capitals">
+					{{#each capitals}}
+						{{> capitalMapObject}}
+					{{/each}}
+				</g>
+
+				{{> drawMarkersOnMap}}
+
+				<g id="hex_highlights"></g>
+				<g id="castle_highlights"></g>
+				<g id="village_highlights"></g>
+				<g id="capital_highlights"></g>
+
+				<g id="armyPastMoves">
+					{{#each armies}}
+						{{> armyPastMoves}}
+					{{/each}}
+				</g>
+
+				<g id="svgAmyPaths"></g>
+
+				{{> armyPathHighlights}}
+
+				<g id="armyHighlights-selected"></g>
+
+				<g id="armies">
+					{{#each armies}}
+						{{> armyMapObject}}
+					{{/each}}
+				</g>
+
+				<g id="armyFlags">
+					{{#each armies}}
+						{{> armyFlagMapObject}}
+					{{/each}}
+				</g>
+
+				<g id="building_flags">
+					{{#each castles}}
+						{{> castleFlagMapObject}}
+					{{/each}}
+					{{#each villages}}
+						{{> villageFlagMapObject}}
+					{{/each}}
+					{{#each capitals}}
+						{{> capitalFlagMapObject}}
+					{{/each}}
+				</g>
+
+
+			</g>
+		</svg>
+	</div>
+</template>

@@ -1,0 +1,34 @@
+<template name="alert_gainedVassal">
+    {{> alert_titleTemplate title=title iconName='fa-sign-in' date=created_at read=read}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+        <div class="alertBody alertPad">
+
+            {{#if vassalsLord}}
+
+                Your vassal
+
+                <a href="" data-x="{{vassalsLord.x}}" data-y="{{vassalsLord.y}}" data-castle_id="{{vassalsLord.castle_id}}" class="userLink">{{vassalsLord.username}}</a>
+
+                 gained
+
+                 <a href="" data-x="{{vassal.x}}" data-y="{{vassal.y}}" data-castle_id="{{vassal.castle_id}}" class="userLink">{{vassal.username}}</a>
+
+                 as a vassal.
+
+            {{else}}
+
+                <a href="" data-x="{{vassal.x}}" data-y="{{vassal.y}}" data-castle_id="{{vassal.castle_id}}" class="userLink">{{vassal.username}}</a>
+
+                is now your vassal.
+
+            {{/if}}
+
+            <br><br>
+
+            <div class="light_text">Vassals pay about {{lordTax}}% of their income to each of their lords.</div>
+
+        </div>
+        {{/if}}
+    </div>
+</template>

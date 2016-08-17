@@ -1,0 +1,17 @@
+<template name="alert_lostVassal">
+    {{> alert_titleTemplate title=title iconName='fa-sign-out' date=created_at read=read}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+            <div class="alertBody alertPad">
+
+                <a href="" data-x="{{vassal.x}}" data-y="{{vassal.y}}" data-castle_id="{{vassal.castle_id}}" class="userLink">{{vassal.username}}</a>
+
+                is no longer your vassal.  They are now a vassal of
+
+                <a href="" data-x="{{vassalsLord.x}}" data-y="{{vassalsLord.y}}" data-castle_id="{{vassalsLord.castle_id}}" class="userLink">{{vassalsLord.username}}</a>.
+
+
+            </div>
+        {{/if}}
+    </div>
+</template>

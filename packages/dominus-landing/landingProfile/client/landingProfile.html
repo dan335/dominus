@@ -1,0 +1,123 @@
+<template name="landingProfile">
+  {{> topNav}}
+
+  <div class="container-fluid" id="paintingFluid"></div>
+
+  <div class="container-fluid" style="margin-top: -150px;" id="landingProfile">
+    <div class="container">
+      <div class="row">
+        <div class="col-xs-12">
+
+          <div class="landingTitleAboveContainer" id="profileUserName">
+            {{user.username}}
+          </div>
+
+          <div class="landingGameContainer">
+            <div class="gameBoxTitle">
+            </div>
+            <div class="gameBoxBody">
+
+              <img src="{{imageUrl}}" id="profileUserImage">
+
+              Games Played: {{numGamesPlayed}}<br>
+              Games Won: {{numGamesWon}}
+
+              <div style="clear:both;"></div>
+
+              <h3>Ranking in Pro Games</h3>
+              <table class="table table-striped table-condensed">
+                <thead>
+                  <tr>
+                    <td style="text-align:center;">Games</td>
+                    <td style="text-align:center;">Wins</td>
+                    <td style="text-align:center;">Rank Overall</td>
+                    <td style="text-align:center;">Rank by Vassals</td>
+                    <td style="text-align:center;">Rank by Income</td>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{#with user.rankingPro}}
+                    <tr>
+                      <td style="text-align:center;">{{numGames}}</td>
+                      <td style="text-align:center;">{{wins}}</td>
+                      <td style="text-align:center;">{{overallRank}}</td>
+                      <td style="text-align:center;">{{numVassalsRank}}</td>
+                      <td style="text-align:center;">{{incomeRank}}</td>
+                    </tr>
+                  {{/with}}
+                </tbody>
+              </table>
+              <br><br>
+
+              <h3>Ranking in Regular Games</h3>
+              <table class="table table-striped table-condensed">
+                <thead>
+                  <tr>
+                    <td style="text-align:center;">Games</td>
+                    <td style="text-align:center;">Wins</td>
+                    <td style="text-align:center;">Rank Overall</td>
+                    <td style="text-align:center;">Rank by Vassals</td>
+                    <td style="text-align:center;">Rank by Income</td>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{#with user.rankingRegular}}
+                    <tr>
+                      <td style="text-align:center;">{{numGames}}</td>
+                      <td style="text-align:center;">{{wins}}</td>
+                      <td style="text-align:center;">{{overallRank}}</td>
+                      <td style="text-align:center;">{{numVassalsRank}}</td>
+                      <td style="text-align:center;">{{incomeRank}}</td>
+                    </tr>
+                  {{/with}}
+                </tbody>
+              </table>
+              <br><br>
+
+              <h3>Completed Games</h3>
+              <table class="table table-striped table-condensed">
+                <thead>
+                  <tr>
+                    <td>Name</td>
+                    <td style="text-align:center;">Rank by Income</td>
+                    <td style="text-align:center;">Rank by Vassals</td>
+                    <td style="text-align:center;">Players</td>
+                    <td style="text-align:center;">Ended</td>
+                    <td style="text-align:center;">Winner</td>
+                  </tr>
+                </thead>
+                <tbody>
+
+                  {{#each games}}
+                    {{> landingProfileGame}}
+                  {{else}}
+                    <tr><td>No games.</td></tr>
+                  {{/each}}
+
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{> landingFooter}}
+</template>
+
+
+
+<template name="landingProfileGame">
+  <tr>
+    <td>
+      <a href="/result/{{_id}}" class="link">{{name}}</a>
+    </td>
+    <td style="text-align:center;">{{player.rankByIncome}}</td>
+    <td style="text-align:center;">{{player.rankByVassals}}</td>
+    <td style="text-align:center;">{{numPlayers}} / {{maxPlayers}}</td>
+    <td style="text-align:center;">{{date_calendar endDate}}</td>
+    <td style="text-align:center;">{{winningPlayer.username}}</td>
+  </tr>
+</template>

@@ -1,0 +1,186 @@
+<template name="landingResults">
+  {{> topNav}}
+
+  <div class="container-fluid" id="paintingFluid"></div>
+
+  <div class="container-fluid" style="margin-top: -150px;">
+    <div class="container">
+      <div class="row">
+        <div class="col-xs-12">
+
+          <div class="landingTitleAboveContainer">
+            Results from Past Games
+          </div>
+
+          {{#if Template.subscriptionsReady}}
+            {{#each games}}
+              {{> landingResult}}
+            {{else}}
+              No games yet.
+            {{/each}}
+          {{else}}
+            {{> loading}}
+          {{/if}}
+
+          <div class="landingGameContainer">
+            <div class="gameBoxTitle">
+              Archived Game Results
+            </div>
+            <div class="gameBoxBody">
+              <a href="/oldresults" id="oldGameLink">Results from Old Games</a><br>
+              <a href="https://github.com/dan335/dominus/wiki">Results from Games 1 - 12</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{> landingFooter}}
+</template>
+
+
+<template name="landingResult">
+  <div class="gameResultContainer {{isOpen}}" id="{{_id}}">
+    <table style="width:100%;">
+      <tr>
+        <td style="vertical-align:top;">
+
+        </td>
+        <td style="vertical-align:top;">
+
+          <div style="float:left;">
+
+            {{#if isSpeed}}
+              <span class="fa-stack fa-2x" data-toggle="tooltip" data-placement="top" title="Speed Game">
+                <i class="fa fa-square fa-stack-2x "></i>
+                <i class="fa fa-forward fa-stack-1x fa-inverse"></i>
+              </span>
+            {{/if}}
+            {{#if isSuperSpeed}}
+              <span class="fa-stack fa-2x" data-toggle="tooltip" data-placement="top" title="Crazy Fast Game">
+                <i class="fa fa-square fa-stack-2x "></i>
+                <i class="fa fa-flash fa-stack-1x fa-inverse"></i>
+              </span>
+            {{/if}}
+            {{#if isProOnly}}
+              <span class="fa-stack fa-2x" data-toggle="tooltip" data-placement="top" title="Pro Only Game">
+                <i class="fa fa-square fa-stack-2x"></i>
+                <i class="fa fa-trophy fa-stack-1x fa-inverse"></i>
+              </span>
+            {{/if}}
+            {{#if isKingOfHill}}
+              <span class="fa-stack fa-2x" data-toggle="tooltip" data-placement="top" title="King of the Hill Game">
+                <i class="fa fa-square fa-stack-2x"></i>
+                <i class="fa fa-fort-awesome fa-stack-1x fa-inverse"></i>
+              </span>
+            {{/if}}
+          </div>
+
+
+
+          <div class="gameResultName">
+            <a href="" class="toggleDetailsButton">{{name}}</a>
+          </div>
+
+          Ran for {{gameDuration}} from {{date_calendar startedAt}} to {{date_calendar endDate}}.
+        </td>
+        <td style="text-align:right;vertical-align:bottom;font-size:120%;">
+          Winner: <a href="/profile/{{winningPlayer.userId}}" class="link">{{winningPlayer.username}}</a>
+          <br>
+          {{numPlayers}} / {{maxPlayers}}
+          &nbsp;<i class="fa fa-users"></i>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  {{#if showDetails}}
+    {{> landingResultDetails}}
+  {{/if}}
+</template>
+
+
+
+
+<template name="landingResultDetails">
+  <div class="gameResultDetailsContainer">
+    {{#if hasDescription}}
+      <div>
+        {{details.desc}}
+      </div>
+    {{/if}}
+
+    <h3>Player Ranking</h3>
+
+    <div class="row">
+      <div class="col-xs-12 col-sm-3">
+        <h4>By Vassals</h4>
+        <table class="table table-striped table-condensed">
+          <thead>
+            <td></td><td style="text-align:center;">Vassals</td>
+          </thead>
+          <tbody>
+            {{#each details.results.numVassals}}
+              <tr>
+                <td>
+                  {{rank}} <a href="/profile/{{userId}}" class="link">{{username}}</a>
+                </td>
+                <td style="text-align:center;">
+                  {{round numVassals}}
+                </td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="col-xs-12 col-sm-3">
+        <h4>By Income</h4>
+        <table class="table table-striped table-condensed">
+          <thead>
+            <td></td><td style="text-align:center;">Income</td>
+          </thead>
+          <tbody>
+            {{#each details.results.income}}
+              <tr>
+                <td>
+                  {{rank}} <a href="/profile/{{userId}}" class="link">{{username}}</a>
+                </td>
+                <td style="text-align:center;">
+                  {{round income}}
+                </td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="col-xs-12 col-sm-3">
+        <h4>By Lost Soldiers</h4>
+        <table class="table table-striped table-condensed">
+          <thead>
+            <td></td><td style="text-align:center;">Num</td><td style="text-align:center;">Worth</td>
+          </thead>
+          <tbody>
+            {{#each details.results.lostSoldiers}}
+              <tr>
+                <td>
+                  {{rank}} <a href="/profile/{{userId}}" class="link">{{username}}</a>
+                </td>
+                <td style="text-align:center;">
+                  {{round lostSoldiersNum}}
+                </td>
+                <td style="text-align:center;">
+                  {{round lostSoldiersWorth}}
+                </td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</template>

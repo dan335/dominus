@@ -1,0 +1,42 @@
+<template name="rp_moveArmy">
+  <div class="rightPanel" id="rp_moveArmy">
+
+    <div class="panel panel-default" style="margin-top:0;">
+      <div class="panel-body">
+        <div class="rpNameContainer">
+          <div class="rpNameType">Army</div>
+          <div class="rpName">{{name}}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel panel-default panel-body">
+      <h3>Move Army</h3>
+      <div class="light_text">
+        Click on a hex or type the coordinates in the boxes.
+      </div>
+      <br>
+      <div class="alert alert-danger moveArmyAlert" style="display:none;"></div>
+      <table style="width:100%;">
+        <tr>
+          <td>
+            <input class="form-control" type="number" placeholder="x" style="width:100%;" id="xCoordInput">
+          </td>
+          <td style="padding-left:10px;">
+            <input class="form-control" type="number" placeholder="y" style="width:100%;" id="yCoordInput">
+          </td>
+          <td style="padding-left:10px;">
+            <button type="button" class="btn btn-sm btn-primary btn-block" id="coordSubmitButton">Submit</button>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    {{> rp_info_army_paths}}
+
+    <div class="panel panel-default panel-body">
+      <button type="button" class="btn btn-primary btn-block" id="moveArmyCloseButton">Close</button>
+    </div>
+
+  </div>
+</template>

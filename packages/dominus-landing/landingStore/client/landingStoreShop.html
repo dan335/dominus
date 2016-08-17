@@ -1,0 +1,44 @@
+<template name="landingStoreShop">
+  <div class="gameBoxTitle">
+    Castle Shop
+  </div>
+  <div class="gameBoxBody">
+    {{#each _sStore.castles.types_not_free}}
+			{{> storePanelItem type='castles' id=this}}
+		{{/each}}
+
+    <div style="clear:both;"></div>
+    <br><br>
+
+    <h2>FAQ</h2>
+    <dl>
+      <dt>Do purchases affect gameplay?</dt>
+      <dd>No, puchases are cosmetic only.</dd>
+
+      <dt>Is my credit card information secure?</dt>
+      <dd>Yes.  Payment processing is handled by <a href="https://stripe.com">Stripe</a>.  Your credit card number is never sent to Dominus' server or stored in Dominus' database.</dd>
+
+      <dt>How do I change my castle?</dt>
+      <dd>After you purchase a new castle click on your castle in the map.  In the right panel there will be a place to set the image.</dd>
+
+      <dt>If I purchase something can I use it in another game?</dt>
+      <dd>Yes, when you purchase something from the store it is available in any game you play.</dd>
+    </dl>
+  </div>
+</template>
+
+
+<template name="storePanelItem">
+  <div class="storePanelItem">
+    <h4>{{name}}</h4>
+    <div>
+      <img src="/game_images/{{image}}">
+    </div>
+    <div class="alert alert-danger store_error_alert" style="display:none;"></div>
+    {{#if iOwn}}
+      <button class="btn btn-primary" type="button" disabled="disabled">Purchased</button>
+    {{else}}
+      <button class="btn btn-primary store_purchase_button" type="button">Purchase for ${{price}}</button>
+    {{/if}}
+  </div>
+</template>

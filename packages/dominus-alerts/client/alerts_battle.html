@@ -1,0 +1,45 @@
+<template name="alerts_battle">
+    <div class="alertTitle pad_group">
+        <div style="font-size:120%;">
+          <table style="width:100%;">
+            <tbody>
+              <tr>
+                <td>
+                  <a href="" class="openAlertButton">
+                    Battle at {{x}},{{y}}
+                  </a>
+                </td>
+                <td style="text-align:right;">
+                  {{date_calendar createdAt}}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+
+        {{#each titleInfo.armies}}
+          <div class="light_text">
+            &bull;&nbsp;
+            {{#if username}}{{username}}'s {{/if}}{{unitType}} {{name}}
+            {{#if destroyed}}
+              was defeated
+            {{/if}}
+            {{#if tookCapital}}
+              captured capital
+            {{/if}}
+            {{#if tookCastle}}
+              captured castle
+            {{/if}}
+          </div>
+        {{/each}}
+    </div>
+
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+            <div class="alertBody">
+                {{> Template.dynamic template='battleReport' data=battle}}
+            </div>
+        {{/if}}
+    </div>
+</template>

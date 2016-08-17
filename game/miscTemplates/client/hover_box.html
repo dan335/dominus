@@ -1,0 +1,28 @@
+<template name="hover_box">
+	{{#if draw}}
+		<div id="hover_box" style="top:{{top}}px;left:{{left}}px;">
+			<table>
+				<tbody>
+					{{#each objects}}
+						<tr>
+							<td>
+								<div id="hover_box_type" class="{{flag_type}}">&nbsp;&nbsp;&nbsp;</div>&nbsp;&nbsp;
+							</td>
+							<td>
+								<span class="light_text">{{flag_name}}</span> :
+								{{username}} :
+								<a href="" class="hover_box_object_link" data-id="{{_id}}">{{name}}</a>
+							</td>
+						</tr>
+						<tr>
+							<td></td>
+							<td>
+								<small class="light_text">{{{units}}}</small>
+							</td>
+						</tr>
+					{{/each}}
+				</tbody>
+			</table>
+		</div>
+	{{/if}}
+</template>

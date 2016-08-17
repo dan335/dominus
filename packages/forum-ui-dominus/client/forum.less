@@ -1,0 +1,73 @@
+@import "{dominus-init}/client/colors.import.less";
+
+#forumListMenu {
+  padding: 20px;
+}
+
+#forumListBottom {
+  padding: 20px;
+}
+
+.forumBoxBody {
+  background-color: @whitePanelBackground;
+  color: @whitePanelTextColor;
+  padding: 10px 0px 20px 0px;
+  border-radius: 3px;
+}
+
+
+#forumTopicTable {
+  thead {
+    background-color: hsl(0, 0%, 80%);
+  }
+
+  tr {
+
+    td {
+      vertical-align: baseline;
+      border-bottom: 1px solid hsl(0, 0%, 0.8);
+    }
+
+    td:first-child {
+      padding-left: 30px;
+    }
+    td:last-child {
+      padding-right: 30px;
+    }
+  }
+
+  .forumTopicListTitle {
+    font-size: 130%;
+
+    a {
+      color: darken(@primaryColor, 10%);
+    }
+  }
+}
+
+
+.forumTopicTitle {
+  font-size: 180%;
+}
+
+.forumTopicPost {
+  background-color: hsl(0, 0%, 88%);
+  padding: 20px;
+  border-bottom: 1px solid hsl(0, 0%, 0.78);
+
+  .forumProfileImage {
+    width:64px;
+    height: 64px;
+    border-radius: 3px;
+  }
+}
+
+#postPreviewContainer {
+  margin-top: 30px;
+
+  #postPreview {
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 3px;
+  }
+}

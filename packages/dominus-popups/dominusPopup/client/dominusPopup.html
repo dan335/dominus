@@ -1,0 +1,34 @@
+<template name="dominusPopup">
+  {{#if show}}
+    <div id="dominusPopup" class="popupPanelContainer">
+      <div class="popupPanelBg">
+        <h4>
+          {{#if isDominus}}
+              <a href="" data-x="{{dominus.x}}" data-y="{{dominus.y}}" data-castle_id="{{dominus.castle_id}}" class="userLink">
+                  {{dominus.username}}
+              </a>
+          {{else}}
+              <a href="" data-x="{{previousDominus.x}}" data-y="{{previousDominus.y}}" data-castle_id="{{previousDominus.castle_id}}" class="userLink">
+                  {{lastDominus.username}}
+              </a>
+          {{/if}}
+
+          is Dominus
+        </h4>
+
+        {{#if isDominus}}
+            <a href="" data-x="{{dominus.x}}" data-y="{{dominus.y}}" data-castle_id="{{dominus.castle_id}}" class="userLink">
+                {{dominus.username}}
+            </a>
+        {{else}}
+            <a href="" data-x="{{previousDominus.x}}" data-y="{{previousDominus.y}}" data-castle_id="{{previousDominus.castle_id}}" class="userLink">
+                {{lastDominus.username}}
+            </a>
+        {{/if}}
+
+        will win {{date_calendar gameEndDate}} {{date_from_now gameEndDate}} unless someone new becomes the Dominus.
+
+      </div>
+    </div>
+  {{/if}}
+</template>

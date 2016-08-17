@@ -1,0 +1,18 @@
+<template name="top_panel">
+	<div style="float: left;font-size: 150%;line-height: 100%;">
+		Dominus
+	</div>
+	<div style="float: left;width: 20px;">&nbsp;</div>
+	<div style="float: left;">
+		{{#if currentUser}}
+			{{> menu}}
+		{{/if}}
+	</div>
+	<div style="float: right;">
+		<span class="light_text">
+			{{serverTime}} &nbsp;&nbsp;
+		</span>
+		{{> loginButtons align="right"}}
+	</div>
+	<div style="clear: both;"></div>
+</template>

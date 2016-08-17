@@ -1,0 +1,9 @@
+<template name="alerts_global">
+    {{#each alerts}}
+        {{> Template.dynamic template=type}}
+    {{/each}}
+
+    <div class="pad_group" style="margin:10px 0px;">
+        <button type="button" class="btn btn-primary btn-block" id="showMoreButton">Show More</button>
+    </div>
+</template>

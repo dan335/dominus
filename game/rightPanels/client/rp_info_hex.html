@@ -1,0 +1,24 @@
+<template name="rp_info_hex">
+	<div class="rightPanel" id="rp_info_hex">
+		{{> rp_closeButton}}
+
+		<div class="panel panel-default" style="margin-top:0;">
+			<div class="panel-body">
+				<h4> {{typeName}}</h4>
+
+				Produces {{numResources}} {{type}} every {{interval}} when adjacent to a village.
+				{{#if isPro}}
+					{{#if isGrain}}
+						A village here would collect {{round worthOfHex}} gold worth of resources.
+					{{/if}}
+				{{/if}}
+			</div>
+		</div>
+
+		<div class="panel panel-default panel-body">
+			{{> infoPanelMarkerButton}}
+		</div>
+
+	</div>
+
+</template>

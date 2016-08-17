@@ -1,0 +1,11 @@
+<template name="alert_battleStart">
+
+    {{> alert_titleTemplate title=title iconName=iconName date=created_at read=read}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+            <div class="alertBody">
+                {{> battleReport battle}}
+            </div>
+        {{/if}}
+    </div>
+</template>

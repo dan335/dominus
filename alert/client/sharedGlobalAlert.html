@@ -1,0 +1,15 @@
+<template name="sharedGlobalAlert">
+  <div id="battlePage">
+      <div class="panel panel-body">
+          <h3>Dominus Global Alert</h3>
+          <a href="/game/{{gameId}}" id="returnButton">Return to Game</a>
+      </div>
+      <div class="panel panel-body">
+          {{#if alert}}
+              {{> Template.dynamic template=alert.type data=alert}}
+          {{else}}
+              No alert found.
+          {{/if}}
+      </div>
+  </div>
+</template>

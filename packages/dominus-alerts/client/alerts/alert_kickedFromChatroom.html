@@ -1,0 +1,10 @@
+<template name="alert_kickedFromChatroom">
+    {{> alert_titleTemplate title=title iconName='fa-comments' date=created_at read=read}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+            <div class="alertBody alertPad">
+                You were kicked out of the chatroom <b>{{chatroom.name}}</b>.
+            </div>
+        {{/if}}
+    </div>
+</template>

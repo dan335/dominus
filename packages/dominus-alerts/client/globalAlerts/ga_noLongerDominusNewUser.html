@@ -1,0 +1,16 @@
+<template name="ga_noLongerDominusNewUser">
+    {{> ga_titleTemplate title=title iconName='fa-trophy' date=created_at}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+        <div class="alertBody alertPad">
+
+            <a href="" data-x="{{user.x}}" data-y="{{user.y}}" data-castle_id="{{user.castle_id}}" class="userLink">{{user.username}}</a>
+
+            is no longer the Dominus.  A new user has joined the game.
+
+            <br><br>
+            {{> globalAlertShareLink}}
+        </div>
+        {{/if}}
+    </div>
+</template>

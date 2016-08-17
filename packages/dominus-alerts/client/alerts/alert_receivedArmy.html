@@ -1,0 +1,31 @@
+<template name="alert_receivedArmy">
+    {{> alert_titleTemplate title=title iconName='fa-envelope' date=created_at read=read}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+            <div class="alertBody alertPad">
+                <a href="" data-x="{{fromUser.x}}" data-y="{{fromUser.y}}" data-castle_id="{{fromUser.castle_id}}" class="userLink">{{fromUser.username}}</a>
+                sent you an army.
+
+                <br><br>
+
+                <table class="table table-striped">
+                    <tbody>
+                        {{#each s.army.types}}
+                        <tr>
+                            <td>
+                                {{capitalize this}}
+                            </td>
+                            <td style="text-align:right;">
+                                {{numSoldiers this}}
+                            </td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+
+                <div class="light_text">Lords can send their vassals soldiers.  Usually to help defend their castle against other lords trying to steal their vassal.</div>
+
+            </div>
+        {{/if}}
+    </div>
+</template>

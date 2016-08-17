@@ -1,0 +1,13 @@
+@import "{dominus-init}/client/colors.import.less";
+@import "{dominus-init}/client/variables.import.less";
+
+#landingRankings {
+  .table-striped {
+    > tbody > tr:nth-of-type(even) {
+      background-color: darken(@whitePanelBackground, 3%);
+    }
+    > tbody > tr:nth-of-type(odd) {
+      background-color: darken(@whitePanelBackground, 8%);
+    }
+  }
+}

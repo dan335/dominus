@@ -1,0 +1,18 @@
+<template name="lp_castle">
+	<table class="table table-condensed">
+		<tbody>
+			<tr>
+				{{#with castle}}
+					<td>
+						{{name}}
+						<br>
+						<small class="light_text">{{unit_count}} Soldiers</small>
+					</td>
+					<td style="text-align: right;">
+						{{> center_on_button x=x y=y selected_type='castle' selected_id=_id}}
+					</td>
+				{{/with}}
+			</tr>
+		</tbody>
+	</table>
+</template>

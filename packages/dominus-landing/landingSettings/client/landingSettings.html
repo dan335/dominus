@@ -1,0 +1,95 @@
+<template name="landingSettings">
+  {{> topNav}}
+
+  <div class="container-fluid" id="paintingFluid"></div>
+
+  <div class="container-fluid" id="accountFluid">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-3 col-sm-1"></div>
+        <div class="col-xs-12 col-sm-10 col-md-6" id="accountContainer">
+
+          <div class="landingTitle">
+            Settings
+          </div>
+          {{#if currentUser}}
+
+          <div class="alert alert-danger" id="settingsErrorAlert" style="display:none;"></div>
+          <div class="alert alert-success" id="settingsSuccessAlert" style="display:none;"></div>
+
+          <a href="/profile/{{currentUser._id}}" class="gotoProfileButton">View Profile</a>
+          <br><br>
+
+          <label for="exampleInputEmail1">Change Username</label>
+          <div class="input-group">
+            <input type="text" id="changeUsernameInput" class="form-control" value="{{currentUser.username}}">
+            <span class="input-group-btn">
+              <button class="btn btn-primary" id="changeUsernameButton">
+                <i class="fa fa-save fa-lg"></i>&nbsp; Save
+              </button>
+            </span>
+          </div>
+          This is your forum username.  This will not change your in-game username.
+
+          <br><br>
+
+          <label>Gender</label>
+          <div class="btn-group btn-group-justified" role="group">
+            <div class="btn-group" role="group">
+              <button type="button" class="btn btn-primary {{isMale}}" data-toggle="tooltip" data-placement="bottom" title="Male" id="genderMaleButton">
+                <i class="fa fa-mars fa-lg"></i>&nbsp; Male
+              </button>
+            </div>
+            <div class="btn-group" role="group">
+              <button type="button" class="btn btn-primary {{isFemale}}" data-toggle="tooltip" data-placement="bottom" title="Female" id="genderFemaleButton">
+                <i class="fa fa-venus fa-lg"></i>&nbsp; Female
+              </button>
+            </div>
+          </div>
+          <br><br>
+
+          {{#unless isVerified}}
+            <button class="btn btn-primary btn-block" id="resendVerificationButton">
+              Resend Email Verification
+            </button>
+            <br><br>
+          {{/unless}}
+
+          <label>Avatar</label><br>
+          <div style="float:left;">
+            <img src="{{avatarUrl}}" class="avatarImageBig">
+          </div>
+
+          <div style="float:left;">
+            <input type="file" id="avatarInputFile">
+            <br>
+            <button type="submit" class="btn btn-primary" id="avatarUploadButton">Upload</button>
+            <br><br>
+
+            {{#if hasAvatar}}
+              <button class="btn btn-primary" id="avatarRemoveButton">Remove</button>
+            {{/if}}
+          </div>
+
+          <div style="clear:both;"></div>
+
+          <br><br>
+
+          <button class="btn btn-primary btn-block" id="deleteAccountButton">
+            <i class="fa fa-eraser fa-lg"></i>&nbsp; Delete Account
+          </button>
+          This will delete your entire account including all games.
+
+
+          {{else}}
+            <a href="/signin">Sign In</a>
+          {{/if}}
+
+        </div>
+        <div class="col-md-3 col-sm-1"></div>
+      </div>
+    </div>
+  </div>
+
+  {{> landingFooter}}
+</template>

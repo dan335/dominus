@@ -1,0 +1,23 @@
+<template name="forum">
+  {{> forumBefore}}
+  {{#if hasAccess}}
+    {{> forumContainer}}
+  {{else}}
+  <div class="container-fluid" style="margin-top: -350px;">
+    <div class="container">
+      <div class="row">
+        <div class="col-xs-12">
+          <div class="landingGameContainer">
+            <div class="forumBoxBody" style="text-align:center;">
+              <br><br><br><br>
+              Please login and verify email to access forum.
+              <br><br><br><br>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{/if}}
+  {{> forumAfter}}
+</template>

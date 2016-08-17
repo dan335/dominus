@@ -1,0 +1,32 @@
+<template name="lp_villages">
+	<table class="table table-condensed table-striped">
+		<tbody>
+			{{#each villages}}
+				{{> lp_village}}
+			{{/each}}
+		</tbody>
+	</table>
+</template>
+
+
+<template name="lp_village">
+	<tr>
+		<td>
+			{{name}}
+			<br>
+			<small class="light_text">
+				Lvl {{level}}
+				&nbsp;&nbsp;
+				Army {{unit_count}}
+				&nbsp;&nbsp;
+				Worth {{round income.worth}}
+				{{#if under_construction}}
+					<br>Finished building {{timeTilFinished}}
+				{{/if}}
+			</small>
+		</td>
+		<td style="text-align: right;">
+			{{> center_on_button x=x y=y selected_type='village' selected_id=_id}}
+		</td>
+	</tr>
+</template>

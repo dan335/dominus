@@ -1,0 +1,173 @@
+<template name="chatroom_open">
+	<div class="panel panel-default" style="margin-top:20px;">
+		<div class="panel-heading">
+			<table style="width:100%;">
+				<tbody>
+					<tr>
+						<td style="text-align:left;font-size:80%;">
+							<span style="font-size:120%;">{{name}}</span>
+							<br>
+							<span class="light_text">{{numPeople}} members</span>
+						</td>
+						<td style="text-align:right;">
+							{{#if showNewNotification}}
+								<i class="fa fa-exclamation-circle"></i>
+								&nbsp;
+							{{/if}}
+
+							<a href="" class="showMembersButton" data-toggle="tooltip" title="Show Members"><i class="fa fa-group"></i></a>
+
+							{{#if roomNotificationsOn}}
+								&nbsp;
+								<a href="" class="buttonTurnRoomNotificationsOff" data-toggle="tooltip" title="Show new chat notification for this room in menu."><i class="fa fa-volume-up"></i></a>
+							{{else}}
+								&nbsp;
+								<a href="" class="buttonTurnRoomNotificationsOn" data-toggle="tooltip" title="Show new chat notification for this room in menu."><i class="fa fa-volume-off"></i></a>
+							{{/if}}
+
+							{{#if showInviteButton}}
+								&nbsp;
+								<a href="" class="inviteButton" data-toggle="tooltip" title="Invite Someone"><i class="fa fa-plus-circle"></i></a>
+							{{/if}}
+
+							{{#if showRenameButton}}
+								&nbsp;
+								<a href="" class="renameButton" data-toggle="tooltip" title="Rename Chatroom"><i class="fa fa-pencil"></i></a>
+							{{/if}}
+
+							{{#if showLeaveButton}}
+								&nbsp;
+								<a href="" class="leaveChatroomButton" data-toggle="tooltip" title="Leave Chatroom"><i class="fa fa-times-circle"></i></a>
+							{{/if}}
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<div class="chatroomInvite chatroomBox"  style="display:{{showInviteBox}};">
+			<div class="pad_group">
+				<h4>Invite someone to this chatroom.</h4>
+				<br>
+				<div class="alert alert-danger inviteErrorAlert" style="display:none;"></div>
+				<label for="inviteInput">Enter User's Name</label>
+				<input type="text" class="form-control inviteInput" value="">
+				<br>
+				<button class="btn btn-primary btn-block inviteSaveButton" type="button">Invite User</button>
+				<button class="btn btn-primary btn-block inviteCancelButton" type="button">Cancel</button>
+				<br>
+			</div>
+		</div>
+
+		<div class="chatroomRename chatroomBox" style="display:{{showRenameBox}};">
+			<div class="pad_group">
+				<h4>Rename Chatroom</h4>
+				<br>
+				<div class="alert alert-danger renameErrorAlert" style="display:none;"></div>
+
+				<label for="renameInput">Enter New Name</label>
+				<input type="text" class="form-control renameInput" value="{{name}}">
+				<br>
+				<button class="btn btn-primary btn-block renameSaveButton" type="button">Save New Name</button>
+				<button class="btn btn-primary btn-block renameCancelButton" type="button">Cancel</button>
+				<br>
+			</div>
+		</div>
+
+		<div class="chatroomLeaveConfirm chatroomBox" style="display:{{showLeaveConfirm}};">
+			<div class="pad_group">
+				<div style="text-align:center;font-size:130%;">Leave this chatroom?</div>
+				<br>
+				<button type="button" class="btn btn-primary btn-block chatroomLeaveYesButton">Yes</button>
+				<button type="button" class="btn btn-primary btn-block chatroomLeaveNoButton">No</button>
+				<br>
+			</div>
+		</div>
+
+
+
+
+		<div style="display:{{showChatBox}};">
+		<table style="width:100%;table-layout-fixed;">
+			<tbody>
+				<tr>
+					<td style="padding-left:15px;padding-right:15px;padding-top:12px;vertical-align:top;">
+
+						{{#if hasReports}}
+							<div>
+								Can't post in chatrooms for {{reportTimeLeft}}.
+							</div>
+						{{else}}
+							<div class="alert alert-danger" id="chatSendAlert" style="display:none;"></div>
+							<div class="input-group" style="width:100%;">
+								<input type="text" class="form-control chatInput">
+								<span class="input-group-btn">
+									<button class="btn btn-primary sendChatButton" type="button">Send</button>
+								</span>
+							</div>
+						{{/if}}
+
+						<br>
+
+						{{#if  Template.subscriptionsReady}}
+							{{#each roomChats}}
+								<div class="chatLine">
+									<a href="" class="usernameLink">{{username}}</a>:
+									<span data-toggle="tooltip" data-placement="right" title="{{date_calendar created_at}}">
+										{{autolink text}}
+										<span style="color:#777;">{{date_calendar created_at}}</span>
+									</span>
+								</div>
+							{{else}}
+								Nothing here yet. Say something.<br>
+								<br>
+							{{/each}}
+						{{else}}
+							Loading...
+						{{/if}}
+
+						<br>
+					</td>
+					{{#if showMembers}}
+						<td class="memberBox">
+							{{#if Template.subscriptionsReady}}
+
+								{{#if roomOwner}}
+									<div>
+										Owner
+									</div>
+									{{#with roomOwner}}
+										{{> chatroom_member}}
+									{{/with}}
+								{{/if}}
+
+								{{#if roomAdmins}}
+									<div style="margin-top:10px;">
+										Admins
+									</div>
+									{{#each roomAdmins}}
+										{{> chatroom_member}}
+									{{/each}}
+								{{/if}}
+
+								{{#if roomMembers}}
+									<div style="margin-top:10px;">
+										Members
+									</div>
+									{{#each roomMembers}}
+										{{> chatroom_member}}
+									{{/each}}
+								{{/if}}
+
+							{{else}}
+								Loading...
+							{{/if}}
+						</td>
+					{{/if}}
+				</tr>
+			</tbody>
+		</table>
+		</div>
+
+	</div>
+</template>

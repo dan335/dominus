@@ -1,0 +1,15 @@
+<template name="tree_panel">
+	<div id="tree_panel" class="leftPanel">
+		<div class="panel_title"><i class="fa fa-sitemap fa-lg"></i> &nbsp;Tree</div>
+
+		<div class="panel panel-body" id="tree">
+			<ul>
+				{{#each tree}}
+					<li>
+						{{> treeUser}}
+					</li>
+				{{/each}}
+			</ul>
+		</div>
+	</div>
+</template>

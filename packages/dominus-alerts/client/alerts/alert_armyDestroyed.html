@@ -1,0 +1,13 @@
+<template name="alert_armyDestroyed">
+    {{> alert_titleTemplate title=title iconName='fa-exclamation-triangle' date=created_at read=read}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+          <div class="alertBody alertPad">
+              Your army <b>{{vars.armyName}}</b> at <a href="" class="coordinateLink" data-x="{{battle.x}}" data-y="{{battle.y}}">{{battle.x}},{{battle.y}}</a> was destroyed.
+          </div>
+          <div class="alertBody">
+              {{> battleReport battle}}
+          </div>
+        {{/if}}
+    </div>
+</template>

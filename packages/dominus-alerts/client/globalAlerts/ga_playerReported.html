@@ -1,0 +1,19 @@
+<template name="ga_playerReported">
+    {{> ga_titleTemplate title=title iconName='fa-frown-o' date=created_at}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+            <div class="alertBody alertPad">
+
+                {{vars.username}} was reported by {{vars.reporterUsername}}.
+                <br><br>
+
+                <blockquote>
+                    <p>{{vars.reason}}</p>
+                </blockquote>
+
+                <br><br>
+                {{> globalAlertShareLink}}
+            </div>
+        {{/if}}
+    </div>
+</template>

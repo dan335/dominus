@@ -1,0 +1,117 @@
+@import "{dominus-init}/client/colors.import.less";
+
+
+
+
+#content1Fluid {
+  background-color: lighten(@bodyBackground, 7%);
+  color: @bodyTextColor;
+
+  #content1Container {
+    padding: 10px 0px 10px 0px;
+
+    p {
+      margin-bottom: 15px;
+    }
+
+    .screenshot {
+      width: 100%;
+    }
+
+    .darkBg {
+      background-color: hsla(0, 0%, 0%, 0.25);
+      padding: 8px;
+    }
+  }
+}
+
+
+#accountFluid {
+  margin-top: -350px;
+
+  #accountContainer {
+    background-color: @whitePanelBackground;
+    color: @whitePanelTextColor;
+    padding: 30px;
+    font-size: 120%;
+    border-radius: 3px;
+  	box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
+
+    .landingTitle {
+      font-size: 250%;
+      text-align:center;
+    }
+
+    /// --- or --- divider
+    .divider {
+      text-align:center;
+      font-size:140%;
+
+      & hr {
+        margin-left:auto;
+        margin-right:auto;
+        width:40%;
+        border-color: fadeout(@whitePanelTextColor, 60%);
+      }
+
+      & .left {
+        float:left;
+      }
+
+      & .right {
+        float:right;
+      }
+
+      & .after {
+        clear:both;
+      }
+    }
+  }
+
+  // .btn {
+  //   font-size: 110%;
+  // }
+}
+
+
+#paintingFluid {
+  background-image: url("/landing/landingBg.jpg");
+  height: 400px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+
+// move image down below navbar
+#navSpacerFluid {
+  height: 30px;
+}
+
+
+#footerFluid {
+  background-color: @bodyBackground;
+  color: @bodyTextColor;
+
+  #footerContainer {
+    padding: 40px 0px 40px 0px;
+    text-align: center;
+
+    a:hover {
+      text-decoration: none;
+    }
+
+    .socialSigninButton {
+      font-size:130%;
+    }
+
+    .loginSocialButton {
+      background-color: rgb(53,126,189);
+      border-radius: 50%;
+      box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
+      width:60px;
+      height:60px;
+      padding:20px;
+    }
+  }
+}

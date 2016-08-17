@@ -1,0 +1,89 @@
+<template name="landingGameSignup">
+  {{> topNav}}
+
+  <div class="container-fluid" id="paintingFluid"></div>
+
+  <div class="container-fluid landingLightBg" id="accountFluid">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-3 col-sm-1"></div>
+        <div class="col-xs-12 col-sm-10 col-md-6">
+
+          <div class="landingGameContainer">
+            <div class="gameBoxTitle" style="text-align:center;font-size:200%;">Game Sign Up</div>
+            {{#if game}}
+              {{#if Template.subscriptionsReady}}
+                <div class="gameBoxBodyDarker">
+                  This game starts {{date_from_now game.startAt}}.  Sign up now to reserve a spot and you will get an email with the game starts.
+                </div>
+
+                <div class="gameBoxBodyDark">
+
+                  <div style="font-size:180%;">{{game.name}}</div>
+                  <div>{{game.desc}}</div>
+                  <div>Starts {{date_landingGames game.startAt}} {{date_from_now game.startAt}}</div>
+                  <div>{{numSignedUp}} / {{game.maxPlayers}} Players Signed Up</div>
+
+                </div>
+                <div class="gameBoxBody">
+
+                  <div class="alert alert-danger" id="gameSignupError" style="display:none;"></div>
+
+                  {{#if user.verifiedEmail}}
+                    {{#if notStarted}}
+                      {{#if alreadySignedUp}}
+                        <button class="btn btn-primary btn-block" id="gameRemoveSignUpButton">Cancel Sign Up</button>
+                      {{else}}
+                        {{#if game.isProOnly}}
+                          {{#if user.pro}}
+                            <div class="form-group">
+                              <label for="gameSignupUsernameInput">Username</label>
+                              <input type="text" class="form-control" id="gameSignupUsernameInput" value="{{user.username}}">
+                            </div>
+                            <button class="btn btn-primary btn-block" id="gameSignUpButton">Sign Up</button>
+                          {{else}}
+                            {{#if hasToken}}
+                              <div class="form-group">
+                                <label for="gameSignupUsernameInput">Username</label>
+                                <input type="text" class="form-control" id="gameSignupUsernameInput" value="{{user.username}}">
+                              </div>
+                              Signing up for this game will use one of your tokens.  You have {{user.proTokens}} left.
+                              <br><br>
+                              <button class="btn btn-primary btn-block" id="gameSignUpButton">Sign Up</button>
+                            {{else}}
+                              This game requires a pro account.  Buy a pro account or single game token in the <a href="/store" id="gotoStoreLink">store</a>.
+                            {{/if}}
+                          {{/if}}
+                        {{else}}
+                          <div class="form-group">
+                            <label for="gameSignupUsernameInput">Username</label>
+                            <input type="text" class="form-control" id="gameSignupUsernameInput" value="{{user.username}}">
+                          </div>
+                          <button class="btn btn-primary btn-block" id="gameSignUpButton">Sign Up</button>
+                        {{/if}}
+                      {{/if}}
+                    {{else}}
+                      Games has already started.
+                    {{/if}}
+                  {{else}}
+                    Please verify your email before signing up for a game.
+                  {{/if}}
+
+                  <br><br>
+                  <a href="/game" id="returnToGameListLink">Return to game list</a>
+                </div>
+              {{else}}
+                {{> loading}}
+              {{/if}}
+            {{else}}
+              {{> loading}}
+            {{/if}}
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-1"></div>
+      </div>
+    </div>
+  </div>
+
+  {{> landingFooter}}
+</template>

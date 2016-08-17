@@ -1,0 +1,28 @@
+<template name="alerts_battles">
+
+    <div class="pad_group alertTitle" style="font-size:150%;text-align:center;">
+        Current Battles
+    </div>
+
+    {{#each battles}}
+        {{> alerts_battle}}
+    {{else}}
+        <div class="alertTitle pad_group">
+            No battles, the land is at peace.
+        </div>
+    {{/each}}
+
+
+    <div class="pad_group alertTitle" style="font-size:150%;margin-top:20px;text-align:center;">
+        Past Battles
+    </div>
+
+
+    {{#each finishedBattles}}
+        {{> alerts_battle}}
+    {{/each}}
+
+    <div class="pad_group" style="margin:10px 0px;">
+        <button type="button" class="btn btn-primary btn-block" id="showMoreButton">Show More</button>
+    </div>
+</template>

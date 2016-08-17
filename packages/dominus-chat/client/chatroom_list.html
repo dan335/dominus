@@ -1,0 +1,29 @@
+<template name="chatroom_list">
+	<div class="chatroom_list">
+		<div class="pad_group">
+			<table style="width:100%;">
+				<tbody>
+					<tr>
+						<td>
+							{{#if selectedChatroom}}
+								<i class="fa fa-angle-right"></i>
+								&nbsp;
+							{{/if}}
+							<a href="" class="openChatroomButton">
+								{{name}}
+							</a>
+						</td>
+						<td style="text-align:right;">
+							{{#if showNewNotification}}
+								<i class="fa fa-exclamation-circle"></i>
+								&nbsp;
+							{{/if}}
+							{{numPeople}} <i class="fa fa-user"></i>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+</template>

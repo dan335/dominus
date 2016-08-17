@@ -1,0 +1,28 @@
+<template name="rp_send_gold">
+	<div class="rightPanel">
+
+		<div class="panel panel-default">
+			<div class="panel-body">
+				<h4>Send gold to {{username}}</h4>
+				<br>
+
+				Gold transfers have {{floatToPercentage s.sendToVassalTax}}% tax.  {{username}} will recieve {{floatToPercentage s.sendToVassalTax}}% less than you send.
+
+				<br><br>
+
+				<div class="alert alert-danger" id="send_gold_error_alert" style="display:none;"></div>
+
+				<div class="form-group">
+					<label for="exampleInputEmail1">How much gold?</label>
+					<input type="number" class="form-control" id="how_much_input">
+				</div>
+
+				<div class="form-group">
+					<button type="button" class="btn btn-sm btn-primary btn-block" id="send_gold_submit_button">Submit</button>
+					<button type="button" class="btn btn-sm btn-primary btn-block" id="send_gold_cancel_button">Cancel</button>
+				</div>
+			</div>
+		</div>
+
+	</div>
+</template>

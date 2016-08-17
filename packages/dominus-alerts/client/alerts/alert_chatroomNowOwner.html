@@ -1,0 +1,14 @@
+<template name="alert_chatroomNowOwner">
+    {{> alert_titleTemplate title=title iconName='fa-comments' date=created_at read=read}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+            <div class="alertBody alertPad">
+                You are now owner of the chatroom <b>{{chatroom.name}}</b>.
+
+                <br><br>
+
+                <div class="light_text">Either the previous owner made you the owner, left the room or deleted their account.  Chatroom owners can invite people to the chatroom, make people admins, rename the chatroom and kick anyone from the chatroom.</div>
+            </div>
+        {{/if}}
+    </div>
+</template>

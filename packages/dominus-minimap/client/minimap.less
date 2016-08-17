@@ -1,0 +1,147 @@
+@import "{dominus-init}/client/colors.import.less";
+
+
+.minimap_capital {
+  &.mine {
+    fill:@icon_mine_fill;
+  }
+  &.enemy {
+    fill:@icon_foe_fill;
+  }
+}
+
+.minimap_castle {
+  &.mine {
+    fill:@icon_mine_fill
+  }
+
+  &.king {
+    fill:@icon_king_fill
+  }
+
+  &.lord {
+    fill:@icon_above_fill
+  }
+
+  &.direct_lord {
+    fill:@icon_lord_fill
+  }
+
+  &.direct_vassal {
+    fill:@icon_vassal_fill
+  }
+
+  &.vassal {
+    fill:@icon_below_fill
+  }
+
+  &.enemy {
+    fill:@icon_foe_fill
+  }
+
+  &.enemy_ally {
+    fill:@icon_team_fill
+  }
+}
+
+.minimap_village {
+  &.mine {
+    fill:darken(@icon_mine_fill, 25%)
+  }
+
+  &.king {
+    fill:darken(@icon_king_fill, 25%)
+  }
+
+  &.lord {
+    fill:darken(@icon_above_fill, 25%)
+  }
+
+  &.direct_lord {
+    fill:darken(@icon_lord_fill, 25%)
+  }
+
+  &.direct_vassal {
+    fill:darken(@icon_vassal_fill, 25%)
+  }
+
+  &.vassal {
+    fill:darken(@icon_below_fill, 25%)
+  }
+
+  &.enemy {
+    fill:darken(@icon_foe_fill, 25%)
+  }
+
+  &.enemy_ally {
+    fill:darken(@icon_team_fill, 25%)
+  }
+}
+
+#minimap_container {
+  width: 300px;
+}
+
+#minimap {
+  height:300px;
+}
+
+.minimapPath {
+  fill:rgba(0,0,0,0.7);
+  stroke-width: 0.5px;
+  stroke: hsl(205, 0, 0.7);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: visible;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.minimap_army {
+  fill: #fff;
+  stroke-width:0.5px;
+  stroke:#000;
+}
+
+.minimap_marker {
+  stroke-width:0.8px;
+  stroke:#fff;
+  fill:none;
+}
+
+#minimap_viewport {
+  fill:none;
+  stroke-width:1px;
+  stroke:rgba(255,255,255,0.5);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+
+.minimapArmyPathLine {
+  stroke:#ddd;
+  stroke-width:1px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 3,3;
+}
+
+.countrypath {
+  stroke:#ddd;
+  pointer-events: painted;
+}
+
+.outsideClipPath {
+  stroke:#fff;
+  stroke-width:0.5;
+  fill:#fff;
+}
+
+.insideClipPath {
+  stroke:#fff;
+  stroke-width:0.5;
+  fill:#000;
+}

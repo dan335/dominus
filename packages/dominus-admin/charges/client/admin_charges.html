@@ -1,0 +1,7 @@
+<template name="admin_charges">
+  {{#each charges}}
+    <div>{{livemode}} {{user_username}} {{user_email}} {{amount}} {{percentToWinner}} {{date_calendar created_at}}</div>
+  {{else}}
+    no charges
+  {{/each}}
+</template>

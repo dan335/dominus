@@ -1,0 +1,114 @@
+#mapCanvas {
+  position:absolute;
+  pointer-events: none;
+  z-index: -1000;
+}
+
+
+#mapLoadingAlert {
+  position: absolute;
+  bottom:0px;
+  left:0px;
+  width:50px;
+  color: #fff;
+  background-color:rgba(0, 0, 0, 0.6);
+  z-index:2000;
+  padding: 8px 0px 8px 0px;
+  text-align: center;
+}
+
+
+// water
+#mapEvents {
+  //background-color:hsl(205,0.5,0.21);
+  overflow:hidden;
+  z-index:1000;
+}
+
+.medWater {
+  stroke: hsl(205, 0.5, 0.25);
+  stroke-width: 60;
+  stroke-opacity:1;
+  stroke-linejoin: round;
+  fill:none;
+  pointer-events: none;
+}
+
+.shallowWater {
+  // stroke:#364d3b;
+  stroke: hsl(205, 0.5, 0.4);
+  stroke-width: 20;
+  stroke-opacity:1;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  fill:none;
+  pointer-events: none;
+}
+
+.countryBorder {
+  // stroke:#364d3b;
+  stroke: #444;
+  stroke-width: 7;
+  stroke-opacity:1;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  fill:none;
+  pointer-events: none;
+}
+
+.countryBorder2 {
+  //stroke:#40804f;
+  stroke: #888;
+  stroke-width: 7;
+  stroke-opacity:1;
+  stroke-dasharray : 4px, 14px;
+  stroke-linejoin: round;
+  fill:none;
+  pointer-events: none;
+}
+
+.countryMouseCatcher {
+  fill-opacity: 0;
+  stroke:none;
+}
+
+.countryMouseCatcher.disableMove {
+  cursor:not-allowed;
+}
+
+.waterMouseCatcher {
+  fill-opacity: 0;
+  stroke:none;
+}
+
+.countryImage {
+  pointer-events: none;
+}
+
+.hex_highlight {
+	stroke: rgba(255, 255, 255, 0.7);
+	stroke-width: 4;
+	stroke-linejoin: round;
+	stroke-linecap: round;
+	stroke-dasharray: 10, 8;
+	fill: none;
+	pointer-events: none;
+}
+
+.hex {
+	fill: rgba(255, 255, 255, 0);
+	stroke: rgba(0,0,0,0.2);
+	stroke-width: 1;
+}
+
+.hex_coord_text {
+	fill: black;
+	text-anchor: middle;
+	font-size:9px;
+	pointer-events: none;
+}
+
+#hexes {
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+}

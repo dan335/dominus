@@ -1,0 +1,127 @@
+<template name="landingResultsOld">
+  {{> topNav}}
+
+  <div class="container-fluid" id="paintingFluid"></div>
+
+  <div class="container-fluid" style="margin-top: -150px;">
+    <div class="container">
+      <div class="row">
+        <div class="col-xs-12">
+
+          <div class="landingTitleAboveContainer">
+            Rankings from Old Games
+          </div>
+
+          <div class="landingGameContainer">
+            <div class="gameBoxTitle">
+            </div>
+            <div class="gameBoxBody">
+
+              <div class="pastGame">
+                <div class="gameTop">
+                  <div class="gameTopName">
+                    Krynn 15
+                  </div>
+                  <div class="gameTopOther">
+                      <div>Winner: Jorge Gonzalez</div>
+                  </div>
+                  <div style="clear:both;"></div>
+                </div>
+              </div>
+
+              {{#if Template.subscriptionsReady}}
+                {{#each results}}
+              		{{> pastGame}}
+              	{{else}}
+              		No Past Games
+              	{{/each}}
+              {{else}}
+                {{> loading}}
+              {{/if}}
+
+            	<br><br><br>
+              <a href="/results" id="resultsLink">Back to Results</a><br>
+              <a href="https://github.com/dan335/dominus/wiki">Results from games 1 - 12</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{> landingFooter}}
+</template>
+
+
+<template name="pastGame">
+  <div class="pastGame">
+    <div class="gameTop">
+      <div class="gameTopName">
+          <a href="" class="showGameLink">{{name}} {{gameNumber}}</a>
+      </div>
+      <div class="gameTopOther">
+          <div>Winner: {{results.winner.username}}</div>
+          <div style="font-size:80%;">{{date_calendar startDate}} - {{date_calendar createdAt}}</div>
+      </div>
+      <div style="clear:both;"></div>
+    </div>
+    {{#if showDetails}}
+      {{> pastGameDetails details}}
+    {{/if}}
+  </div>
+</template>
+
+
+<template name="pastGameDetails">
+  <div class="gameBottom">
+    Server: {{gameId}}<br>
+    Game number: {{gameNumber}}<br>
+    <br>
+    {{description}}<br>
+    <br>
+    {{numPlayers}} / {{maxPlayers}} players<br>
+    <br>
+
+    <h4>Number of Vassals</h4>
+    <table><tbody>
+        {{#each results.numVassals}}
+        {{> pastGameResultNumVassals}}
+        {{/each}}
+    </tbody></table>
+    <br>
+
+    <h4>Income</h4>
+    <table><tbody>
+        {{#each results.income}}
+        {{> pastGameResultIncome}}
+        {{/each}}
+    </tbody></table>
+  </div>
+</template>
+
+
+
+<template name="pastGameResultNumVassals">
+    <tr>
+        <td>{{rank}}</td>
+        <td>{{username}}</td>
+        <td>{{numVassals}}</td>
+    </tr>
+</template>
+
+<template name="pastGameResultIncome">
+    <tr>
+        <td>{{rank}}</td>
+        <td>{{username}}</td>
+        <td>{{round income}}</td>
+    </tr>
+</template>
+
+<template name="pastGameResultNetworth">
+    <tr>
+        <td>{{rank}}</td>
+        <td>{{username}}</td>
+        <td>{{round networth}}</td>
+    </tr>
+</template>

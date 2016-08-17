@@ -1,0 +1,11 @@
+<template name="alert_addedToChatroom">
+    {{> alert_titleTemplate title=title iconName='fa-comments' date=created_at read=read}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+            <div class="alertBody alertPad">
+                <a href="" data-x="{{addedByUser.x}}" data-y="{{addedByUser.y}}" data-castle_id="{{addedByUser.castle_id}}" class="userLink">{{addedByUser.username}}</a>
+                added you to the chatroom <b>{{chatroom.name}}</b>.
+            </div>
+        {{/if}}
+    </div>
+</template>

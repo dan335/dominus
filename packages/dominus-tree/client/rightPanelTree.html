@@ -1,0 +1,27 @@
+<template name="rightPanelTree">
+    {{#if hasLords}}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                {{username}}'s Lords
+            </div>
+            <div class="panel-body"  id="tree">
+                {{> Template.dynamic template="rightPanelTreeUser" data=king}}
+            </div>
+        </div>
+    {{/if}}
+</template>
+
+
+<template name="rightPanelTreeUser">
+    <ul>
+        <li>
+            <div>
+                <span class="tree_flag {{relationship _id}}">&nbsp;</span>
+                <a href="" class="username">{{username}}</a>
+            </div>
+            {{#if getNextLord}}
+                {{> Template.dynamic template="rightPanelTreeUser" data=getNextLord}}
+            {{/if}}
+        </li>
+    </ul>
+</template>

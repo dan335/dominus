@@ -1,0 +1,50 @@
+<template name="forumNewTopic">
+
+  <div style="padding: 20px;">
+
+    <h2>New Forum Topic</h2>
+    <br>
+
+    <div class="alert alert-danger" role="alert" id="topicAlert" style="display:none;"></div>
+
+    {{#if currentUser}}
+
+      <div class="form-group">
+          <input type="text" class="form-control" id="topicTitleInput" placeholder="What is this discussion about in one brief sentence?">
+      </div>
+
+      <div class="form-group">
+          <select class="form-control" id="topicTagSelect">
+              <option value=false>Select a Category</option>
+              {{#each forumSettings.categories}}
+                  <option value="{{id}}">{{name}}</option>
+              {{/each}}
+          </select>
+      </div>
+
+      <div class="form-group">
+          <textarea class="form-control" rows="15" id="topicTextarea" placeholder="Type here."></textarea>
+      </div>
+
+      <div class="form-group">
+          <button id="saveNewTopicButton" class="btn btn-primary">Create Topic</button>
+
+          <button id="cancelNewTopicButton" class="btn btn-primary">Cancel</button>
+      </div>
+
+      <br>
+
+      &bull; Use <a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet">markdown</a> for formatting.<br>
+      &bull; Offensive posts will be removed.<br>
+
+      <div id="postPreviewContainer">
+        Markdown Preview
+        <div id="postPreview">{{#markdown}}{{msgPreview}}{{/markdown}}</div>
+      </div>
+    {{else}}
+      <div style="font-size:200%;">Login to post in the forum.</div>
+    {{/if}}
+
+  </div>
+
+</template>

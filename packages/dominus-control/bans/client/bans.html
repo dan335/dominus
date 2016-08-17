@@ -1,0 +1,11 @@
+<template name="control_bans">
+  <input type="text" id="banInput" class="form-control" placeholder="userid">
+  <br>
+  <button class="btn btn-primary" id="banButton">Ban User</button>
+
+  <br><br>
+  <h3>Banned Users</h3>
+  {{#each bannedUsers}}
+    <div>{{username}} {{_id}}</div>
+  {{/each}}
+</template>

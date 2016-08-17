@@ -1,0 +1,26 @@
+<template name="rp_infoMarkerGroup">
+  <div class="rightPanel">
+
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        Marker Group
+      </div>
+      <div class="panel-body">
+
+        <div class="alert alert-danger" id="groupEditAlert" style="display:none;"></div>
+
+
+        <div class="form-group">
+          <label for="edit_name_input">Group Name</label>
+          <input type="text" class="form-control" id="groupNameInput" value="{{group.name}}">
+        </div>
+
+        <div class="form-group">
+          <button class="btn btn-primary btn-block" type="button" id="saveGroupButton">Save</button>
+          <button class="btn btn-primary btn-block" type="button" id="closeGroupButton">Close</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</template>

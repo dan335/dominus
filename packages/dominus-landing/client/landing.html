@@ -1,0 +1,45 @@
+<template name="landing">
+  <div id="landing">
+
+    {{> topNav}}
+
+    <div class="container-fluid" id="paintingFluid"></div>
+
+    <div class="container-fluid" id="content1Fluid">
+      <div class="container" id="content1Container">
+        <div class="row">
+          <div class="col-xs-12 col-sm-7">
+            <img src="landing/landingScreenshot.jpg" class="screenshot">
+          </div>
+          <div class="col-xs-12 col-sm-5">
+            <h1 style="margin-bottom:4px;">
+              Dominus
+            </h1>
+            <p style="font-size:170%;font-weight:100;">
+              A free multiplayer social strategy game.
+            </p>
+            <p style="font-size:120%;">
+              Grow in power by conquering castles.
+              Gain vassals until you can overthrow your lord and climb the tree to become the Dominus.
+            </p>
+            <p style="font-size:120%;">
+              Dominus is a slow strategy game.
+              Army movement and resource gathering happen slowly over time.
+              Login, give your armies their orders then check back in a few hours.
+              Chat with other players to form alliances and conquer larger enemies.
+            </p>
+            <br>
+            <button class="btn btn-primary btn-lg" id="joinAGameButton">View Games</button>
+            <br><br>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {{> landingFooter}}
+
+  </div>
+</template>
+
+
+<!-- <img src="landing/landingScreenshot.jpg" id="screenshot"> -->

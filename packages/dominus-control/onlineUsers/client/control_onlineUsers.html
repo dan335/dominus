@@ -1,0 +1,47 @@
+<template name="control_onlineUsers">
+
+  <h3>Servers</h3>
+  {{#each servers}}
+    {{serverId}}: {{num}}<br>
+  {{/each}}
+  <br>
+  Total: {{numUsers}}
+  <br><br>
+
+  <h3>Users</h3>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <td>_id</td>
+        <td>username</td>
+        <td>pro</td>
+        <td>status</td>
+        <td>male</td>
+        <td>serverId</td>
+        <td>updatedAt</td>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each users}}
+        {{> control_onlineUser}}
+      {{else}}
+        <tr><td colspan=4>
+          No users.
+        </td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</template>
+
+
+<template name="control_onlineUser">
+  <tr>
+    <td>{{_id}}</td>
+    <td>{{username}}</td>
+    <td>{{pro}}</td>
+    <td>{{presence.status}}</td>
+    <td>{{male}}</td>
+    <td>{{presence.serverId}}</td>
+    <td>{{presence.updatedAt}}</td>
+  </tr>
+</template>

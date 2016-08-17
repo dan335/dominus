@@ -1,0 +1,73 @@
+<template name="game">
+  <div id="hexmapContainer">
+    {{#if hasAccess}}
+      {{> hexmap}}
+    {{/if}}
+  </div>
+
+  {{> topNav}}
+
+  {{#if hasAccess}}
+    <div id="leftPanels">
+      {{#if playerId}}
+        {{> gameLeftMenu}}
+
+        {{#if isPanelOpen panel="help_panel"}}
+          {{> help_panel}}
+        {{/if}}
+
+        {{#if isPanelOpen panel="left_panel"}}
+          {{> left_panel}}
+        {{/if}}
+
+        {{#if isPanelOpen panel="alerts_panel"}}
+          {{> alerts_panel}}
+        {{/if}}
+
+        {{#if isPanelOpen panel="market_panel"}}
+          {{> market_panel}}
+        {{/if}}
+
+        {{#if isPanelOpen panel="stats_panel"}}
+          {{> stats_panel}}
+        {{/if}}
+
+        {{#if isPanelOpen panel="chatrooms_panel"}}
+          {{> chatrooms_panel}}
+        {{/if}}
+
+        {{#if isPanelOpen panel="rankings_panel"}}
+          {{> rankings_panel}}
+        {{/if}}
+
+        {{#if isPanelOpen panel="tree_panel"}}
+          {{> tree_panel}}
+        {{/if}}
+
+        {{#if isPanelOpen panel="calculatorPanel"}}
+          {{> calculatorPanel}}
+        {{/if}}
+
+        {{#if isPanelOpen panel="markersPanel"}}
+          {{> markersPanel}}
+        {{/if}}
+
+        {{#if isPanelOpen panel="settings_panel"}}
+          {{> settings_panel}}
+        {{/if}}
+      {{/if}}
+      {{> navigation_panel}}
+    </div>
+
+
+    <div id="rightPanels">
+      {{#if playerId}}
+        {{> Template.dynamic template=rp_template data=rp_template_data}}
+      {{/if}}
+      {{> rightEdPanel}}
+      {{> popup_panel}}
+      <div style="clear:both;"></div>
+    </div>
+
+  {{/if}}
+</template>

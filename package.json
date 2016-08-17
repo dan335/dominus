@@ -1,0 +1,26 @@
+{
+  "name": "dominus",
+  "version": "1.0.0",
+  "description": "game",
+  "main": "index.js",
+  "dependencies": {
+    "d3": "^3.5.17",
+    "jquery": "^2.2.4",
+    "moment": "^2.14.1",
+    "svgexport": "^0.3.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dan335/dominus.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dan335/dominus/issues"
+  },
+  "homepage": "https://github.com/dan335/dominus#readme"
+}

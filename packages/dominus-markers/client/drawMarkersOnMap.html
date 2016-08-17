@@ -1,0 +1,43 @@
+<template name="drawMarkersOnMap">
+  <g id="markers">
+    <g id="castleMarkers">
+      {{#each castleMarkers}}
+        <polygon class="markerOnMap castleMarkerOnMap" points="{{hex_points x y 1.07}}"/>
+        <path class="markerOnMapLine" d="M{{castleMarkerStart}} c8,0, 22,-30 30,-30" />
+        <text class="markerOnMapText" x="{{castleMarkerTextPos.x}}" y="{{castleMarkerTextPos.y}}">
+          {{name}}
+        </text>
+      {{/each}}
+    </g>
+
+    <g id="villageMarkers">
+      {{#each villageMarkers}}
+        <polygon class="markerOnMap villageMarkerOnMap" points="{{hex_points x y 1.07}}"/>
+        <path class="markerOnMapLine" d="M{{castleMarkerStart}} c8,0, 22,-30 25,-30" />
+        <text class="markerOnMapText" x="{{castleMarkerTextPos.x}}" y="{{castleMarkerTextPos.y}}">
+          {{name}}
+        </text>
+      {{/each}}
+    </g>
+
+    <g id="hexMarkers">
+      {{#each hexMarkers}}
+        <polygon class="markerOnMap hexMarkerOnMap" points="{{hex_points x y 1.07}}"/>
+        <path class="markerOnMapLine" d="M{{castleMarkerStart}} c8,0, 22,-30 25,-30" />
+        <text class="markerOnMapText" x="{{castleMarkerTextPos.x}}" y="{{castleMarkerTextPos.y}}">
+          {{name}}
+        </text>
+      {{/each}}
+    </g>
+
+    <g id="armyMarkers">
+      {{#each armyMarkers}}
+        <ellipse class="markerOnMap armyMarkerOnMap" cx="{{coord_to_pixel_x x y armyMarkerOffsetX}}" cy="{{coord_to_pixel_y x y armyMarkerOffsetY}}" rx="{{armyMarkerRadiusX}}" ry="{{armyMarkerRadiusY}}" />
+        <path class="markerOnMapLine" d="M{{armyMarkerStart}} c8,0, 22,-30 25,-30" />
+        <text class="markerOnMapText" x="{{armyMarkerTextPos.x}}" y="{{armyMarkerTextPos.y}}">
+          {{name}}
+        </text>
+      {{/each}}
+    </g>
+  </g>
+</template>

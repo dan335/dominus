@@ -1,0 +1,47 @@
+@import "{dominus-init}/client/colors.import.less";
+
+#gameLeftMenu {
+  width: 50px;
+
+  .gameLeftMenuPanelIcon {
+    background-color: fadeout(@bodyBackground, 50%);
+    text-align: center;
+    padding: 8px;
+    color: hsl(0, 0%, 90%);
+    pointer-events: all;
+    cursor: pointer;
+  }
+
+  .gameLeftMenuPanelIcon:hover {
+    background-color: fadeout(#fff, 80%);
+  }
+
+  .gameLeftMenuPanelIcon.open {
+    background-color: @primaryColor;
+  }
+
+  .gameLeftMenuPanelIcon.highlighted {
+    background-color: hsla(35, 90%, 40%, 0.7);
+  }
+
+  .gameLeftMenuPanelIcon.highlighted:hover {
+    background-color: fadeout(#fff, 80%);
+  }
+
+  .gameLeftMenuPanelIcon.open.highlighted {
+    background-color: spin(@primaryColor, 180);
+  }
+
+  .gameLeftMenuPanelIcon + .gameLeftMenuPanelIcon {
+    margin-top: 1px;
+  }
+
+  #utctime {
+    margin-top:1px;
+    font-size:80%;
+    text-align: center;
+    color: hsl(0, 0%, 75%);
+    background-color: fadeout(@bodyBackground, 50%);
+    padding: 10px 0px 10px 0px;
+  }
+}

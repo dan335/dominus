@@ -1,0 +1,8 @@
+<template name="infoPanelMarkerButton">
+  <div class="alert alert-danger addMarkerAlert" style="display:none;margin-top:5px;"></div>
+  {{#if hasMarkerHere}}
+    <button class="btn btn-block btn-primary" id="infoPanelRemoveMarkerButton" style="margin-top:5px;">Remove Marker</button>
+  {{else}}
+    <button class="btn btn-block btn-primary" id="infoPanelMarkerButton" style="margin-top:5px;">Add Marker</button>
+  {{/if}}
+</template>

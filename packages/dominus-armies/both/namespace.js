@@ -1,0 +1,3 @@
+dArmies = {
+  methods: {}
+};

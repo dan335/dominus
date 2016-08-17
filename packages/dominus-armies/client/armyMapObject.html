@@ -1,0 +1,6 @@
+<template name="armyMapObject">
+	{{#if draw}}
+		<rect width="24" height="50" x="{{coord_to_pixel_x x y 0}}" y="{{coord_to_pixel_y x y -10}}" class="armyMapObject" data-id="{{_id}}" data-x="{{x}}" data-y="{{y}}" />
+		<image xlink:href="/game_images/army_01.png" class="armyMapObjectImage" x="{{coord_to_pixel_x x y -63}}" y="{{coord_to_pixel_y x y -41}}" height="83" width="126" data-x="{{x}}" data-y="{{y}}" data-id="{{_id}}"/>
+	{{/if}}
+</template>

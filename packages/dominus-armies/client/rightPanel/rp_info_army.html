@@ -1,0 +1,251 @@
+<template name="rp_info_army">
+	<div class="rightPanel" id="rp_info_army">
+		{{> rp_closeButton}}
+
+		{{#if infoLoaded}}
+			<div class="panel panel-default" style="margin-top:0;">
+				<div class="panel-body">
+					<div class="rpNameContainer">
+						<div class="rpNameType">Army</div>
+						<div class="rpName">{{name}}</div>
+						{{#if is_owner}}
+							<div class="rpEditName">{{> edit_name_button}}</div>
+						{{/if}}
+						<div style="clear:both;"></div>
+						{{#unless is_owner}}
+							<div style="margin-top:8px;">
+								<div style="float:left;">
+									<span class="light_text">
+										{{#if male}}
+											Lord
+										{{else}}
+											Lady
+										{{/if}}
+									</span>
+									{{username}}
+								</div>
+
+								<div style="float:right;">
+									{{> center_on_button x=castle_x y=castle_y selected_type='castle' selected_id=castle_id}}
+								</div>
+								<div style="clear:both;"></div>
+							</div>
+						{{/unless}}
+					</div>
+				</div>
+			</div>
+
+			{{#if unitRelationType}}
+				<div class="panel panel-default panel-body" style="text-align:center;">
+					{{username}} is your {{unitRelationType}}
+				</div>
+			{{/if}}
+
+			<div class="panel panel-default">
+				<div class="panel panel-default panel-heading">
+					Soldiers
+				</div>
+				<table class="table table-condensed table-striped">
+					<tbody>
+						{{#each types}}
+							{{#if (numSoldierType this)}}
+								<tr>
+									<td>{{capitalize this}}</td>
+									<td style="text-align:right;">
+										{{round (numSoldierType this)}}
+									</td>
+								</tr>
+							{{/if}}
+						{{/each}}
+
+						<tr>
+							<td>Base Offense Power</td>
+							<td style="text-align:right;">{{round offensePower}}</td>
+						</tr>
+						<tr>
+							<td>Base Defense Power</td>
+							<td style="text-align:right;">{{round defensePower}}</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+
+			{{#if is_owner}}
+				{{> rp_info_army_paths}}
+
+				<div class="panel panel-default panel-body">
+					<button type="button" class="btn btn-sm btn-primary btn-block" id="move_army_button">Move Army</button>
+					{{#if is_another_army_here}}
+						<button type="button" class="btn btn-sm btn-primary btn-block" id="combine_armies_button" data-toggle="tooltip" data-placement="top" title="Combine your other armies in this hex with this army.">Combine Armies</button>
+					{{/if}}
+					{{#if has_enough_to_split}}
+						<button type="button" class="btn btn-sm btn-primary btn-block" id="split_armies_button">Split Army</button>
+					{{/if}}
+					<button type="button" class="btn btn-sm btn-primary btn-block" id="return_to_castle_button">Return to Castle</button>
+					{{#if is_on_village}}
+						<button type="button" class="btn btn-sm btn-primary btn-block" id="join_village_button">Join Village Garrison</button>
+					{{/if}}
+				</div>
+
+
+				<div class="panel panel-default">
+					<div class="panel-heading">
+						Build a Village
+					</div>
+					{{#if has_less_than_max_villages}}
+						{{#if is_on_grain_hex}}
+							<div class="panel-body" style="text-align:center;">
+								You can build {{how_many_villages_can_i_build}} more villages.
+							</div>
+							<table class="table table-condensed table-striped">
+								<thead>
+									<tr>
+										<td></td><td style="text-align:right;"><b>cost</b></td>
+									</tr>
+								</thead>
+								<tbody>
+									{{#if has_enough_grain}}
+										<tr>
+											<td>Grain</td>
+											<td style="text-align:right;">{{round sVillages.cost.level1.grain}}</td>
+										</tr>
+									{{else}}
+										<tr class="danger">
+											<td>Grain</td>
+											<td style="text-align:right;">{{round sVillages.cost.level1.grain}}</td>
+										</tr>
+									{{/if}}
+
+									{{#if has_enough_lumber}}
+										<tr>
+											<td>Lumber</td>
+											<td style="text-align:right;">{{round sVillages.cost.level1.lumber}}</td>
+										</tr>
+									{{else}}
+										<tr class="danger">
+											<td>Lumber</td>
+											<td style="text-align:right;">{{round sVillages.cost.level1.lumber}}</td>
+										</tr>
+									{{/if}}
+
+									{{#if has_enough_ore}}
+										<tr>
+											<td>Ore</td>
+											<td style="text-align:right;">{{round sVillages.cost.level1.ore}}</td>
+										</tr>
+									{{else}}
+										<tr class="danger">
+											<td>Ore</td>
+											<td style="text-align:right;">{{round sVillages.cost.level1.ore}}</td>
+										</tr>
+									{{/if}}
+
+									{{#if has_enough_wool}}
+										<tr>
+											<td>Wool</td>
+											<td style="text-align:right;">{{round sVillages.cost.level1.wool}}</td>
+										</tr>
+									{{else}}
+										<tr class="danger">
+											<td>Wool</td>
+											<td style="text-align:right;">{{round sVillages.cost.level1.wool}}</td>
+										</tr>
+									{{/if}}
+
+									{{#if has_enough_clay}}
+										<tr>
+											<td>Clay</td>
+											<td style="text-align:right;">{{round sVillages.cost.level1.clay}}</td>
+										</tr>
+									{{else}}
+										<tr class="danger">
+											<td>Clay</td>
+											<td style="text-align:right;">{{round sVillages.cost.level1.clay}}</td>
+										</tr>
+									{{/if}}
+
+									{{#if has_enough_glass}}
+										<tr>
+											<td>Glass</td>
+											<td style="text-align:right;">{{round sVillages.cost.level1.glass}}</td>
+										</tr>
+									{{else}}
+										<tr class="danger">
+											<td>Glass</td>
+											<td style="text-align:right;">{{round sVillages.cost.level1.glass}}</td>
+										</tr>
+									{{/if}}
+								</tbody>
+							</table>
+							<div class="panel-body" style="text-align:center;">
+								{{#if isPro}}
+									A village here would collect<br>
+									{{#if villageWorth}}
+										{{round villageWorth}}
+									{{else}}
+										(calculating)
+									{{/if}}
+									gold worth of resources.<br>
+									<br>
+								{{/if}}
+
+								{{#if has_enough_grain}}
+									{{#if has_enough_lumber}}
+										{{#if has_enough_ore}}
+											{{#if has_enough_wool}}
+												{{#if has_enough_clay}}
+													{{#if has_enough_glass}}
+														<div class="alert alert-danger" id="build_village_error_alert" style="display:none;"></div>
+														<button type="button" class="btn btn-sm btn-primary btn-block" id="build_village_button">Build Village</button>
+													{{/if}}
+												{{/if}}
+											{{/if}}
+										{{/if}}
+									{{/if}}
+								{{/if}}
+							</div>
+
+						{{else}}
+							<div class="panel-body">
+								Must be on a grain hex to build a village.
+							</div>
+						{{/if}}
+					{{else}}
+						<div class="panel-body">
+							You have {{maxVillages}} villages. Cannot build any more.<br>
+							To build another village destroy one of<br>
+							your current villages.
+						</div>
+					{{/if}}
+				</div>
+			{{/if}}
+
+			<div class="panel panel-default panel-body">
+				{{#if is_owner}}
+					<button type="button" class="btn btn-sm btn-primary btn-block" id="disband_army_button">Disband Army</button>
+				{{/if}}
+				{{> infoPanelMarkerButton}}
+			</div>
+
+			{{#if battleInfoReady}}
+				{{#if battle}}
+					<div class="panel panel-default">
+						<div class="panel-heading">
+							Battle
+						</div>
+						<div class="panel-body">
+							{{> battleReport battle}}
+						</div>
+					</div>
+				{{/if}}
+			{{/if}}
+		{{else}}
+			<div class="pad_group" style="text-align:center;">
+				<i class="fa fa-refresh fa-spin"></i>
+				&nbsp;
+				Loading
+			</div>
+		{{/if}}
+	</div>
+</template>

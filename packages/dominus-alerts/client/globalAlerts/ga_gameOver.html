@@ -1,0 +1,19 @@
+<template name="ga_gameOver">
+    {{> ga_titleTemplate title=title iconName='fa-smile-o' date=created_at}}
+    <div class="alertAnimationWrapper">
+        {{#if isOpen}}
+        <div class="alertBody alertPad">
+            <a href="" data-x="{{winner.x}}" data-y="{{winner.y}}" data-castle_id="{{winner.castle_id}}" class="userLink">{{winner.username}}</a>
+
+            wins the game.  Congrats!!
+
+            <br><br>
+
+            <div class="light_text">A new game will start soon.</div>
+
+            <br><br>
+            {{> globalAlertShareLink}}
+        </div>
+        {{/if}}
+    </div>
+</template>

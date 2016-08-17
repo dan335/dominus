@@ -1,0 +1,74 @@
+<template name="rp_info_army_paths">
+  {{#if hasPath paths}}
+
+    <div class="panel panel-default" id="rp_info_army_paths">
+      <div class="panel-heading">
+        Movement
+      </div>
+
+      <table class="table table-striped table-condensed">
+        <thead>
+          <tr>
+            <td>To</td>
+            <td style="text-align:center;">Distance</td>
+            <td style="text-align:center;">Time</td>
+            <td></td>
+          </tr>
+        </thead>
+				<tbody>
+          {{#each paths}}
+            {{> rp_info_army_path}}
+          {{/each}}
+
+          <tr>
+            <td class="light_text">Total</td>
+            <td style="text-align:center;">{{army.moveDistance}} hexes</td>
+            <td style="text-align:center;">{{{totalTravelTime}}}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="panel-body">
+        <div>
+          Next move {{nextMoveTime}}.<br>
+
+          {{#if isPaused}}
+
+            <button class="btn btn-block btn-small btn-primary" data-toggle="tooltip" data-placement="top" id="resumeMovementButton">
+              Resume Movement
+            </button>
+
+          {{else}}
+
+            <button class="btn btn-block btn-small btn-primary" data-toggle="tooltip" data-placement="top" id="pauseMovementButton">
+              Delay Next Move
+            </button>
+
+          {{/if}}
+        </div>
+      </div>
+
+    </div>
+  {{/if}}
+</template>
+
+
+<template name="rp_info_army_path">
+  <tr>
+    <td>
+      <span class="light_text">{{index}}.</span> {{x}}, {{y}}
+    </td>
+    <td style="text-align:center;">
+      {{{moveDistance}}}
+    </td>
+    <td style="text-align:center;">
+      {{{travelTime}}}
+    </td>
+    <td style="text-align:right;">
+      <button class="btn btn-xs btn-primary upArmyPathButton" data-toggle="tooltip" data-placement="top" title="Move Up"><i class="fa fa-angle-up"></i></button>
+      <button class="btn btn-xs btn-primary downArmyPathButton" data-toggle="tooltip" data-placement="top" title="Move Down"><i class="fa fa-angle-down"></i></button>
+      <button class="btn btn-xs btn-primary removeArmyPathButton" data-toggle="tooltip" data-placement="top" title="Remove Destination"><i class="fa fa-trash"></i></button>
+    </td>
+  </tr>
+</template>

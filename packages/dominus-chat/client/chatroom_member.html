@@ -1,0 +1,35 @@
+<template name="chatroom_member">
+	<div>
+		<table style="width:100%;">
+			<tbody>
+				<tr>
+					<td style="padding-right:8px;">
+						<a href="" class="usernameLink">
+							{{username}}
+						</a>
+					</td>
+					<td style="text-align:right;padding-left:10px;padding-right:10px;white-space:nowrap;">
+						{{#if showMakeOwnerButton}}
+							<a href="" class="makeOwnerButton" data-toggle="tooltip" title="Make Owner"><i class="fa fa-sitemap"></i></a>
+						{{/if}}
+
+						{{#if showMakeAdminButton}}
+							&nbsp;
+							<a href="" class="makeAdminButton" data-toggle="tooltip" title="Make Admin"><i class="fa fa-level-up"></i></a>
+						{{/if}}
+
+						{{#if showRemoveAdminButton}}
+							&nbsp;
+							<a href="" class="removeAdminButton" data-toggle="tooltip" title="Remove Admin"><i class="fa fa-level-down"></i></a>
+						{{/if}}
+
+						{{#if showKickButton}}
+							&nbsp;
+							<a href="" class="kickButton" data-toggle="tooltip" title="Kick From Chatroom"><i class="fa fa-trash"></i></a>
+						{{/if}}
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+</template>
