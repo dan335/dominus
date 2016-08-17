@@ -11,6 +11,9 @@ The game is able to support any number of people.  As more people join the map g
 
 Dominus is made using the web platform <a href="http://meteor.com">Meteor</a>.
 
+#### Contributing ####
+
+Please sign the <a href="https://www.clahub.com/agreements/dan335/dominus">contributor license agreement</a> before contributing.  It's required so that the license can be changed if needed.
 
 #### Todo ####
 * When Apollo is released and switch to it and RethinkDB.
