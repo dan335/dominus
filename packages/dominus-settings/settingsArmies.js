@@ -21,7 +21,7 @@ _gs.armies = function(gameId, path) {
 
   // cheats
   if (Meteor.settings.public.dominusIsDev) {
-    settings.armyTravelMultiplier = 0.1; // this breaks tests TODO: make meteor settings variable isTest
+    //settings.armyTravelMultiplier = 0.1; // this breaks tests TODO: make meteor settings variable isTest
   }
 
   return objectValueFromString(settings, path);

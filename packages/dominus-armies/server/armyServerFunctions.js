@@ -100,7 +100,7 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
   check(checkForMerge, Boolean);
   check(gameId, String);
 
-  var armyFields = {playerId:1, user_id:1, x:1, y:1, onAllyBuilding:1, pastMoves:1};
+  var armyFields = {playerId:1, user_id:1, x:1, y:1, onAllyBuilding:1, pastMoves:1, last_move_at:1};
   _s.armies.types.forEach(function(type) {
     armyFields[type] = 1;
   })
@@ -178,7 +178,15 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
 
               // make sure other army is stopped
               if (dArmies.isStopped(otherArmy._id)) {
-                Armies.update(otherArmy._id, {$inc:inc, $set: {speed:null}});
+                
+                // new army should get the lastest last_move_at to prevent cheat
+                let latest = moment(new Date(otherArmy.last_move_at));
+                let armyLastMove = moment(new Date(army.last_move_at));
+                if (armyLastMove.isAfter(latest)) {
+                  latest = armyLastMove;
+                }
+
+                Armies.update(otherArmy._id, {$inc:inc, $set: {speed:null, last_move_at:latest.toDate()}});
                 dArmies.destroyArmy(army_id);
 
                 // we still need to check for enemies
