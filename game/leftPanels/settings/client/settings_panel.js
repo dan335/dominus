@@ -122,7 +122,7 @@ Template.settings_panel.events({
 		$(alert).hide()
 		var username = $(input).val()
 
-		username = username.replace(/[^a-zA-Z0-9]+/g, "");
+		username = username.replace(/[^a-zA-Z0-9_\s]+/g, "");
 
 		if (error) {
 			$(alert).show()

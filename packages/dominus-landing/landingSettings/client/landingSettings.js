@@ -162,7 +162,7 @@ Template.landingSettings.events({
     $(alert).hide();
     $(successAlert).hide();
 
-    nameInput.value = nameInput.value.replace(/[^a-zA-Z0-9]+/g, "");
+    nameInput.value = nameInput.value.replace(/[^a-zA-Z0-9_\s]+/g, "");
 
     Meteor.apply('changeMainUsername', [nameInput.value], {throwStubExceptions:false}, function(error, result) {
       if (error) {

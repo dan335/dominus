@@ -1,10 +1,10 @@
 Template.castleFlagMapObject.helpers({
 	cleanName: function() {
-		return this.name.replace(/[^a-zA-Z0-9]+/g, "");
+		return this.name.replace(/[^a-zA-Z0-9_\s]+/g, "");
 	},
 
 	cleanUsername: function() {
-		return this.username.replace(/[^a-zA-Z0-9 ]+/g, "");
+		return this.username.replace(/[^a-zA-Z0-9_\s]+/g, "");
 	},
 
 	friend_or_foe: function() {

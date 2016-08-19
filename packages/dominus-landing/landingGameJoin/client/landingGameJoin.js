@@ -28,7 +28,7 @@ Template.landingGameJoin.events({
     let button = event.currentTarget;
     let buttonText = $(button).text();
 
-    username.value = username.value.replace(/[^a-zA-Z0-9]+/g, "");
+    username.value = username.value.replace(/[^a-zA-Z0-9_\s]+/g, "");
 
     $(alert).hide();
     $(button).attr('disabled', true);

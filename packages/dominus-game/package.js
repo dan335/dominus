@@ -17,7 +17,8 @@ Package.onUse(function(api) {
     'ddp-rate-limiter',
     'steeve:reactive-cookie@0.0.8',
     'dominus-castles',
-    'dominus-init'
+    'dominus-init',
+    'dominus-alerts'
   ]);
   api.addFiles([
     'both/namespace.js',
