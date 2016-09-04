@@ -4,10 +4,10 @@
 # but you can also edit it by hand.
 
 jquery@1.11.9
-less@2.7.4
+less@2.7.5
 random@1.0.10
-accounts-password@1.2.12
-email@1.1.16
+accounts-password@1.3.0
+email@1.1.17
 accounts-ui@1.1.9
 danimal:accounts-templates
 danimal:hx
@@ -23,7 +23,7 @@ d3js:d3
 mrgalaxy:stripe
 wizonesolutions:underscore-string
 wylio:mandrill
-http@1.2.8
+http@1.2.9
 meteorhacks:kadira
 dominus-minimap
 dominus-mapbaker
@@ -38,21 +38,21 @@ dominus-init
 dominus-armies
 meteor-base@1.0.4
 mobile-experience@1.0.4
-mongo@1.1.10
+mongo@1.1.12
 blaze-html-templates@1.0.4
 session@1.1.6
 tracker@1.1.0
-logging@1.1.14
+logging@1.1.15
 reload@1.1.10
 ejson@1.0.12
 spacebars@1.0.12
 check@1.2.3
 danimal:mapmover
 dominus-hexmap
-ecmascript@0.5.7
+ecmascript@0.5.8
 ecmascript-collections
-promise@0.8.3
-es5-shim@4.6.13
+promise@0.8.4
+es5-shim@4.6.14
 dominus-market
 dominus-manager
 okgrow:analytics
@@ -82,7 +82,8 @@ dominus-battles-ui
 dominus-panel-rankings
 danimal:dominus-rankings
 dominus-queue
-standard-minifier-css@1.1.8
-standard-minifier-js@1.1.8
+standard-minifier-css@1.2.0
+standard-minifier-js@1.2.0
 danimal:dominus-help
 huttonr:bootstrap3
+shell-server

@@ -4,6 +4,7 @@
   "description": "game",
   "main": "index.js",
   "dependencies": {
+    "bcrypt": "^0.8.7",
     "d3": "^3.5.17",
     "jquery": "^2.2.4",
     "moment": "^2.14.1",
