@@ -47,14 +47,3 @@ Package.onUse(function(api) {
     'dCastles'
   ]);
 });
-
-Package.onTest(function(api) {
-  api.use('tinytest');
-  api.use([
-    'dominus-init',
-    'dominus-castles',
-    'dominus-mapmaker',
-    'dominus-manager'
-  ]);
-  api.addFiles('castles-tests-server.js', 'server');
-});

@@ -8,16 +8,19 @@ if (process.env.DOMINUS_WORKER == 'true') {
 
 
 dManager.checkForDominus = function(gameId) {
-  console.log('--- checking for dominus', gameId, '---')
+  //console.log('--- checking for dominus', gameId, '---')
 	var numPlayers = Players.find({gameId:gameId, castle_id: {$exists: true, $ne:null}}).count()
 
 	if (numPlayers <= 1) {
 		return;
 	}
 
-	let dominus = Players.findOne({gameId:gameId, is_dominus:true}, {fields: {gameId:1}});
-	let is_still_dominus = false
-  console.log('current dominus', dominus)
+	//let dominus = Players.findOne({gameId:gameId, is_dominus:true}, {fields: {gameId:1}});
+	let is_still_dominus = false;
+
+  // get prevDominusId
+  let game = Games.findOne(gameId, {fields: {dominusAchieved:1, lastDominusPlayerId:1}});
+
 	// find dominus
   let newDominus = null;
   let query = {gameId:gameId, is_king:true, castle_id: {$exists:true, $ne:null}};
@@ -34,14 +37,15 @@ dManager.checkForDominus = function(gameId) {
 	})
 
   if (newDominus) {
-    console.log('newDominus', newDominus);
     Players.update(newDominus._id, {$set: {is_dominus: true}});
 
     // set everyone to not dominus except new dominus
     Players.update({gameId:gameId, is_dominus:true, _id:{$ne:newDominus._id}}, {$set: {is_dominus:false}}, {multi:true});
 
-    if (dominus) {
-      if (newDominus._id == dominus._id) {
+    //if (dominus) {
+    if (game.lastDominusPlayerId) {
+      //if (newDominus._id == dominus._id) {
+      if (newDominus._id == game.lastDominusPlayerId)
         is_still_dominus = true;
       } else {
         new_dominus_event(gameId, newDominus);
@@ -50,14 +54,15 @@ dManager.checkForDominus = function(gameId) {
       new_dominus_event(gameId, newDominus);
     }
   } else {
-    console.log('no dominus found.');
+    //console.log('no dominus found.');
     // remove dominus
     Players.update({gameId:gameId, is_dominus:true}, {$set: {is_dominus:false}}, {multi:true});
   }
 
 	// if old dominus is no longer dominus
 	// there is a new dominus
-	if (dominus) {
+	//if (dominus) {
+  if (game.lastDominusPlayerId) {
 		if (!is_still_dominus) {
 			dAlerts.alert_noLongerDominus(gameId, dominus._id)
 		}
