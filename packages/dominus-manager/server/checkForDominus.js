@@ -45,7 +45,7 @@ dManager.checkForDominus = function(gameId) {
     //if (dominus) {
     if (game.lastDominusPlayerId) {
       //if (newDominus._id == dominus._id) {
-      if (newDominus._id == game.lastDominusPlayerId)
+      if (newDominus._id == game.lastDominusPlayerId) {
         is_still_dominus = true;
       } else {
         new_dominus_event(gameId, newDominus);

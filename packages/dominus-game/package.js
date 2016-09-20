@@ -18,7 +18,7 @@ Package.onUse(function(api) {
     'steeve:reactive-cookie@0.0.8',
     'dominus-castles',
     'dominus-init',
-    'dominus-alerts'
+    'dominus-alerts',
   ]);
   api.addFiles([
     'both/namespace.js',
