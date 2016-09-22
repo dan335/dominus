@@ -197,6 +197,6 @@ Accounts.emailTemplates.verifyEmail.subject = function(user) {
 };
 
 Accounts.emailTemplates.verifyEmail.html = function(user, url) {
-	var email = '<div><img src="https://dominusgame.net/emails/emailBanner.jpg" style="max-width:100%;max-height:283px;"><br><br><p>Hello,</p><p>To verify your email, simply click the link below.</p><p><a href="'+url+'">'+url+'</a></p><p>Inactive unverified accounts are deleted after 48 hours.</p><p>Thanks.</p><p><a href="https://dominusgame.net">Dominus</a></p></div>';
+	var email = '<div><img src="https://dominusgame.net/emails/emailBanner.jpg" style="max-width:100%;max-height:283px;"><br><br><p>Hello,</p><p>To verify your email, simply click the link below.</p><p><a href="'+url+'">'+url+'</a></p><p>Thanks.</p><p><a href="https://dominusgame.net">Dominus</a></p></div>';
 	return email;
 };

@@ -15,11 +15,11 @@ dManager.checkForDominus = function(gameId) {
 		return;
 	}
 
-	//let dominus = Players.findOne({gameId:gameId, is_dominus:true}, {fields: {gameId:1}});
+	let dominus = Players.findOne({gameId:gameId, is_dominus:true}, {fields: {gameId:1}});
 	let is_still_dominus = false;
 
   // get prevDominusId
-  let game = Games.findOne(gameId, {fields: {dominusAchieved:1, lastDominusPlayerId:1}});
+  let game = Games.findOne(gameId, {fields: {lastDominusPlayerId:1}});
 
 	// find dominus
   let newDominus = null;
@@ -42,10 +42,10 @@ dManager.checkForDominus = function(gameId) {
     // set everyone to not dominus except new dominus
     Players.update({gameId:gameId, is_dominus:true, _id:{$ne:newDominus._id}}, {$set: {is_dominus:false}}, {multi:true});
 
-    //if (dominus) {
-    if (game.lastDominusPlayerId) {
-      //if (newDominus._id == dominus._id) {
-      if (newDominus._id == game.lastDominusPlayerId) {
+    if (dominus) {
+    //if (game.lastDominusPlayerId) {
+      if (newDominus._id == dominus._id) {
+      //if (newDominus._id == game.lastDominusPlayerId) {
         is_still_dominus = true;
       } else {
         new_dominus_event(gameId, newDominus);
@@ -96,7 +96,7 @@ var remove_dominus = function(gameId) {
 
 // happens when there is a new dominus
 var new_dominus_event = function(gameId, dominusPlayer) {
-	check(dominusPlayer, Object);;
+	check(dominusPlayer, Object);
 	check(dominusPlayer._id, String);
 	check(gameId, String);
 
@@ -114,13 +114,12 @@ var new_dominus_event = function(gameId, dominusPlayer) {
 	if (dominusPlayer._id != lastDominusPlayerId) {
 		let time = _gs.init(gameId, 'time_til_game_end_when_new_dominus');
 		set.endDate = moment(new Date()).add(time, 'ms').toDate();
-		set.lastDominusPlayerId = lastDominusPlayerId;
 	}
 
+  set.lastDominusPlayerId = dominusPlayer._id;
+
 	// close game registration
-	if (!game.dominusAchieved) {
-		set.dominusAchieved = true;
-	}
+	set.dominusAchieved = true;
 
 	Games.update(gameId, {$set:set});
 
