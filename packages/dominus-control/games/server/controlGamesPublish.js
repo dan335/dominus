@@ -3,8 +3,12 @@ Meteor.publish('gamesForControl', function() {
     return this.ready();
   }
 
-  var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
-  if (!user || !user.admin) {
+  var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
+  if (!user) {
+    return this.ready();
+  }
+
+  if (!user.admin && !user.moderator) {
     return this.ready();
   }
 
@@ -26,8 +30,12 @@ Meteor.publish('gameForControl', function(gameId) {
     return this.ready();
   }
 
-  var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
-  if (!user || !user.admin) {
+  var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
+  if (!user) {
+    return this.ready();
+  }
+
+  if (!user.admin && !user.moderator) {
     return this.ready();
   }
 

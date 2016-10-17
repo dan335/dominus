@@ -37,6 +37,7 @@ Accounts.onCreateUser(function(options, user) {
 
 	// set admin
 	user.admin = false;
+	user.moderator = false;
 
 	// has user's email been verified
 	user.verifiedEmail = false;

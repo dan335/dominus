@@ -30,7 +30,9 @@ Package.onUse(function(api) {
     'kuestats/server/kuestatsPublish.js',
     'kuestats/server/control_queueMethods.js',
     'bans/server/bansMethods.js',
-    'bans/server/bansPublish.js'
+    'bans/server/bansPublish.js',
+    'moderators/server/moderatorsPublish.js',
+    'moderators/server/moderatorsMethods.js'
   ], 'server');
   api.addFiles([
     'client/control.html',
@@ -52,7 +54,9 @@ Package.onUse(function(api) {
     'kuestats/client/control_kuestats.html',
     'kuestats/client/control_kuestats.js',
     'bans/client/bans.html',
-    'bans/client/bans.js',
+    'bans/client/bans.js',,
+    'moderators/client/moderators.html',
+    'moderators/client/moderators.js'
   ], 'client');
   api.export('dControl');
 });

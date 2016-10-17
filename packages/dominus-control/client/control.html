@@ -1,6 +1,6 @@
 <template name="control">
   <div id="control_container">
-    {{#if currentUser.admin}}
+    {{#if showMenu}}
   		{{> controlMenu}}
   		{{> Template.dynamic template=route}}
     {{else}}

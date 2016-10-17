@@ -1,0 +1,11 @@
+<template name="control_moderators">
+  <input type="text" id="modInput" class="form-control" placeholder="userid">
+  <br>
+  <button class="btn btn-primary" id="modButton">Add Mod</button>
+
+  <br><br>
+  <h3>Mods</h3>
+  {{#each mods}}
+    <div>{{username}} {{_id}}</div>
+  {{/each}}
+</template>

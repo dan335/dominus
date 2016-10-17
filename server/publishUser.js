@@ -16,7 +16,8 @@ Meteor.publish(null, function () {
 			proTokens:1,
 			male:1,
 			avatarFilename:1,
-			banned:1
+			banned:1,
+			moderator:1
 		}})
 	} else {
 		this.ready()

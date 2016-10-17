@@ -1,11 +1,6 @@
 Template.control_games.helpers({
   games: function() {
     return Games.find({}, {sort:{startAt: -1}});
-  },
-
-  dateFormat: function() {
-    let data = Template.currentData();
-    return moment(new Date(data.startAt)).format('YYYY-MM-DD HH:mm');
   }
 })
 

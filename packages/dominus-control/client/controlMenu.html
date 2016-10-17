@@ -9,8 +9,18 @@
 				<li><a href="/control/onlineUsers">Online Users</a></li>
 				<li><a href="/control/kuestats">Job Queue</a></li>
 				<li><a href="/control/bans">Bans</a></li>
+				<li><a href="/control/moderators">Moderators</a></li>
 			</ul>
 		</div>
 		<br>
+	{{/if}}
+
+	{{#if currentUser.moderator}}
+		<div>
+			<ul class="nav nav-pills">
+				<li><a href="/">Exit</a></li>
+				<li><a href="/control/games">Create Game</a></li>
+			</ul>
+		</div>
 	{{/if}}
 </template>

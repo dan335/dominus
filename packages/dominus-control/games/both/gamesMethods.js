@@ -14,9 +14,13 @@ Meteor.methods({
     check(isKingOfHill, Boolean);
     check(isNoLargeResources, Boolean);
 
-    var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
-    if (!user || !user.admin) {
-      throw new Meteor.Error('control.games.addGame', 'Must be admin.');
+    var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
+    if (user) {
+      if (!user.admin && !user.moderator) {
+        throw new Meteor.Error('control.games.addGame', 'Must be admin or moderator.');
+      }
+    } else {
+      throw new Meteor.Error('control.games.addGame', 'Must be admin or moderator.');
     }
 
     // 2015-12-23 16:20
@@ -75,9 +79,13 @@ Meteor.methods({
   removeGame: function(gameId) {
     check(gameId, String);
 
-    var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
-    if (!user || !user.admin) {
-      throw new Meteor.Error('control.games.addGame', 'Must be admin.');
+    var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
+    if (user) {
+      if (!user.admin && !user.moderator) {
+        throw new Meteor.Error('control.games.addGame', 'Must be admin or moderator.');
+      }
+    } else {
+      throw new Meteor.Error('control.games.addGame', 'Must be admin or moderator.');
     }
 
     Games.remove(gameId);
@@ -115,5 +123,5 @@ if (Meteor.isServer) {
     type: 'method',
     name: 'addGame'
   }
-  DDPRateLimiter.addRule(addGameRule, 3, 5000);
+  DDPRateLimiter.addRule(addGameRule, 1, 1000);
 }

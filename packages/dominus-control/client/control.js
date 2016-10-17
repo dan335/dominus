@@ -3,6 +3,15 @@ Template.control.helpers({
     var path = SimpleRouter.path.get();
     var pathArray = path.split('/');
     return 'control_'+pathArray[2];
+  },
+
+  showMenu: function() {
+    let user = Meteor.users.findOne(Meteor.userId(), {fields: {admin:1, moderator:1}});
+    if (user) {
+      if (user.admin || user.moderator) {
+        return true;
+      }
+    }
   }
 })
 
