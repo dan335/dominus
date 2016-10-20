@@ -1,9 +1,29 @@
 Meteor.methods({
   banUser: function(userId) {
-    let callerUserId = Meteor.userId();
-    let user = Meteor.users.findOne(callerUserId, {fields: {admin:1}});
-    if (user && user.admin) {
-      Meteor.users.update(userId, {$set: {banned:true}});
+    var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
+    if (user) {
+      if (!user.admin && !user.moderator) {
+        throw new Meteor.Error('control.games.addGame', 'Must be admin or moderator.');
+      }
+    } else {
+      throw new Meteor.Error('control.games.addGame', 'Must be admin or moderator.');
     }
+
+    Meteor.users.update(userId, {$set: {banned:true}});
+  },
+
+
+
+  unbanUser: function(userId) {
+    var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
+    if (user) {
+      if (!user.admin && !user.moderator) {
+        throw new Meteor.Error('control.games.addGame', 'Must be admin or moderator.');
+      }
+    } else {
+      throw new Meteor.Error('control.games.addGame', 'Must be admin or moderator.');
+    }
+
+    Meteor.users.update(userId, {$set: {banned:false}});
   }
-})
+});

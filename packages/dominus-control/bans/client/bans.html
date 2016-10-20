@@ -6,6 +6,15 @@
   <br><br>
   <h3>Banned Users</h3>
   {{#each bannedUsers}}
-    <div>{{username}} {{_id}}</div>
+    {{> control_bans_players}}
   {{/each}}
+</template>
+
+
+<template name="control_bans_players">
+  <div>
+    {{username}}
+    {{_id}}
+    <button class="btn btn-primary unbanButton">X</button>
+  </div>
 </template>

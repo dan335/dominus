@@ -17,3 +17,12 @@ Template.control_bans.events({
 Template.control_bans.onCreated(function() {
   this.subscribe('control_bans');
 });
+
+
+
+Template.control_bans_players.events({
+  'click .unbanButton': function(event, template) {
+    event.preventDefault();
+    Meteor.call('unbanUser', this._id);
+  }
+})
