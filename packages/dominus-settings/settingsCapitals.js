@@ -9,24 +9,24 @@ _gs.capitals = function(gameId, path) {
   if (game && game.isSpeed) {
     settings.income = {
       gold: 0,
-      grain: 20,
-      lumber: 20,
-      ore: 20,
-      wool: 20,
-      clay: 20,
-      glass: 20
+      grain: 16,
+      lumber: 16,
+      ore: 16,
+      wool: 16,
+      clay: 16,
+      glass: 16
     }
   }
 
   if (game && game.isSuperSpeed) {
     settings.income = {
       gold: 0,
-      grain: 100,
-      lumber: 100,
-      ore: 100,
-      wool: 100,
-      clay: 100,
-      glass: 100
+      grain: 80,
+      lumber: 80,
+      ore: 80,
+      wool: 80,
+      clay: 80,
+      glass: 80
     }
 
     settings.incomeInterval = 1000 * 60 * 10;
@@ -43,12 +43,12 @@ _gs.capitals = function(gameId, path) {
 _s.capitals = {
   income: {   // base income at every capital
     gold: 0,
-    grain: 10,
-    lumber: 10,
-    ore: 10,
-    wool: 10,
-    clay: 10,
-    glass: 10
+    grain: 8,
+    lumber: 8,
+    ore: 8,
+    wool: 8,
+    clay: 8,
+    glass: 8
   },
 
   startingGarrison: {
