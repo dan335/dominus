@@ -1,4 +1,14 @@
 Template.landingProfile.helpers({
+  joined: function() {
+    let userId = Template.instance().userId.get();
+    if (userId) {
+      let user = ProfileUser.findOne(userId, {fields: {createdAt:1}});
+      if (user) {
+        return moment(new Date(user.createdAt)).fromNow();
+      }
+    }
+  },
+
   user: function() {
     let userId = Template.instance().userId.get();
     if (userId) {

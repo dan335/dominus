@@ -4,7 +4,8 @@ Meteor.publish('userProfile', function(userId) {
 	var fields = {
 		username:1,
 		rankingRegular:1,
-		rankingPro:1
+		rankingPro:1,
+		createdAt:1
 	};
 	var query = Meteor.users.find(userId, {fields: fields});
 	Mongo.Collection._publishCursor(query, this, 'profileuser');
