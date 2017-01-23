@@ -1,0 +1,26 @@
+<template name="help_castles">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#accordion_help" href="#help-castles">
+                Castles
+            </a>
+        </div>
+        <div id="help-castles" class="panel-collapse collapse">
+            <div class="panel-body">
+{{#markdown}}
+
+Your castle is the center of your kingdom.  Everyone has one castle and they cannot be destroyed.
+
+Castles are very defensive.  They have a {{sCastles.defense_bonus}}x defense bonus.
+
+If you attack someone's castle and win then you become their lord and they become your vassal.
+
+If your army stops on the same hex as your castle then they will join your castle's garrison.
+
+Castles produce {{collected.gold}} gold,  {{collected.grain}} of each resource and collect vassal income every {{date_duration_humanize incomeInterval}}.
+
+{{/markdown}}
+            </div>
+        </div>
+    </div>
+</template>

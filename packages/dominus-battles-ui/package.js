@@ -27,7 +27,7 @@ Package.onUse(function(api) {
     'dominus-hexmap',
     'dominus-alerts',
     'dominus-mapmaker',
-    'danimal:dominus-battles@1.0.2',
+    'dominus-battles',
     'dominus-queue'
   ]);
   api.addFiles([

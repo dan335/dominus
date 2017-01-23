@@ -1,0 +1,42 @@
+<template name="help_market">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#accordion_help" href="#help-market">
+                Resources and the Market
+            </a>
+        </div>
+        <div id="help-market" class="panel-collapse collapse">
+            <div class="panel-body">
+{{#markdown}}
+
+There are six different types of resources.  Grain, lumber, ore, wool, clay and glass.  Resources are used to hire soldiers and build villages.  Each hex produces a different type of resouce.
+
+### Collecting Resources
+
+Resources are collected at your castle and villages.
+
+Your castle collects {{income.gold}} gold, {{income.grain}} grain, {{income.lumber}} lumber, {{income.ore}} ore, {{income.wool}} wool, {{income.clay}} clay, and {{income.glass}} glass.  Everyone's castle collects the same resources.
+
+Villages collect resources from the 6 hexes surrounding them.
+
+Resources are collected every {{incomeInterval}}.
+
+You can see how many resources you have in the top of the summary panel.  The white number is how many you have.  The first grey number is how many you collected last resource update from your castle and villages.  The second grey number is how many you received from your vassals.
+
+Villages collect from the hexes surrounding even if there is another building on the hex.  It is ok to build villages next to each other or next to a castle, capital or other villages.
+
+### Large Resource Hexes
+
+Some hexes produce {{round resources_at_large_hexes}} resources instead of {{round gained_at_hex}}. These hexes have small buildings on them.
+
+### The Market
+
+The market is where you can exchange resources and gold.  Prices for resources go up and down based on demand.  If grain is in high demand because many people bought grain then the price will go up.
+
+Taxes from the market are evenly distributed to castles every resource update.
+
+{{/markdown}}
+            </div>
+        </div>
+    </div>
+</template>

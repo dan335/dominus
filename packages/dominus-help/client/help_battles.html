@@ -1,0 +1,57 @@
+<template name="help_battles">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#accordion_help" href="#help-battles">
+                Battles
+            </a>
+        </div>
+        <div id="help-battles" class="panel-collapse collapse">
+            <div class="panel-body">
+{{#markdown}}
+When a unit is on the same hex as an enemy they will battle.  Every {{date_duration_humanize battleInterval}} all units in the battle will lose soldiers.  Losers lose {{s.battle_power_lost_per_round}} power worth of soldiers.  Winners lose {{floatToPercentage s.battle_power_lost_winner_ratio}}% of what losers lose.   Larger armies and more people in a battle cause losses to go up.
+
+### Attackers and Defenders
+In battle units are either attackers or defenders.  Buildings are always defenders.  If an army is on the same hex as their castle or village or their ally's castle or village then they are a defender.  Otherwise the defender is the first army to arrive at the hex.
+
+### Power
+Every round, if your units' power + your allies' power is greater than your enemies' combined power then you are a winner that round.
+
+If you are a defender then your soldiers use their defense power; if you are an attacker then they use their offense power.
+
+|   | Attack Power | Defend Power |
+|---|:------------:|:------------:|
+| Footmen   | {{s.army.stats.footmen.offense}}   | {{s.army.stats.footmen.defense}}   |
+| Archers   | {{s.army.stats.archers.offense}}   | {{s.army.stats.archers.defense}}   |
+| Pikemen   | {{s.army.stats.pikemen.offense}}   | {{s.army.stats.pikemen.defense}}   |
+| Cavalry   | {{s.army.stats.cavalry.offense}}   | {{s.army.stats.cavalry.defense}}   |
+| Catapults | {{s.army.stats.catapults.offense}} | {{s.army.stats.catapults.defense}} |
+
+### Bonuses
+
+Bonuses can increase an army's power.
+
+Footmen receive a bonus against pikemen. Archers receive a bonus against footmen. Pikemen receive a bonus against cavalry. Calvary receive a bonus against archers and footmen.
+
+When an archer fights a footman because the archer has a bonus against footmen the archer is {{bonusAmount}}x as powerful.
+
+Catapults' offense is multiplied by {{s.army.stats.catapults.bonus_against_buildings}} when attacking a castle, capital or village.  They must be on the same hex as an enemy castle, capital or village.
+
+Armies inside a castle receive a {{sCastles.defense_bonus}}x bonus.  Armies inside a village receive a  {{sVillages.defense_bonus}}x bonus.
+
+Armies on a vassal's castle or village receive a {{sCastles.ally_defense_bonus}}x bonus.  Armies on the same hex as their own castle or village but outside also receive this bonus.
+
+### Alerts
+
+You will get an alert when your units enter a battle.  You can also see battles as they happen in the alerts panel.
+
+### Who Gets the Spoils
+
+Multiple armies can attack a castle at the same time.  If they win the castle will go to the first army to arrive that is still alive.
+
+{{/markdown}}
+
+
+            </div>
+        </div>
+    </div>
+</template>

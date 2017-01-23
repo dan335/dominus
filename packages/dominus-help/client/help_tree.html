@@ -1,0 +1,34 @@
+<template name="help_tree">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <a data-toggle="collapse" data-parent="#accordion_help" href="#help-lords">
+        Vassals, Lords and Kings
+      </a>
+    </div>
+    <div id="help-lords" class="panel-collapse collapse">
+      <div class="panel-body">
+{{#markdown}}
+
+If you attack someone's castle and win then you become their lord and they become your vassal.
+
+Lords receive {{floatToPercentage s.income.percentToLords}}% of their vassals' income.
+
+If a vassal has more than 5 people above him (or her), each lord gets {{floatToPercentage s.income.maxToLords}}% of the vassal's income divided by the number of lords that vassal has. For example: if you have 8 people above you, then they each get {{floatToPercentage s.income.maxToLords}}% / 8 = {{exampleNum}}% of your income.
+
+Vassals do not lose the resources that their lords receive.  If someone takes your castle and becomes your lord then your income will still be the same.  Vassals do not lose the {{floatToPercentage s.income.percentToLords}}% that their lords receive.
+
+You can send gold or soldiers to your vassals but not to enemies or anyone above you in the tree.  To send someone gold click on the "Send Gold" button at their castle.  To send someone soldiers click on the "Hire Soldiers" button at their castle.
+
+Gold transfers and buying soldiers for vassals are public.  Everyone can see alerts for these in the global alerts panel.
+
+If you do not have a lord then you are a king.  If you have a lord and you attack their castle and win then their lord will become your lord.  If you attack your king's castle and win then they become your vassal and you become the king.
+
+You cannot attack anyone below you in the tree.  These will have a yellow or orange square or flag.
+
+You can attack the castle of people above you in the tree but you cannot attack their armies or villages.  These will have a blue or purple square or flag.
+
+{{/markdown}}
+      </div>
+    </div>
+  </div>
+</template>

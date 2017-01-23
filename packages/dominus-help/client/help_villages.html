@@ -1,0 +1,32 @@
+<template name="help_villages">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#accordion_help" href="#help-villages">
+                Villages
+            </a>
+        </div>
+        <div id="help-villages" class="panel-collapse collapse">
+            <div class="panel-body">
+{{#markdown}}
+
+Villages give you resources.  They produce resources from the 6 surrounding hexes every {{date_duration_humanize incomeInterval}}.
+
+You can build up to {{maxVillages}} villages at one time.
+
+Building a village costs {{sVillages.cost.level1.grain}} of each resource and takes {{date_duration_humanize sVillages.cost.level1.timeToBuild}} to build.  Level 1 villages can hire only archers.  They can be upgraded to produce more types of soldiers.
+
+Upgrading a village to level 2 costs {{sVillages.cost.level2.grain}} of each resource and takes {{date_duration_humanize sVillages.cost.level2.timeToBuild}}.  Level 2 villages can hire footmen, archers and pikemen.
+
+Upgrading a village to level 3 costs {{sVillages.cost.level3.grain}} of each resource and takes {{date_duration_humanize sVillages.cost.level3.timeToBuild}}.  Level 3 villages can hire soldiers of any type.
+
+While upgrading, villages do not receive resources and cannot hire soldiers.
+
+Villages have a {{sVillages.defense_bonus}}x defense bonus.
+
+If an army of yours is stopped on the same hex as your village then they will join the village's garrison.
+
+{{/markdown}}
+            </div>
+        </div>
+    </div>
+</template>

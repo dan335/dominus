@@ -1,0 +1,37 @@
+<template name="help_colors">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a data-toggle="collapse" data-parent="#accordion_help" href="#help-flags">
+                Unit Colors
+            </a>
+        </div>
+        <div id="help-flags" class="panel-collapse collapse">
+            <div class="panel-body">
+                <p>The color of a unit's flag or square is based on its relationship to you.</p>
+                <p><div class="help_flag mine">&nbsp;</div> Your units are green.</p>
+                <p><div class="help_flag foe">&nbsp;</div> <div class="help_flag team">&nbsp;</div> Enemy units are red.</p>
+                <p><div class="help_flag king">&nbsp;</div> <div class="help_flag above">&nbsp;</div> <div class="help_flag lord">&nbsp;</div> Units that are above you in the tree are cool colors.  You can attack their castles but not their armies or villages.</p>
+                <p><div class="help_flag vassal">&nbsp;</div> <div class="help_flag below">&nbsp;</div> Units that are yellow or orange are below you in the tree.  You cannot attack these units.</p>
+
+                <div class="help_section">Enemies</div>
+                <p>Gain vassals by attacking these units' castles.</p>
+
+                <p><div class="help_flag foe">&nbsp;</div> Units that have a different king than you are solid red.</p>
+                <p><div class="help_flag team">&nbsp;</div> Units that are red and light red share the same king as you but are in a different branch.</p>
+
+                <div class="help_section">People Above You</div>
+                <p>Attack these units' castles to climb the tree.</p>
+
+                <p><div class="help_flag king">&nbsp;</div> Units that are purple belong to your king.  You can attack your king's castle but not their armies or villages.  If you attack their castle and win then you become king and he becomes your vassal.</p>
+                <p><div class="help_flag above">&nbsp;</div> These units are below your king but above your lord.  You can attack their castle only.  If you attack their castle and win then they become your vassal and their lord becomes your lord.</p>
+                <p><div class="help_flag lord">&nbsp;</div> These units belong to your lord.  You can attack your lord's castle only.  If you attack your lord's castle and win then you become their lord and their lord becomes your lord.</p>
+
+                <div class="help_section">People Below You</div>
+                <p>You cannot attack these units.</p>
+
+                <p><div class="help_flag vassal">&nbsp;</div> These units are directly below you in the tree.  You cannot attack them.</p>
+                <p><div class="help_flag below">&nbsp;</div> These units are below you in the tree.  You cannot attack them.</p>
+            </div>
+        </div>
+    </div>
+</template>
