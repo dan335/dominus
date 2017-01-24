@@ -403,6 +403,10 @@ var getKingOf = function(playerId) {
 	var player = Players.findOne(playerId, {fields: {lord:1}});
 	if (player) {
 		if (player.lord) {
+			if (player.lord == player._id) {
+				console.error('Player cannot be their own lord.', player);
+				return false;
+			}
 			return getKingOf(player.lord);
 		} else {
 			return playerId;

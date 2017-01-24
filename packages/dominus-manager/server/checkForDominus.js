@@ -63,7 +63,7 @@ dManager.checkForDominus = function(gameId) {
 	// there is a new dominus
 	//if (dominus) {
   if (game.lastDominusPlayerId) {
-		if (!is_still_dominus) {
+		if (dominus && !is_still_dominus) {
 			dAlerts.alert_noLongerDominus(gameId, dominus._id)
 		}
 	}
