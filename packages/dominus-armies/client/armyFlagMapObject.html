@@ -1,7 +1,7 @@
 <template name="armyFlagMapObject">
 	{{#if draw}}
 		{{#each flags}}
-			<rect x="{{coord_to_pixel_x x y 19}}" y="{{coord_to_pixel_y x y offset}}" rx="2" ry="2" width="11" height="11" class="flag army_flag {{type}}"/>
+			<image xlink:href="/game_images/{{flagImage}}" x="{{flagCoordsX x y}}" y="{{flagCoordsY x y}}" height="11px" width="11px"/>
 			{{#if drawNum}}
 				<text x="{{coord_to_pixel_x x y 24}}" y="{{coord_to_pixel_y x y textOffset}}" class="hex_coord_text" style="fill:#000;">{{num}}</text>
 			{{/if}}

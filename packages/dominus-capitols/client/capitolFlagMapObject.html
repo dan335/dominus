@@ -1,4 +1,4 @@
 <template name="capitalFlagMapObject">
-	<polygon points="{{flag_points x y}}" class="flag capital_flag {{friend_or_foe}}" />
+	<image xlink:href="/game_images/{{flagImage}}" x="{{flagCoordsX x y}}" y="{{flagCoordsY x y}}" height="12px" width="22px"/>
 	<text x="{{coord_to_pixel_x x y 32}}" y="{{coord_to_pixel_y x y -20}}" class="capitalMapObjectNameText">{{cleanName}}</text>
 </template>

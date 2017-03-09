@@ -20,6 +20,59 @@ Template.capitalFlagMapObject.helpers({
 		points = points + (22 + grid.x + offset_x) + ',' + (-12 + grid.y + offset_y) + ' ';
 		points = points + (0 + grid.x + offset_x) + ',' + (-1 + grid.y + offset_y);
 		return points;
+	},
+
+
+	flagCoordsX: function(x, y) {
+		check(x, Match.Integer);
+		check(y, Match.Integer);
+
+		var grid = Hx.coordinatesToPos(x, y, _s.init.hexSize, _s.init.hexSquish);
+		var offset_x = 2;
+
+		return grid.x + offset_x;
+	},
+
+	flagCoordsY: function(x, y) {
+		check(x, Match.Integer);
+		check(y, Match.Integer);
+
+		var grid = Hx.coordinatesToPos(x, y, _s.init.hexSize, _s.init.hexSquish);
+		var offset_y = -27;
+
+		return grid.y + offset_y - 12;
+	},
+
+	flagImage: function() {
+		var flagName = '';
+		switch(Template.instance().flagColor.get()) {
+			case 'mine':
+				flagName = 'castleFlagMine.png';
+				break;
+			case 'enemy_ally':
+				flagName = 'castleFlagEnemyAlly.png';
+				break;
+			case 'enemy':
+				flagName = 'castleFlagEnemy.png';
+				break;
+			case 'vassal':
+				flagName = 'castleFlagVassal.png';
+				break;
+			case 'direct_vassal':
+				flagName = 'castleFlagDirectVassal.png';
+				break;
+			case 'lord':
+				flagName = 'castleFlagLord.png';
+				break;
+			case 'direct_lord':
+				flagName = 'castleFlagDirectLord.png';
+				break;
+			case 'king':
+				flagName = 'castleFlagKing.png';
+				break;
+		}
+
+		return flagName;
 	}
 });
 

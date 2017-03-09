@@ -5,6 +5,58 @@ Template.armyFlagMapObject.helpers({
 
 	flags: function() {
 		return Template.instance().flags.get();
+	},
+
+	flagCoordsX: function(x, y) {
+		check(x, Match.Integer);
+		check(y, Match.Integer);
+
+		var grid = Hx.coordinatesToPos(x, y, _s.init.hexSize, _s.init.hexSquish);
+		var offset_x = 19;
+
+		return grid.x + offset_x;
+	},
+
+	flagCoordsY: function(x, y) {
+		check(x, Match.Integer);
+		check(y, Match.Integer);
+
+		var grid = Hx.coordinatesToPos(x, y, _s.init.hexSize, _s.init.hexSquish);
+		var offset_y = this.offset;
+
+		return grid.y + offset_y;
+	},
+
+	flagImage: function() {
+		var flagName = '';
+		switch(this.type) {
+			case 'mine':
+				flagName = 'armyFlagMine.png';
+				break;
+			case 'enemy_ally':
+				flagName = 'armyFlagEnemyAlly.png';
+				break;
+			case 'enemy':
+				flagName = 'armyFlagEnemy.png';
+				break;
+			case 'vassal':
+				flagName = 'armyFlagVassal.png';
+				break;
+			case 'direct_vassal':
+				flagName = 'armyFlagDirectVassal.png';
+				break;
+			case 'lord':
+				flagName = 'armyFlagLord.png';
+				break;
+			case 'direct_lord':
+				flagName = 'armyFlagDirectLord.png';
+				break;
+			case 'king':
+				flagName = 'armyFlagKing.png';
+				break;
+		}
+
+		return flagName;
 	}
 });
 
