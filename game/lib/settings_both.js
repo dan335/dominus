@@ -76,7 +76,7 @@ s.army.unitBonusMultiplier = 1.5;
 
 s.army.cost = {
 	footmen: {
-		grain: 18,
+		grain: 22,
 		lumber: 0,
 		ore: 100,
 		wool: 0,
@@ -84,7 +84,7 @@ s.army.cost = {
 		glass: 0,
 	},
 	archers: {
-		grain: 18,
+		grain: 22,
 		lumber: 100,
 		ore: 0,
 		wool: 0,
@@ -92,7 +92,7 @@ s.army.cost = {
 		glass: 0,
 	},
 	pikemen: {
-		grain: 18,
+		grain: 22,
 		lumber: 0,
 		ore: 0,
 		wool: 0,
@@ -100,7 +100,7 @@ s.army.cost = {
 		glass: 0,
 	},
 	cavalry: {
-		grain: 18,
+		grain: 22,
 		lumber: 0,
 		ore: 0,
 		wool: 100,
@@ -108,7 +108,7 @@ s.army.cost = {
 		glass: 0,
 	},
 	catapults: {
-		grain:18,
+		grain: 22,
 		lumber:0,
 		ore:0,
 		wool:0,
