@@ -18,7 +18,7 @@ Package.onUse(function(api) {
     'less',
     'dominus-collections',
     'ddp-rate-limiter',
-    'momentjs:moment@2.13.0',
+    'momentjs:moment@2.18.1',
     'underscore',
     'dominus-queue'
   ]);

@@ -14,7 +14,7 @@ Package.onUse(function(api) {
     'underscore',
     'ejson',
     'mongo',
-    'momentjs:moment@2.13.0'
+    'momentjs:moment@2.18.1'
   ]);
   api.addFiles([
     'namespace.js',

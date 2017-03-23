@@ -9,7 +9,7 @@ Package.describe({
 Package.onUse(function(api) {
   api.versionsFrom('1.2.1');
   api.use([
-    'momentjs:moment@2.13.0',
+    'momentjs:moment@2.18.1',
     'dominus-init',
     'dominus-market',
     'dominus-castles',

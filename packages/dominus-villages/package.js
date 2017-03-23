@@ -16,7 +16,7 @@ Package.onUse(function(api) {
     'dominus-market',
     'dominus-mapmaker',
     'danimal:hx@1.0.9',
-    'momentjs:moment@2.13.0'
+    'momentjs:moment@2.18.1'
   ])
   api.addFiles([
     'both/villageMethods.js'

@@ -23,19 +23,19 @@ if (!Meteor.settings.public.dominusIsDev) {
   Queues.settings.options = {no_ready_check: true};
 }
 
-Meteor.startup(function() {
-  if (process.env.DOMINUS_WORKER == 'true') {
-    let matador = Npm.require('bull-ui/app')({
-      redis: {
-        host: Queues.settings.host,
-        port: Queues.settings.port,
-        //password: Queues.settings.options.password,
-        options: Queues.settings.options
-      }
-    });
-    matador.listen(3020);
-  }
-});
+// Meteor.startup(function() {
+//   if (process.env.DOMINUS_WORKER == 'true') {
+//     let matador = Npm.require('bull-ui/app')({
+//       redis: {
+//         host: Queues.settings.host,
+//         port: Queues.settings.port,
+//         //password: Queues.settings.options.password,
+//         options: Queues.settings.options
+//       }
+//     });
+//     matador.listen(3020);
+//   }
+// });
 
 
 Queues.trackJob = function(type, duration) {

@@ -15,7 +15,7 @@ Package.onUse(function(api) {
     'dominus-mappather',
     'ejson',
     'danimal:hx@1.0.9',
-    'momentjs:moment@2.13.0',
+    'momentjs:moment@2.18.1',
     'dominus-alerts',
     'reactive-var',
     'tracker',
@@ -83,7 +83,7 @@ Package.onTest(function(api) {
     'dominus-init',
     'dominus-mapmaker',
     'dominus-armies',
-    'momentjs:moment@2.13.0',
+    'momentjs:moment@2.18.1',
     'dominus-castles'
   ]);
   api.addFiles([

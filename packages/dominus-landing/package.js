@@ -19,7 +19,7 @@ Package.onUse(function(api) {
     'danimal:accounts-templates',
     'accounts-base',
     'accounts-password',
-    'momentjs:moment@2.13.0',
+    'momentjs:moment@2.18.1',
     'danimal:simplerouter@1.0.0',
     'dominus-init',
     'mongo',
