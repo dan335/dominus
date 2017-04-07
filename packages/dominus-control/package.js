@@ -16,7 +16,7 @@ Package.onUse(function(api) {
     'ecmascript',
     'blaze-html-templates',
     'less',
-    'momentjs:moment@2.13.0',
+    'momentjs:moment@2.18.1',
     'dominus-init'
   ]);
   api.addFiles([

@@ -30,6 +30,10 @@ Meteor.methods({
       throw new Meteor.Error('You are not Danimal.');
     }
 
+    if (username.length > 25) {
+      throw new Meteor.Error('Username is too long.');
+    }
+
     if (!user.verifiedEmail) {
       throw new Meteor.Error('nonVerifiedEmail', 'Email must be verified before joining a game.');
     }

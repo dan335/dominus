@@ -15,7 +15,7 @@ Package.onUse(function(api) {
     'dominus-collections',
     'ejson',
     'check',
-    'momentjs:moment@2.13.0'
+    'momentjs:moment@2.18.1'
   ]);
   api.addFiles([
     'queue.js',
@@ -27,6 +27,6 @@ Package.onUse(function(api) {
 });
 
 Npm.depends({
-  "bull":"1.0.0",
-  "bull-ui":"1.2.1"
+  "bull":"2.2.5",
+  //"bull-ui":"1.2.1"
 });

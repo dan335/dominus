@@ -8,7 +8,7 @@
     "bcrypt": "^0.8.7",
     "d3": "^3.5.17",
     "jquery": "^2.2.4",
-    "moment": "^2.14.1",
+    "moment": "^2.18.1",
     "svgexport": "^0.3.2"
   },
   "devDependencies": {},

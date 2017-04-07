@@ -23,7 +23,7 @@ Package.onUse(function(api) {
     'dominus-capitols',
     'blaze-html-templates',
     'less',
-    'momentjs:moment@2.13.0',
+    'momentjs:moment@2.18.1',
     'dominus-tree',
   ]);
   api.addFiles([
