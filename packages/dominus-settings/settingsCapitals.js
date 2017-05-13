@@ -29,6 +29,7 @@ _gs.capitals = function(gameId, path) {
     }    
 
     settings.incomeInterval = 1000 * 60 * 10;
+    settings.villagePercentageIncome = 0.12;
   }
 
   // cheats
