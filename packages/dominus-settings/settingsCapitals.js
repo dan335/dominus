@@ -7,15 +7,6 @@ _gs.capitals = function(gameId, path) {
   // game specific settings
 
   if (game && game.isSpeed) {
-    settings.income = {
-      gold: 0,
-      grain: 16,
-      lumber: 16,
-      ore: 16,
-      wool: 16,
-      clay: 16,
-      glass: 16
-    }
   }
 
   if (game && game.isSuperSpeed) {
@@ -28,6 +19,14 @@ _gs.capitals = function(gameId, path) {
       clay: 80,
       glass: 80
     }
+
+    settings.startingGarrison = {
+      footmen: 24,
+      archers: 24,
+      pikemen: 24,
+      cavalry: 0,
+      catapults: 0
+    }    
 
     settings.incomeInterval = 1000 * 60 * 10;
   }
