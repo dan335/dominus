@@ -23,7 +23,7 @@ _gs.villages = function(gameId, path) {
     settings.cost.level2.timeToBuild = _s.villages.cost.level2.timeToBuild / 20
     settings.cost.level3.timeToBuild = _s.villages.cost.level3.timeToBuild / 20
 
-    settings.incomeInterval = 1000 * 60 * 5;
+    settings.incomeInterval = 1000 * 60 * 10;
   }
 
   // cheats
