@@ -7,6 +7,15 @@ _gs.capitals = function(gameId, path) {
   // game specific settings
 
   if (game && game.isSpeed) {
+    settings.income = {
+      gold: 0,
+      grain: 16,
+      lumber: 16,
+      ore: 16,
+      wool: 16,
+      clay: 16,
+      glass: 16
+    }
   }
 
   if (game && game.isSuperSpeed) {
