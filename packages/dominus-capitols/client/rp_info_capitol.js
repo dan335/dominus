@@ -46,6 +46,10 @@ Template.rp_info_capital.helpers({
     return _gs.capitals(Session.get('gameId'), 'income');
   },
 
+  villagePercentageIncome: function() {
+    return _gs.capitals(Session.get('gameId'), 'villagePercentageIncome');
+  },
+
   no_soldiers: function() {
 		if (this) {
 			var self = this;

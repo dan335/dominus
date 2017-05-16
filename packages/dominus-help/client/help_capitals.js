@@ -9,5 +9,10 @@ Template.help_capitals.helpers({
 
   income: function() {
     return _gs.capitals(Session.get('gameId'), 'income');
+  },
+
+  villagePercentageIncome: function() {
+    return _gs.capitals(Session.get('gameId'), 'villagePercentageIncome');
   }
+  
 })

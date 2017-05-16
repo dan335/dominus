@@ -30,7 +30,7 @@ if (process.env.DOMINUS_WORKER == 'true') {
 				const villageOptions = {fields: {income:1}};
 				Villages.find(villageFind, villageOptions).forEach(function(village) {
 					_s.market.types_plus_gold.forEach(function(type) {
-						capitalIncome[type] += village.income[type] * _s.capitals.villagePercentageIncome;
+						capitalIncome[type] += village.income[type] * _gs.capitals.villagePercentageIncome;
 						check(capitalIncome[type], validNumber);
 					})
 				});
