@@ -32,7 +32,7 @@ dCapitals.createCapital = function(gameId, countryId) {
   };
 
   _s.armies.types.forEach(function(type) {
-    capital[type] = _s.capitals.startingGarrison[type];
+    capital[type] = _gs.capitals(gameId, 'startingGarrison.' + type);
   });
 
   _s.market.types_plus_gold.forEach(function(type) {

@@ -29,7 +29,16 @@ _gs.capitals = function(gameId, path) {
       glass: 80
     }
 
+    settings.startingGarrison = {
+      footmen: 24,
+      archers: 24,
+      pikemen: 24,
+      cavalry: 0,
+      catapults: 0
+    }    
+
     settings.incomeInterval = 1000 * 60 * 10;
+    settings.villagePercentageIncome = 0.12;
   }
 
   // cheats

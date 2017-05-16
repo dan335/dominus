@@ -16,12 +16,12 @@ _gs.villages = function(gameId, path) {
   }
 
   if (game && game.isSuperSpeed) {
-    settings.max_can_have = 6;
-    settings.gained_at_hex = 0.00004;
+    settings.max_can_have = 8;
+    settings.gained_at_hex = 0.0001;
 
-    settings.cost.level1.timeToBuild = _s.villages.cost.level1.timeToBuild / 10
-    settings.cost.level2.timeToBuild = _s.villages.cost.level2.timeToBuild / 10
-    settings.cost.level3.timeToBuild = _s.villages.cost.level3.timeToBuild / 10
+    settings.cost.level1.timeToBuild = _s.villages.cost.level1.timeToBuild / 20
+    settings.cost.level2.timeToBuild = _s.villages.cost.level2.timeToBuild / 20
+    settings.cost.level3.timeToBuild = _s.villages.cost.level3.timeToBuild / 20
 
     settings.incomeInterval = 1000 * 60 * 10;
   }

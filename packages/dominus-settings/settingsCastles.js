@@ -12,18 +12,18 @@ _gs.castles = function(gameId, path) {
   if (game && game.isSuperSpeed) {
     settings.income = {
       gold: 30,
-      grain: 100,
-    	lumber: 100,
-    	ore: 100,
-    	wool: 100,
-    	clay: 100,
-    	glass: 100
+      grain: 80,
+    	lumber: 80,
+    	ore: 80,
+    	wool: 80,
+    	clay: 80,
+    	glass: 80
     }
 
     settings.startingGarrison = {
-      footmen: 6,
-      archers: 20,
-      pikemen: 20,
+      footmen: 8,
+      archers: 24,
+      pikemen: 24,
       cavalry: 6,
       catapults: 0
     }

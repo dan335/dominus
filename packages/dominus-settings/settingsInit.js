@@ -8,7 +8,7 @@ _gs.init = function(gameId, path) {
   // ---------
   // game specific settings
   if (game && game.isSuperSpeed) {
-    settings.time_til_game_end_when_new_dominus = 1000 * 60 * 60 * 3;
+    settings.time_til_game_end_when_new_dominus = 1000 * 60 * 60 * 1;
   }
 
   // cheats
@@ -18,7 +18,6 @@ _gs.init = function(gameId, path) {
 
   return objectValueFromString(settings, path);
 }
-
 
 
 _s.init = {
