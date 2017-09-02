@@ -86,7 +86,7 @@ _s.armies = {
     footmen: {
   		offense: 13,
   		defense: 13,
-  		speed: 10
+  		speed: 12
   	},
   	archers: {
   		offense: 5,
@@ -96,7 +96,7 @@ _s.armies = {
   	pikemen: {
   		offense: 2,
   		defense: 17,
-  		speed: 8
+  		speed: 10
   	},
   	cavalry: {
   		offense: 13,
@@ -106,7 +106,7 @@ _s.armies = {
   	catapults: {
   		offense: 1,
   		defense: 1,
-  		speed: 4,
+  		speed: 8,
   		bonus_against_buildings: 30
   	}
   },
