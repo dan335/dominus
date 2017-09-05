@@ -302,6 +302,11 @@ BattleArmy.prototype.updateLocationBonus = function() {
     self.villageDefenseBonus = true
   }
 
+  if (self.unitType == 'capital') {
+    self.locationBonus = self.basePower.total * (_s.capitals.battleBonus - 1);
+    self.capitalDefenseBonus = true
+  }
+
   if (self.unitType == 'army') {
     if (self.isOnAllyCastle) {
       self.locationBonus = self.basePower.total * (_s.castles.ally_defense_bonus - 1);
