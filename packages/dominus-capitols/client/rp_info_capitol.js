@@ -115,7 +115,7 @@ Template.rp_info_capital.onCreated(function() {
 		if (data && gameId) {
 			Tracker.nonreactive(function() {
 				var basePower = dArmies.getUnitBasePower(gameId, data);
-				var locationMultiplier = dHexmap.getUnitLocationBonusMultiplier(data, 'castle');
+				var locationMultiplier = dHexmap.getUnitLocationBonusMultiplier(data, 'capital');
 
 				var power = {
 					offense: basePower.offense.total * locationMultiplier,
