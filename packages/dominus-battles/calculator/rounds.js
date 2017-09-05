@@ -429,10 +429,10 @@ BattleRound.prototype.updateUnitBonus = function(army) {
   var enemyPercentage = this.getEnemyUnitPercentage(army);
 
   var bonus = {};
-  bonus.footmen = army.basePower.totalNoCats * army.percentage['footmenNoCats'] * enemyPercentage['pikemenNoCats'] * _s.battles.unitBonusMultiplier;
-  bonus.archers = army.basePower.totalNoCats * army.percentage['archersNoCats'] * enemyPercentage['footmenNoCats'] * _s.battles.unitBonusMultiplier;
-  bonus.pikemen = army.basePower.totalNoCats * army.percentage['pikemenNoCats'] * enemyPercentage['cavalryNoCats'] * _s.battles.unitBonusMultiplier;
-  bonus.cavalry = army.basePower.totalNoCats * army.percentage['cavalryNoCats'] * (enemyPercentage['footmenNoCats'] + enemyPercentage['archersNoCats']) * _s.battles.unitBonusMultiplier;
+  bonus.footmen = army.basePower.footmen * enemyPercentage['pikemenNoCats'] * _s.battles.unitBonusMultiplier;
+  bonus.archers = army.basePower.archers * enemyPercentage['footmenNoCats'] * _s.battles.unitBonusMultiplier;
+  bonus.pikemen = army.basePower.pikemen * enemyPercentage['cavalryNoCats'] * _s.battles.unitBonusMultiplier;
+  bonus.cavalry = army.basePower.cavalry * (enemyPercentage['footmenNoCats'] + enemyPercentage['archersNoCats']) * _s.battles.unitBonusMultiplier;
 
   // catapults
   // if there is an enemy castle of village in this hex then catapults get bonus
