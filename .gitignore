@@ -3,7 +3,6 @@ git_stats/
 .meteor/local
 .meteor/meteorite
 .build*
-settings.json
 public/hexBakes/*
 .DS_Store
 testpackage

@@ -1,0 +1,52 @@
+{
+  "sikka": {
+    "rateLimits": {
+      "perIp":60,
+      "perHuman":60
+    },
+    "captcha": {
+      "siteKey": "key",
+      "secret": "key"
+    }
+  },
+  "PrerenderIO": {
+    "token": "key"
+  },
+  "stripe_secret_key": "key",
+  "googleLogin":{
+    "service":"google",
+    "clientId":"key",
+    "secret":"key",
+    "loginStyle":"redirect"
+  },
+  "facebookLogin": {
+    "service":"facebook",
+    "appId":"key",
+    "secret":"key",
+    "loginStyle":"redirect"
+  },
+  "public": {
+    "analyticsSettings": {
+      "Google Analytics" : {
+        "trackingId": ""
+      }
+    },
+    "stripe_publishable_key": "key",
+    "ga": {
+      "account":""
+    },
+    "s3": {
+      "region": "us-west-2",
+      "bucket": "dominuslocal",
+      "url": "https://dominuslocal.s3.amazonaws.com/",
+      "bakePath": "bakes/",
+      "avatarPath": "avatars/",
+      "serveBakesFromS3": false
+    },
+    "dominusIsDev": true
+  },
+  "mandrill": {
+    "username": "danimal",
+    "apikey": "key"
+  }
+}
