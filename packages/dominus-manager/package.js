@@ -7,7 +7,7 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.versionsFrom('1.5.1');
+  //api.versionsFrom('1.4.3.2');
   api.use([
     'ddp-client',
     'dominus-market',
