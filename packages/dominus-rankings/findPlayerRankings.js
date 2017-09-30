@@ -13,7 +13,8 @@
 var pointsForWinning = 500;
 
 let gameRankToPoints = function(rankInGame) {
-  if (rankInGame <= 0) {
+
+  if (!rankInGame || rankInGame <= 0) {
     return 0;
   }
 

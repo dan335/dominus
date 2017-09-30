@@ -37,6 +37,7 @@
                   {{#each pro}}
                     <tr>
                       <td>
+                        {{rankingPro.overallRank}}.
                         <a href="/profile/{{_id}}" class="link">{{username}}</a>
                       </td>
                       <td style="text-align:center;">{{rankingPro.numGames}}</td>
@@ -73,6 +74,7 @@
                   {{#each regular}}
                     <tr>
                       <td>
+                        {{rankingRegular.overallRank}}.
                         <a href="/profile/{{_id}}" class="link">{{username}}</a>
                       </td>
                       <td style="text-align:center;">{{rankingRegular.numGames}}</td>
