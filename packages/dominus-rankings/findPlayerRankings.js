@@ -15,16 +15,16 @@ var pointsForWinning = 500;
 let gameRankToPoints = function(rankInGame) {
   let points = Math.max(51 - rankInGame, 0);
 
-  if (rankInGame <= 10) {
+  if (rankInGame > 0 && rankInGame <= 10) {
     points += 10;
   }
-  if (rankInGame <= 5) {
+  if (rankInGame > 0 && rankInGame <= 5) {
     points += 10;
   }
-  if (rankInGame <= 3) {
+  if (rankInGame > 0 && rankInGame <= 3) {
     points += 10;
   }
-  if (rankInGame <= 2) {
+  if (rankInGame > 0 && rankInGame <= 2) {
     points += 10;
   }
   if (rankInGame == 1) {
