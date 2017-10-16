@@ -19,6 +19,7 @@ Template.control_gamesAdd.events({
     var maxPlayers = template.find('#maxPlayers');
     var date = template.find('#gameStartDateInput');
 		var time = template.find('#gameStartTimeInput');
+    var isLazy = template.$('#isLazyCheckbox').is(':checked');
     var isSpeed = template.$('#isSpeedCheckbox').is(':checked');
     var isSuperSpeed = template.$('#isSuperSpeedCheckbox').is(':checked');
     var isProOnly = template.$('#isProOnlyCheckbox').is(':checked');
@@ -27,7 +28,7 @@ Template.control_gamesAdd.events({
 
     Meteor.apply(
       'addOrEditGame',
-      [name.value, desc.value, Number(maxPlayers.value), date.value+' '+time.value, isSpeed, isSuperSpeed, isProOnly, isKingOfHill, isNoLargeResources, null],
+      [name.value, desc.value, Number(maxPlayers.value), date.value+' '+time.value, isLazy, isSpeed, isSuperSpeed, isProOnly, isKingOfHill, isNoLargeResources, null],
       {},
       function(error, result) {
         if (error) {

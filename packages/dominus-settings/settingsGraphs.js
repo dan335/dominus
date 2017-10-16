@@ -3,6 +3,10 @@ _gs.graphs = function(gameId, path) {
   let game = _gs.getGame(gameId);
   let settings = EJSON.clone(_s.graphs);
 
+  if (game.isLazy) {
+    settings.statsInverval = 9;
+  }
+
   if (game.isSpeed) {
 		settings.statsInverval = 3;
   }

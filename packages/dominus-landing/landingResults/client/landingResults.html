@@ -52,6 +52,12 @@
 
           <div style="float:left;">
 
+            {{#if isLazy}}
+              <span class="fa-stack fa-2x" data-toggle="tooltip" data-placement="top" title="Lazy Game">
+                <i class="fa fa-square fa-stack-2x "></i>
+                <i class="fa fa-forward fa-stack-1x fa-inverse"></i>
+              </span>
+            {{/if}}
             {{#if isSpeed}}
               <span class="fa-stack fa-2x" data-toggle="tooltip" data-placement="top" title="Speed Game">
                 <i class="fa fa-square fa-stack-2x "></i>

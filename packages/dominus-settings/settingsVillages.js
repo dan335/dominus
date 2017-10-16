@@ -5,6 +5,14 @@ _gs.villages = function(gameId, path) {
 
   // ---------
   // game specific settings
+  if (game && game.isLazy) {
+    settings.max_can_have = 6;
+    settings.gained_at_hex = 0.000005;
+
+    settings.cost.level1.timeToBuild = _s.villages.cost.level1.timeToBuild * 1.2
+    settings.cost.level2.timeToBuild = _s.villages.cost.level2.timeToBuild * 1.2
+    settings.cost.level3.timeToBuild = _s.villages.cost.level3.timeToBuild * 1.2
+  }
 
   if (game && game.isSpeed) {
     settings.max_can_have = 6;

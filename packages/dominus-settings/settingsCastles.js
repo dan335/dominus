@@ -9,6 +9,28 @@ _gs.castles = function(gameId, path) {
   if (game && game.isSpeed) {
   }
 
+  if (game && game.isLazy) {
+    settings.income = {
+      gold: 30,
+      grain: 20,
+      lumber: 20,
+      ore: 20,
+      wool: 20,
+      clay: 20,
+      glass: 20
+    }
+
+    settings.startingGarrison = {
+      footmen: 8,
+      archers: 24,
+      pikemen: 24,
+      cavalry: 6,
+      catapults: 0
+    }
+
+    settings.incomeInterval = 1000 * 60 * 20;
+  }
+
   if (game && game.isSuperSpeed) {
     settings.income = {
       gold: 30,

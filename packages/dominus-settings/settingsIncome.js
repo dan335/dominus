@@ -3,6 +3,9 @@ _gs.income = function(gameId, path) {
   let game = _gs.getGame(gameId);
   let settings = EJSON.clone(_s.income);
 
+  if (game.isLazy) {
+  }
+
   if (game.isSpeed) {
   }
 

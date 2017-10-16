@@ -27,6 +27,7 @@ Template.control_gamesEdit.events({
     var maxPlayers = template.find('#maxPlayers');
     var startAtDate = template.find('#gameStartDateInput');
 		var startAtTime = template.find('#gameStartTimeInput');
+    var isLazy = template.$('#isLazyCheckbox').is(':checked');
     var isSpeed = template.$('#isSpeedCheckbox').is(':checked');
     var isSuperSpeed = template.$('#isSuperSpeedCheckbox').is(':checked');
     var isProOnly = template.$('#isProOnlyCheckbox').is(':checked');
@@ -44,6 +45,7 @@ Template.control_gamesEdit.events({
         desc.value,
         Number(maxPlayers.value),
         startAtDate.value+' '+startAtTime.value,
+        isLazy,
         isSpeed,
         isSuperSpeed,
         isProOnly,
