@@ -17,7 +17,8 @@ Package.onUse(function(api) {
     'ddp-rate-limiter',
     'dominus-settings',
     'dominus-queue',
-    'meteorhacks:unblock@1.1.0'
+    'meteorhacks:unblock@1.1.0',
+    'dominus-rankings'
   ]);
   api.addFiles([
     'lib/collections.js'

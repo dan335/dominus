@@ -33,12 +33,14 @@ DDPRateLimiter.addRule(globalAlertSubRule, 30, 5000);
 
 
 
+// temporarily disable oplog until this issue is fixed
+// https://github.com/meteor/meteor/issues/9087
 Meteor.publish('myAlerts', function(playerId, numShow, hideAlertTypes) {
   if(this.userId) {
     check(hideAlertTypes, Array);
     numShow = Math.min(numShow, 150);
     var find = {playerIds: {$elemMatch: {playerId:playerId}}, type:{$nin:hideAlertTypes}};
-    var options = {sort:{created_at:-1}, limit:numShow};
+    var options = {sort:{created_at:-1}, limit:numShow, disableOplog:true};
     return Alerts.find(find, options);
   } else {
     this.ready();
@@ -184,6 +186,8 @@ DDPRateLimiter.addRule(battleAlertTitlesSubRule, 30, 5000);
 
 
 // unread alerts
+// temporarily disable oplog until issue is fixed
+// https://github.com/meteor/meteor/issues/9087
 Meteor.publish('unreadAlerts', function(playerId, hideAlertsMine) {
   check(playerId, String);
   var self = this;
@@ -192,7 +196,7 @@ Meteor.publish('unreadAlerts', function(playerId, hideAlertsMine) {
   }
 
   var find = {playerIds: {$elemMatch: {playerId:playerId, read:false}}, type:{$nin:hideAlertsMine}};
-  var options = {fields:{_id:1}};
+  var options = {fields:{_id:1}, disableOplog:true};
   var cur = Alerts.find(find, options);
   Mongo.Collection._publishCursor(cur, self, 'unreadalerts');
   return self.ready();

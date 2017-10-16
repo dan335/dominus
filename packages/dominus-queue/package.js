@@ -19,7 +19,8 @@ Package.onUse(function(api) {
   ]);
   api.addFiles([
     'queue.js',
-    'queueMethods.js'
+    'queueMethods.js',
+    'shutdown.js'
   ], 'server');
   api.export([
     'Queues'
@@ -27,6 +28,6 @@ Package.onUse(function(api) {
 });
 
 Npm.depends({
-  "bull":"2.2.5",
+  "bull":"2.2.6",
   //"bull-ui":"1.2.1"
 });

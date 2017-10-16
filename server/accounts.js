@@ -188,7 +188,7 @@ Meteor.startup(function() {
 
 Accounts.config({
 	sendVerificationEmail:true,
-	loginExpirationInDays:null
+	loginExpirationInDays:1000
 });
 
 Accounts.emailTemplates.siteName = 'Dominus';

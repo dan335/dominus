@@ -28,12 +28,16 @@
                     <td style="text-align:center;">Overall Rank</td>
                     <td style="text-align:center;">Rank by Vassals</td>
                     <td style="text-align:center;">Rank by Income</td>
+                    <td style="text-align:center;">Overall Points</td>
+                    <td style="text-align:center;">Vassal Points</td>
+                    <td style="text-align:center;">Income Points</td>
                   </tr>
                 </thead>
                 <tbody>
                   {{#each pro}}
                     <tr>
                       <td>
+                        {{rankingPro.overallRank}}.
                         <a href="/profile/{{_id}}" class="link">{{username}}</a>
                       </td>
                       <td style="text-align:center;">{{rankingPro.numGames}}</td>
@@ -41,6 +45,9 @@
                       <td style="text-align:center;">{{rankingPro.overallRank}}</td>
                       <td style="text-align:center;">{{rankingPro.numVassalsRank}}</td>
                       <td style="text-align:center;">{{rankingPro.incomeRank}}</td>
+                      <td style="text-align:center;">{{rankingPro.overallPoints}}</td>
+                      <td style="text-align:center;">{{rankingPro.numVassalsPoints}}</td>
+                      <td style="text-align:center;">{{rankingPro.incomePoints}}</td>
                     </tr>
                   {{/each}}
                 </tbody>
@@ -58,12 +65,16 @@
                     <td style="text-align:center;">Overall Rank</td>
                     <td style="text-align:center;">Rank by Vassals</td>
                     <td style="text-align:center;">Rank by Income</td>
+                    <td style="text-align:center;">Overall Points</td>
+                    <td style="text-align:center;">Vassal Points</td>
+                    <td style="text-align:center;">Income Points</td>
                   </tr>
                 </thead>
                 <tbody>
                   {{#each regular}}
                     <tr>
                       <td>
+                        {{rankingRegular.overallRank}}.
                         <a href="/profile/{{_id}}" class="link">{{username}}</a>
                       </td>
                       <td style="text-align:center;">{{rankingRegular.numGames}}</td>
@@ -71,6 +82,9 @@
                       <td style="text-align:center;">{{rankingRegular.overallRank}}</td>
                       <td style="text-align:center;">{{rankingRegular.numVassalsRank}}</td>
                       <td style="text-align:center;">{{rankingRegular.incomeRank}}</td>
+                      <td style="text-align:center;">{{rankingRegular.overallPoints}}</td>
+                      <td style="text-align:center;">{{rankingRegular.numVassalsPoints}}</td>
+                      <td style="text-align:center;">{{rankingRegular.incomePoints}}</td>
                     </tr>
                   {{/each}}
                 </tbody>
