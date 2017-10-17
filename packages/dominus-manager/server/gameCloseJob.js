@@ -81,7 +81,7 @@ var cleanupGame = function(gameId) {
     desc:1,
     isProOnly:1,
     isKingOfHill:1,
-    isLazy:1,
+    isRelaxed:1,
     isSpeed:1,
     isSuperSpeed:1,
   }

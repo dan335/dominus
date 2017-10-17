@@ -9,7 +9,7 @@ _gs.castles = function(gameId, path) {
   if (game && game.isSpeed) {
   }
 
-  if (game && game.isLazy) {
+  if (game && game.isRelaxed) {
     settings.income = {
       gold: 30,
       grain: 20,

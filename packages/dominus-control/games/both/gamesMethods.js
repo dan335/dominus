@@ -3,12 +3,12 @@ Meteor.methods({
   // pass in gameId if editing
   // otherwise it will insert game
   // return gameId
-  addOrEditGame: function(name, desc, maxPlayers, startAtTimeString, isLazy, isSpeed, isSuperSpeed, isProOnly, isKingOfHill, isNoLargeResources, gameId) {
+  addOrEditGame: function(name, desc, maxPlayers, startAtTimeString, isRelaxed, isSpeed, isSuperSpeed, isProOnly, isKingOfHill, isNoLargeResources, gameId) {
 
     check(name, String);
     check(maxPlayers, Match.Integer);
     check(startAtTimeString, String);
-    check(isLazy, Boolean);
+    check(isRelaxed, Boolean);
     check(isSpeed, Boolean);
     check(isSuperSpeed, Boolean);
     check(isProOnly, Boolean);
@@ -43,7 +43,7 @@ Meteor.methods({
       desc: desc,
       maxPlayers: maxPlayers,
       startAt: startAt.toDate(),
-      isLazy: isLazy,
+      isRelaxed: isRelaxed,
       isSpeed: isSpeed,
       isSuperSpeed: isSuperSpeed,
       isProOnly: isProOnly,

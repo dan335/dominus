@@ -3,7 +3,7 @@ _gs.armies = function(gameId, path) {
   let game = _gs.getGame(gameId);
   let settings = EJSON.clone(_s.armies);
 
-  if (game.isLazy) {
+  if (game.isRelaxed) {
     settings.stats.footmen.speed = Math.round(settings.stats.footmen.speed * 0.5);
     settings.stats.archers.speed = Math.round(settings.stats.archers.speed * 0.5);
     settings.stats.pikemen.speed = Math.round(settings.stats.pikemen.speed * 0.5);

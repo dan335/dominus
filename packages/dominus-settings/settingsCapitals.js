@@ -18,7 +18,7 @@ _gs.capitals = function(gameId, path) {
     }
   }
 
-  if (game && game.isLazy) {
+  if (game && game.isRelaxed) {
     settings.income = {
       gold: 0,
       grain: 6,

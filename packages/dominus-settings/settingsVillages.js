@@ -5,7 +5,7 @@ _gs.villages = function(gameId, path) {
 
   // ---------
   // game specific settings
-  if (game && game.isLazy) {
+  if (game && game.isRelaxed) {
     settings.max_can_have = 6;
     settings.gained_at_hex = 0.000005;
 

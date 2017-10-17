@@ -3,7 +3,7 @@ _gs.graphs = function(gameId, path) {
   let game = _gs.getGame(gameId);
   let settings = EJSON.clone(_s.graphs);
 
-  if (game.isLazy) {
+  if (game.isRelaxed) {
     settings.statsInverval = 9;
   }
 
