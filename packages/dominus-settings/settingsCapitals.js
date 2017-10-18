@@ -18,6 +18,29 @@ _gs.capitals = function(gameId, path) {
     }
   }
 
+  if (game && game.isRelaxed) {
+    settings.income = {
+      gold: 0,
+      grain: 6,
+      lumber: 6,
+      ore: 6,
+      wool: 6,
+      clay: 6,
+      glass: 6
+    }
+
+    settings.startingGarrison = {
+      footmen: 16,
+      archers: 16,
+      pikemen: 16,
+      cavalry: 0,
+      catapults: 0
+    }    
+
+    settings.incomeInterval = 1000 * 60 * 20;
+    settings.villagePercentageIncome = 0.1;
+  }
+
   if (game && game.isSuperSpeed) {
     settings.income = {
       gold: 0,

@@ -40,6 +40,7 @@ if (Meteor.isServer) {
 
   // limit to fields that are settings
   let fields = {
+    isRelaxed:1,
     isSpeed:1,
     isSuperSpeed:1,
     isKingOfHill:1,

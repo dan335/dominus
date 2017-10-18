@@ -2,6 +2,7 @@
 // subscribe is in Template.game.onCreated
 Meteor.publish('game', function(gameId) {
   let fields = {
+    isRelaxed:1,
     isSpeed:1,
     isSuperSpeed:1,
     isKingOfHill:1,
