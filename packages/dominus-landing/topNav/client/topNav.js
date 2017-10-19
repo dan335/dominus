@@ -44,5 +44,10 @@ Template.topNav.events({
   'click #noGamesLink': function(event, template) {
     event.preventDefault();
     SimpleRouter.go('/games');
+  },
+
+  'click .dropdown-toggle': function(event, template) {
+    event.preventDefault();
+    $('.dropdown-menu').toggle();
   }
 })
