@@ -38,11 +38,13 @@ Template.topNav.events({
 
   'click .gameListLink': function(event, template) {
     event.preventDefault();
+    $('.dropdown-menu').hide();
     SimpleRouter.go('/game/'+this.gameId);
   },
 
   'click #noGamesLink': function(event, template) {
     event.preventDefault();
+    $('.dropdown-menu').hide();
     SimpleRouter.go('/games');
   },
 
