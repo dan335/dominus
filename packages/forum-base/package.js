@@ -15,6 +15,7 @@ Package.onUse(function(api) {
     'mongo',
     'ddp-rate-limiter',
     'steeve:reactive-cookie@0.0.8',
+    'underscore'
   ]);
   api.addFiles([
     'both/namespace.js',

@@ -1,8 +1,12 @@
 Template.forumList.helpers({
-  topics: function() {
-    let sort = {createdAt: -1};
-    return Forumtopics.find({}, {sort:sort});
+
+  pinnedTopics: function() {
+    return Forumtopics.find({isPinned:true}, {sort:{lastPostDate:-1}});
   },
+  // topics: function() {
+  //   let sort = {createdAt: -1};
+  //   return Forumtopics.find({}, {sort:sort});
+  // },
 
   topics: function() {
       var sort = {};
@@ -18,7 +22,7 @@ Template.forumList.helpers({
           break;
       }
 
-      return Forumtopics.find({}, {sort:sort});
+      return Forumtopics.find({isPinned: {$ne:true}}, {sort:sort});
     },
 
   forumSettings: function() {
@@ -53,7 +57,7 @@ Template.forumList.helpers({
     if (Session.get('forumSort') == 'numPosts') {
       return 'active';
     }
-  },
+  }
 })
 
 Template.forumList.events({
@@ -126,6 +130,7 @@ Template.forumList.onCreated(function() {
       Session.get('forumCategory'),
       Session.get('forumFilter')
     );
+    Meteor.subscribe('forumPinnedTopics');
   });
 })
 
@@ -143,6 +148,12 @@ Template.forumListTopic.helpers({
     if (topic) {
       let isRead = isTopicRead(topic._id, topic.lastPostDate);
       return !isRead;
+    }
+  },
+
+  pinned: function() {
+    if (this.isPinned) {
+      return 'pinned';
     }
   }
 });

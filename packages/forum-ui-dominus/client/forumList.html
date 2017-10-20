@@ -59,6 +59,9 @@
               </tr>
           </thead>
           <tbody>
+            {{#each pinnedTopics}}
+              {{> forumListTopic}}
+            {{/each}}
             {{#each topics}}
               {{> forumListTopic}}
             {{/each}}
@@ -77,8 +80,11 @@
 
 
 <template name="forumListTopic">
-  <tr>
+  <tr class="{{pinned}}">
     <td class="forumTopicListTitle">
+      {{#if isPinned}}
+        <i class="fa fa-thumb-tack"></i>&nbsp;
+      {{/if}}
       {{#if isUnread}}
         <i class="fa fa-exclamation-circle"></i>&nbsp;
       {{/if}}

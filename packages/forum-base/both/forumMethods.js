@@ -1,4 +1,80 @@
 Meteor.methods({
+  forumPinTopic: function(topicId) {
+    var self = this;
+    self.unblock();
+    var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
+    if (user) {
+      if (!user.admin && !user.moderator) {
+        throw new Meteor.Error('forumDeleteTopic', 'Must be admin or moderator.');
+      }
+    } else {
+      throw new Meteor.Error('forumDeleteTopic', 'Must be admin or moderator.');
+    }
+
+    Forumtopics.update(topicId, {$set: {isPinned:true}});
+  },
+
+  forumUnpinTopic: function(topicId) {
+    var self = this;
+    self.unblock();
+    var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
+    if (user) {
+      if (!user.admin && !user.moderator) {
+        throw new Meteor.Error('forumDeleteTopic', 'Must be admin or moderator.');
+      }
+    } else {
+      throw new Meteor.Error('forumDeleteTopic', 'Must be admin or moderator.');
+    }
+
+    Forumtopics.update(topicId, {$set: {isPinned:false}});
+  },
+
+  forumDeleteTopic: function(topicId) {
+    var self = this;
+    self.unblock();
+    var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
+    if (user) {
+      if (!user.admin && !user.moderator) {
+        throw new Meteor.Error('forumDeleteTopic', 'Must be admin or moderator.');
+      }
+    } else {
+      throw new Meteor.Error('forumDeleteTopic', 'Must be admin or moderator.');
+    }
+
+    Forumtopics.remove(topicId);
+  },
+
+
+  forumLockTopic: function(topicId) {
+    var self = this;
+    self.unblock();
+    var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
+    if (user) {
+      if (!user.admin && !user.moderator) {
+        throw new Meteor.Error('forumDeleteTopic', 'Must be admin or moderator.');
+      }
+    } else {
+      throw new Meteor.Error('forumDeleteTopic', 'Must be admin or moderator.');
+    }
+
+    Forumtopics.update(topicId, {$set: {isLocked:true}});
+  },
+
+  forumUnlockTopic: function(topicId) {
+    var self = this;
+    self.unblock();
+    var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
+    if (user) {
+      if (!user.admin && !user.moderator) {
+        throw new Meteor.Error('forumDeleteTopic', 'Must be admin or moderator.');
+      }
+    } else {
+      throw new Meteor.Error('forumDeleteTopic', 'Must be admin or moderator.');
+    }
+
+    Forumtopics.update(topicId, {$set: {isLocked:false}});
+  },
+
   forumNewTopic: function(title, categoryId, text) {
     var self = this;
     self.unblock();

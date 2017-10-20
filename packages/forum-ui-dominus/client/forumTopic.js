@@ -1,5 +1,15 @@
 Template.forumTopic.helpers({
 
+  isMod: function() {
+    var user = Meteor.users.findOne(Meteor.userId(), {fields:{admin:1, moderator:1}});
+    if (user) {
+      if (user.admin || user.moderator) {
+        return true;
+      }
+    }
+    return false;
+  },
+
   topic: function() {
     let topicId = Template.instance().topicId.get();
     if (topicId) {
@@ -32,6 +42,47 @@ Template.forumTopic.helpers({
 
 
 Template.forumTopic.events({
+  'click #pinTopicButton': function(event, template) {
+    event.preventDefault();
+    let topicId = Template.instance().topicId.get();
+    if (topicId) {
+      Meteor.call('forumPinTopic', topicId);
+    }
+  },
+
+  'click #unpinTopicButton': function(event, template) {
+    event.preventDefault();
+    let topicId = Template.instance().topicId.get();
+    if (topicId) {
+      Meteor.call('forumUnpinTopic', topicId);
+    }
+  },
+
+  'click #lockTopicButton': function(event, template) {
+    event.preventDefault();
+    let topicId = Template.instance().topicId.get();
+    if (topicId) {
+      Meteor.call('forumLockTopic', topicId);
+    }
+  },
+
+  'click #unlockTopicButton': function(event, template) {
+    event.preventDefault();
+    let topicId = Template.instance().topicId.get();
+    if (topicId) {
+      Meteor.call('forumUnlockTopic', topicId);
+    }
+  },
+
+  'click #deleteTopicButton': function(event, template) {
+    event.preventDefault();
+    let topicId = Template.instance().topicId.get();
+    if (topicId) {
+      Meteor.call('forumDeleteTopic', topicId);
+      SimpleRouter.go('/forum');
+    }
+  },
+
   'click .toTopicListButton': function(event, template) {
     event.preventDefault();
     let topicId = Template.instance().topicId.get();
