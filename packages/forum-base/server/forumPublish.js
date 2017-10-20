@@ -1,3 +1,7 @@
+Meteor.publish('forumPinnedTopics', function() {
+  return Forumtopics.find({isPinned:true}, {sort:{lastPostDate:-1}});
+});
+
 Meteor.publish('forumTopics', function(sort, numShow, categoryId, filter) {
   if (!this.userId) {
     return this.ready();
@@ -21,7 +25,7 @@ Meteor.publish('forumTopics', function(sort, numShow, categoryId, filter) {
       break;
   }
 
-  let find = {};
+  let find = {isPinned: {$ne: true}};
 
   if (categoryId != 'all') {
     find.categoryId = categoryId;

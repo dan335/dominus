@@ -17,9 +17,17 @@
   {{/each}}
 
   <div style="padding: 20px;">
-    {{> forumNewPost topic}}
+    {{#unless topic.isLocked}}
+      {{> forumNewPost topic}}
+    {{/unless}}
     <br><br>
-
+    {{#if isMod}}
+      <button class="btn btn-primary" id="deleteTopicButton">Delete Topic</button>
+      <button class="btn btn-primary" id="lockTopicButton">Lock Topic</button>
+      <button class="btn btn-primary" id="unlockTopicButton">Unlock Topic</button>
+      <button class="btn btn-primary" id="pinTopicButton">Pin Topic</button>
+      <button class="btn btn-primary" id="unpinTopicButton">Unpin Topic</button>
+    {{/if}}
   </div>
 </template>
 
