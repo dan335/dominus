@@ -39,7 +39,7 @@ dArmies.methods.combineArmies = new ValidatedMethod({
       });
 
       Armies.update(armyId, {$inc:soldiers, $set:{speed:null, moveTime:null, last_move_at:latestMove.toDate()}});
-
+      Armypaths.update({armyId:armyId}, {$set:{last_move_at:latestMove.toDate()}}, {multi:true});
     } else {
       throw new Meteor.Error('Army not found.');
     }
