@@ -11,13 +11,13 @@ _gs.init = function(gameId, path) {
     settings.time_til_game_end_when_new_dominus = 1000 * 60 * 60 * 1;
 
     settings.startingResources = {
-  		gold: 10,
-  		grain: 500,
-  		lumber: 500,
-  		ore: 500,
-  		wool: 500,
-  		clay: 500,
-  		glass: 500
+  		gold: 10000,
+  		grain: 1500,
+  		lumber: 2000,
+  		ore: 1500,
+  		wool: 1500,
+  		clay: 2000,
+  		glass: 1500
   	}
   }
 
