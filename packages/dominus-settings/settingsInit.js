@@ -9,6 +9,16 @@ _gs.init = function(gameId, path) {
   // game specific settings
   if (game && game.isSuperSpeed) {
     settings.time_til_game_end_when_new_dominus = 1000 * 60 * 60 * 1;
+
+    settings.startingResources = {
+  		gold: 10,
+  		grain: 500,
+  		lumber: 500,
+  		ore: 500,
+  		wool: 500,
+  		clay: 500,
+  		glass: 500
+  	}
   }
 
   // cheats
