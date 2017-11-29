@@ -43,10 +43,10 @@ _gs.castles = function(gameId, path) {
     }
 
     settings.startingGarrison = {
-      footmen: 8,
-      archers: 24,
-      pikemen: 24,
-      cavalry: 6,
+      footmen: 2,
+      archers: 4,
+      pikemen: 4,
+      cavalry: 8,
       catapults: 0
     }
 
