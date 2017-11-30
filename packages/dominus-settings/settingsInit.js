@@ -1,7 +1,5 @@
 _gs.init = function(gameId, path) {
-  let game = _.find(cachedGames, function(cachedGame) {
-    return cachedGame._id == gameId;
-  });
+  let game = _gs.getGame(gameId);
 
   let settings = EJSON.clone(_s.init);
 
