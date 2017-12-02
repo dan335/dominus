@@ -31,7 +31,7 @@ _gs.castles = function(gameId, path) {
     settings.incomeInterval = 1000 * 60 * 20;
   }
 
-  if (game && game.isSuperSpeed) {
+  if (game && game.isCrazyFast) {
     settings.income = {
       gold: 30,
       grain: 80,

@@ -7,7 +7,7 @@ _gs.battles = function(gameId, path) {
     settings.battleInterval = 1000 * 60;
   }
 
-  if (game.isSuperSpeed) {
+  if (game.isCrazyFast) {
     settings.battleInterval = 1000 * 30;
   }
 

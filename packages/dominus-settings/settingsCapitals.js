@@ -41,7 +41,7 @@ _gs.capitals = function(gameId, path) {
     settings.villagePercentageIncome = 0.1;
   }
 
-  if (game && game.isSuperSpeed) {
+  if (game && game.isCrazyFast) {
     settings.income = {
       gold: 0,
       grain: 80,

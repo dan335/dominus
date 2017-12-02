@@ -5,7 +5,7 @@ _gs.init = function(gameId, path) {
 
   // ---------
   // game specific settings
-  if (game && game.isSuperSpeed) {
+  if (game && game.isCrazyFast) {
     settings.time_til_game_end_when_new_dominus = 1000 * 60 * 60 * 1;
 
     settings.startingResources = {

@@ -19,7 +19,7 @@ _gs.armies = function(gameId, path) {
     settings.stats.catapults.speed = Math.round(settings.stats.catapults.speed * 6);
   }
 
-  if (game.isSuperSpeed) {
+  if (game.isCrazyFast) {
     settings.stats.footmen.speed = Math.round(settings.stats.footmen.speed * 18);
     settings.stats.archers.speed = Math.round(settings.stats.archers.speed * 18);
     settings.stats.pikemen.speed = Math.round(settings.stats.pikemen.speed * 18);

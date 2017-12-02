@@ -23,7 +23,7 @@ _gs.villages = function(gameId, path) {
     settings.cost.level3.timeToBuild = _s.villages.cost.level3.timeToBuild / 3
   }
 
-  if (game && game.isSuperSpeed) {
+  if (game && game.isCrazyFast) {
     settings.max_can_have = 8;
     settings.gained_at_hex = 0.0001;
 

@@ -29,7 +29,7 @@ Template.control_gamesEdit.events({
 		var startAtTime = template.find('#gameStartTimeInput');
     var isRelaxed = template.$('#isRelaxedCheckbox').is(':checked');
     var isSpeed = template.$('#isSpeedCheckbox').is(':checked');
-    var isSuperSpeed = template.$('#isSuperSpeedCheckbox').is(':checked');
+    var isCrazyFast = template.$('#isCrazyFastCheckbox').is(':checked');
     var isProOnly = template.$('#isProOnlyCheckbox').is(':checked');
     var isKingOfHill = template.$('#isKingOfHillCheckbox').is(':checked');
     var isNoLargeResources = template.$('#isNoLargeResourcesCheckbox').is(':checked');
@@ -47,7 +47,7 @@ Template.control_gamesEdit.events({
         startAtDate.value+' '+startAtTime.value,
         isRelaxed,
         isSpeed,
-        isSuperSpeed,
+        isCrazyFast,
         isProOnly,
         isKingOfHill,
         isNoLargeResources,
