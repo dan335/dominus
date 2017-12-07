@@ -77,24 +77,26 @@ dRankings = {
     	};
 
       Players.find({userId:user._id}, {fields: {gameId:1, wonGame:1}}).forEach(function(player) {
-        let game = Games.findOne(player.gameId, {fields: {hasEnded:1, isProOnly:1}});
+        let game = Games.findOne(player.gameId, {fields: {hasEnded:1, isProOnly:1, isCrazyFast:1}});
 
-        if (game.hasEnded) {
-          let wins = 0;
-          let overallPoints = 0;
-          if (player.wonGame) {
-            wins = 1;
-            overallPoints = pointsForWinning;
-          }
+        if (!game.isCrazyFast) {
+          if (game.hasEnded) {
+            let wins = 0;
+            let overallPoints = 0;
+            if (player.wonGame) {
+              wins = 1;
+              overallPoints = pointsForWinning;
+            }
 
-          if (game.isProOnly) {
-            rankingPro.numGames++;
-            rankingPro.wins += wins;
-            rankingPro.overallPoints += overallPoints;
-          } else {
-            rankingRegular.numGames++;
-            rankingRegular.wins += wins;
-            rankingRegular.overallPoints += overallPoints;
+            if (game.isProOnly) {
+              rankingPro.numGames++;
+              rankingPro.wins += wins;
+              rankingPro.overallPoints += overallPoints;
+            } else {
+              rankingRegular.numGames++;
+              rankingRegular.wins += wins;
+              rankingRegular.overallPoints += overallPoints;
+            }
           }
         }
       });
@@ -108,35 +110,37 @@ dRankings = {
     // results
 
     // num vassal points
-    Games.find({hasEnded:true}, {fields: {isProOnly:1, results:1}}).forEach(function(game) {
-      game.results.numVassals.forEach(function(u) {
-        let points = gameRankToPoints(u.rank);
+    Games.find({hasEnded:true}, {fields: {isProOnly:1, results:1, isCrazyFast:1}}).forEach(function(game) {
+      if (!game.isCrazyFast) {
+        game.results.numVassals.forEach(function(u) {
+          let points = gameRankToPoints(u.rank);
 
-        if (points > 0) {
-          if (game.isProOnly) {
-            bulk.find({_id:u.userId}).updateOne({$inc: {"rankingPro.numVassalsPoints":points}});
-            hasBulk = true;
-          } else {
-            bulk.find({_id:u.userId}).updateOne({$inc:{"rankingRegular.numVassalsPoints":points}});
-            hasBulk = true;
+          if (points > 0) {
+            if (game.isProOnly) {
+              bulk.find({_id:u.userId}).updateOne({$inc: {"rankingPro.numVassalsPoints":points}});
+              hasBulk = true;
+            } else {
+              bulk.find({_id:u.userId}).updateOne({$inc:{"rankingRegular.numVassalsPoints":points}});
+              hasBulk = true;
+            }
           }
-        }
-      });
+        });
 
-      // income points
-      game.results.income.forEach(function(u) {
-        let points = gameRankToPoints(u.rank);
+        // income points
+        game.results.income.forEach(function(u) {
+          let points = gameRankToPoints(u.rank);
 
-        if (points > 0) {
-          if (game.isProOnly) {
-            bulk.find({_id:u.userId}).updateOne({$inc:{"rankingPro.incomePoints":points}});
-            hasBulk = true;
-          } else {
-            bulk.find({_id:u.userId}).updateOne({$inc:{"rankingRegular.incomePoints":points}});
-            hasBulk = true;
+          if (points > 0) {
+            if (game.isProOnly) {
+              bulk.find({_id:u.userId}).updateOne({$inc:{"rankingPro.incomePoints":points}});
+              hasBulk = true;
+            } else {
+              bulk.find({_id:u.userId}).updateOne({$inc:{"rankingRegular.incomePoints":points}});
+              hasBulk = true;
+            }
           }
-        }
-      });
+        });
+      }
     });
 
     // save

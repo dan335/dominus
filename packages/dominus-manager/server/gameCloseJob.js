@@ -84,6 +84,7 @@ var cleanupGame = function(gameId) {
     isRelaxed:1,
     isSpeed:1,
     isCrazyFast:1,
+    isSuperSpeed:1
   }
 
   let game = Games.findOne(gameId, {fields:keep});
