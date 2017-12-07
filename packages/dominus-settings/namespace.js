@@ -42,7 +42,7 @@ if (Meteor.isServer) {
   let fields = {
     isRelaxed:1,
     isSpeed:1,
-    isSuperSpeed:1,
+    isCrazyFast:1,
     isKingOfHill:1,
     isProOnly:1,
     maxPlayers:1

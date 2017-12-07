@@ -11,7 +11,7 @@ _gs.graphs = function(gameId, path) {
 		settings.statsInverval = 3;
   }
 
-  if (game.isSuperSpeed) {
+  if (game.isCrazyFast) {
 		settings.statsInverval = 0.5;
   }
 

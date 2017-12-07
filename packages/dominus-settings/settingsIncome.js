@@ -9,7 +9,7 @@ _gs.income = function(gameId, path) {
   if (game.isSpeed) {
   }
 
-  if (game.isSuperSpeed) {
+  if (game.isCrazyFast) {
   }
 
   // cheats
