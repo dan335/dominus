@@ -22,7 +22,6 @@ fastclick@1.0.13
 d3js:d3
 mrgalaxy:stripe
 wizonesolutions:underscore-string
-wylio:mandrill
 http@1.3.0
 dominus-minimap
 dominus-mapbaker

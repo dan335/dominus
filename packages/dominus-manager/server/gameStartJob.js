@@ -92,16 +92,29 @@ var sendGameStartedEmail = function(gameId, gameName, userId) {
   let email = AccountsEmail.extract(user);
 
   if (user && email) {
-    let global_merge_vars = [
-      {"name":"gameId", "content":gameId},
-      {"name":"gameName", "content":gameName},
-      {"name":"domain", "content":Meteor.absoluteUrl()}
-    ];
-    let to = [{
-      "email": email,
-      "name": user.username
-    }];
 
-    mandrillSendTemplate('game-started', to, global_merge_vars);
+    // old mandrill stuff
+    // let global_merge_vars = [
+    //   {"name":"gameId", "content":gameId},
+    //   {"name":"gameName", "content":gameName},
+    //   {"name":"domain", "content":Meteor.absoluteUrl()}
+    // ];
+    // let to = [{
+    //   "email": email,
+    //   "name": user.username
+    // }];
+
+    //mandrillSendTemplate('game-started', to, global_merge_vars);
+
+    var html = '<img src="https://dominusgame.net/emails/emailBanner.jpg"><br><br>The game ' +gameName+ ' that you signed up for just started.  Your castle has been created.<br><br><a href="https://dominusgame.net/game/' +gameId+ '">Click here to play</a><br><br><a href="https://dominusgame.net">Dominus</a>';
+
+    var options = {
+      from: 'Dominus <dan@dominusgame.net>',
+      to: user.username + '<' + email + '>',
+      subject: 'Game Started',
+      html: html
+    }
+
+    Email.send(options);
   }
 }
