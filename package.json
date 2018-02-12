@@ -4,8 +4,9 @@
   "description": "game",
   "main": "index.js",
   "dependencies": {
-    "babel-runtime": "^6.26.0",
+    "@babel/runtime": "^7.0.0-beta.39",
     "bcrypt": "^0.8.7",
+    "core-js": "^2.5.3",
     "d3": "^3.5.17",
     "jquery": "^2.2.4",
     "moment": "^2.18.1",
