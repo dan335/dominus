@@ -9,6 +9,7 @@ testpackage
 .DS_Store
 packages/*/.build*
 packages/*/.npm*
+.build
 
 # Logs
 logs
