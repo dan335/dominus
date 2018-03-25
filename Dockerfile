@@ -24,7 +24,7 @@ RUN apt-get -y update && apt-get install -y --fix-missing \
 
 ENV DOMINUS_TEST=false HTTP_FORWARDED_COUNT=1 PORT=80 TERM=xterm
 
-ADD .build/iogameszone.tar.gz /opt/app/
+ADD .build/dominus.tar.gz /opt/app/
 
 WORKDIR /opt/app/bundle/programs/server
 RUN npm install
