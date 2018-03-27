@@ -80,7 +80,7 @@ dominus-battles-ui
 dominus-panel-rankings
 dominus-queue
 standard-minifier-css@1.4.1
-standard-minifier-js@2.3.2
+standard-minifier-js@2.3.1
 huttonr:bootstrap3
 shell-server@0.3.1
 dominus-help
