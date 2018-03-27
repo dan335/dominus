@@ -20,7 +20,7 @@ Package.onUse(function(api) {
     'ecmascript',
     'mdg:validated-method@0.2.0',
     'mdg:validation-error@0.1.0',
-    'aldeed:simple-schema@1.4.0',
+    'aldeed:simple-schema@1.5.4',
     'ddp-rate-limiter',
     'random',
     'dominus-queue',
