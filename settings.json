@@ -9,9 +9,6 @@
       "secret": "key"
     }
   },
-  "PrerenderIO": {
-    "token": "key"
-  },
   "stripe_secret_key": "key",
   "googleLogin":{
     "service":"google",

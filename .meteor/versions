@@ -38,7 +38,6 @@ ddp-common@1.4.0
 ddp-rate-limiter@1.0.7
 ddp-server@2.1.2
 deps@1.0.12
-dfischer:prerenderio@1.0.9
 diff-sequence@1.1.0
 dominus-admin@0.0.1
 dominus-alerts@0.0.1
