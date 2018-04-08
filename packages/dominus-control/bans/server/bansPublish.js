@@ -12,5 +12,5 @@ Meteor.publish('control_bans', function() {
     return this.ready();
   }
 
-  return Meteor.users.find({banned:true}, {fields: {username:1, banned:1}});
+  return Meteor.users.find({banned:true}, {fields: {username:1, banned:1, bannedDate:1, bannedBy:1, reason:1}});
 });

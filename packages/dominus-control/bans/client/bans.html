@@ -1,20 +1,37 @@
 <template name="control_bans">
   <input type="text" id="banInput" class="form-control" placeholder="userid">
+  <input type="text" id="banReason" class="form-control" placeholder="reason">
   <br>
   <button class="btn btn-primary" id="banButton">Ban User</button>
 
   <br><br>
   <h3>Banned Users</h3>
-  {{#each bannedUsers}}
-    {{> control_bans_players}}
-  {{/each}}
+  <table style="width:100%;">
+    <thead>
+      <tr>
+        <td>Username</td>
+        <td>user_id</td>
+        <td>Banned By</td>
+        <td>Date</td>
+        <td>Reason</td>
+        <td>Remove</td>
+      </tr>
+    </thead>
+    <tbody>
+    {{#each bannedUsers}}
+      {{> control_bans_players}}
+    {{/each}}
+  </tbody></table>
 </template>
 
 
 <template name="control_bans_players">
-  <div>
-    {{username}}
-    {{_id}}
-    <button class="btn btn-primary unbanButton">X</button>
-  </div>
+  <tr>
+    <td>{{username}}</td>
+    <td>{{_id}}</td>
+    <td>{{bannedBy}}</td>
+    <td>{{nicedate}}</td>
+    <td>{{reason}}</td>
+    <td><button class="btn btn-primary unbanButton">X</button></td>
+  </tr>
 </template>
