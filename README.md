@@ -25,3 +25,7 @@ Required environment variables
 * DOMINUS_WORKER=true
 * DOMINUS_ADMIN_EMAIL=email@email.com
 * DOMINUS_TEST=false
+
+#### License ####
+
+All rights reserved.
