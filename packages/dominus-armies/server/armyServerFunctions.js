@@ -278,7 +278,7 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
   // check for armies
   if (!startBattle) {
     armies.forEach(function(otherArmy) {
-      if (otherArmy._id != army._id) {
+      if ((otherArmy._id != army._id) && (this.playerId != otherArmy.playerId)) {
 
         var someoneIsDominus = false;
 
