@@ -178,7 +178,7 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
 
               // make sure other army is stopped
               if (dArmies.isStopped(otherArmy._id)) {
-                
+
                 // new army should get the lastest last_move_at to prevent cheat
                 let latest = moment(new Date(otherArmy.last_move_at));
                 let armyLastMove = moment(new Date(army.last_move_at));
@@ -278,7 +278,7 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
   // check for armies
   if (!startBattle) {
     armies.forEach(function(otherArmy) {
-      if ((otherArmy._id != army._id) && (army.playerId != otherArmy.playerId)) {
+      if (army.playerId != otherArmy.playerId) {
 
         var someoneIsDominus = false;
 
