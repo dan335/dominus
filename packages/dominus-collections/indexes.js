@@ -2,6 +2,7 @@ Meteor.startup(function () {
   Players._ensureIndex({_id:1, userId:1});
   Players._ensureIndex({gameId:1, userId:1});
   Players._ensureIndex({gameId:1, is_dominus:1});
+  Players._ensureIndex({lord:1, username:1});
 
   //Gamesignups._dropIndex({gameId:1, user_id:1})
   Gamesignups._ensureIndex({gameId:1, user_id:1});
@@ -35,6 +36,7 @@ Meteor.startup(function () {
   Battles2._ensureIndex({gameId:1, x:1, y:1, isOver:1});
   Battles2._ensureIndex({gameId:1, x:1, y:1, updatedAt:1});
   Battles2._ensureIndex({gameId:1, showBattle:1});
+  Battles2._ensureIndex({isRunning:1, updatedAt:1});
 
   Roomchats._ensureIndex({room_id:1, created_at:1});
   Recentchats._ensureIndex({room_id:1});
