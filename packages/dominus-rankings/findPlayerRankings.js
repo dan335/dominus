@@ -112,34 +112,36 @@ dRankings = {
     // num vassal points
     Games.find({hasEnded:true}, {fields: {isProOnly:1, results:1, isCrazyFast:1}}).forEach(function(game) {
       if (!game.isCrazyFast) {
-        game.results.numVassals.forEach(function(u) {
-          let points = gameRankToPoints(u.rank);
-
-          if (points > 0) {
-            if (game.isProOnly) {
-              bulk.find({_id:u.userId}).updateOne({$inc: {"rankingPro.numVassalsPoints":points}});
-              hasBulk = true;
-            } else {
-              bulk.find({_id:u.userId}).updateOne({$inc:{"rankingRegular.numVassalsPoints":points}});
-              hasBulk = true;
+        if (game.results) {
+          game.results.numVassals.forEach(function(u) {
+            let points = gameRankToPoints(u.rank);
+  
+            if (points > 0) {
+              if (game.isProOnly) {
+                bulk.find({_id:u.userId}).updateOne({$inc: {"rankingPro.numVassalsPoints":points}});
+                hasBulk = true;
+              } else {
+                bulk.find({_id:u.userId}).updateOne({$inc:{"rankingRegular.numVassalsPoints":points}});
+                hasBulk = true;
+              }
             }
-          }
-        });
-
-        // income points
-        game.results.income.forEach(function(u) {
-          let points = gameRankToPoints(u.rank);
-
-          if (points > 0) {
-            if (game.isProOnly) {
-              bulk.find({_id:u.userId}).updateOne({$inc:{"rankingPro.incomePoints":points}});
-              hasBulk = true;
-            } else {
-              bulk.find({_id:u.userId}).updateOne({$inc:{"rankingRegular.incomePoints":points}});
-              hasBulk = true;
+          });
+  
+          // income points
+          game.results.income.forEach(function(u) {
+            let points = gameRankToPoints(u.rank);
+  
+            if (points > 0) {
+              if (game.isProOnly) {
+                bulk.find({_id:u.userId}).updateOne({$inc:{"rankingPro.incomePoints":points}});
+                hasBulk = true;
+              } else {
+                bulk.find({_id:u.userId}).updateOne({$inc:{"rankingRegular.incomePoints":points}});
+                hasBulk = true;
+              }
             }
-          }
-        });
+          });
+        }
       }
     });
 
