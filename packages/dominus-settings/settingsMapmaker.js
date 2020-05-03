@@ -2,7 +2,7 @@ _gs.mapmaker = function(gameId, path) {
 
   let game = _gs.getGame(gameId);
   let settings = EJSON.clone(_s.mapmaker);
-
+console.log(game)
   if (game.isNoLargeResources) {
     settings.large = 0;
   }
