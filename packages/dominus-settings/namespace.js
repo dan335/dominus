@@ -46,7 +46,8 @@ if (Meteor.isServer) {
     isSuperSpeed:1,
     isKingOfHill:1,
     isProOnly:1,
-    maxPlayers:1
+    maxPlayers:1,
+    isNoLargeResources:1
   };
 
   let cacheGame = function(game) {
