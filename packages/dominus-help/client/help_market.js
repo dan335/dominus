@@ -12,6 +12,6 @@ Template.help_market.helpers({
   },
 
   incomeInterval: function() {
-    return _gs.castles(Session.get('gameId'), 'incomeInterval');
+    return _gs.castles(Session.get('gameId'), 'incomeInterval') / 60 ; /* ms to seconds */
   }
 })
