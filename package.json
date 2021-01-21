@@ -5,7 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "@babel/runtime": "^7.9.6",
-    "@sendgrid/mail": "^6.3.1",
+    "@sendgrid/mail": "^6.5.5",
     "bcrypt": "^0.8.7",
     "core-js": "^2.5.3",
     "d3": "^3.5.17",
