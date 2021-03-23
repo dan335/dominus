@@ -92,7 +92,10 @@ Package.onUse(function(api) {
     'landingStore/client/landingStoreDonate.js',
     'landingProfile/client/landingProfile.html',
     'landingProfile/client/landingProfile.js',
-    'landingProfile/client/landingProfile.less'
+    'landingProfile/client/landingProfile.less',
+    'mailinglist/client/mailinglist.html',
+    'mailinglist/client/mailinglist.js',
+    'mailinglist/client/mailinglist.less'
   ], 'client');
   api.export([
     'dLanding',
