@@ -8,7 +8,9 @@ Meteor.methods({
       let future = new Future();
       Queues[jobName].pause().then(Meteor.bindEnvironment(function() {
         future.return(true);
-      }));
+      })).catch(error => {
+        console.log(error);
+      })
       future.wait();
     });
   },
@@ -23,7 +25,9 @@ Meteor.methods({
       let future = new Future();
       Queues[jobName].resume().then(Meteor.bindEnvironment(function() {
         future.return(true);
-      }));
+      })).then(error => {
+        console.log(error);
+      })
       future.wait();
     });
   },

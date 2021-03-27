@@ -31,7 +31,9 @@ var shutdown = function() {
 
   Queues.queueNames.forEach((jobName) => {
     promises.push(new Promise((resolve, reject) => {
-      Queues[jobName].pause().then(() => { resolve(); })
+      Queues[jobName].pause().then(() => { resolve(); }).catch(error => {
+        console.log(error);
+      })
     }))
   })
 
@@ -41,6 +43,8 @@ var shutdown = function() {
     setTimeout(() => {
       console.log('--- waited for jobs ---');
     }, 1000 * 8)
+  }).catch(error => {
+    console.log(error);
   })
 
 }
