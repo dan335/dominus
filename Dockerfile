@@ -1,4 +1,4 @@
-FROM node:8
+FROM node:14
 MAINTAINER Daniel Phillips (http://danp.us)
 
 # timezone
