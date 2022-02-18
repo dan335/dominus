@@ -27,7 +27,7 @@ Package.onUse(function(api) {
     'dominus-game',   // for deleteGameAccount
     'forum-base',     // change forum username in changeMainUsername function
     'classcraft:knox@0.9.11',
-    'meteorhacks:unblock@1.1.0'
+    //'meteorhacks:unblock@1.1.0'
   ]);
   api.addFiles([
     'lib/namespace.js',
