@@ -2,7 +2,7 @@ var countryFields = {minX:1, maxX:1, minY:1, maxY:1, minZ:1, maxZ:1, paths:1, im
 
 Meteor.methods({
   fetchCountriesOnScreen: function(countryIds) {
-    this.unblock();
+    //this.unblock();
     check(countryIds, Array);
     return Countries.find({_id: {$in: countryIds}}, {fields: countryFields}).fetch();
   }

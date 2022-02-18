@@ -3,7 +3,7 @@ Meteor.methods({
     check(gameId, String);
     check(x, Match.Integer);
     check(y, Match.Integer);
-    this.unblock();
+    //this.unblock();
     var self = this;
 
 		var fields = {
@@ -220,7 +220,7 @@ Meteor.methods({
 
 
 	destroyVillage: function(villageId) {
-		this.unblock();
+		//this.unblock();
 		check(villageId, String);
 
     let find = {_id:villageId, user_id:this.userId};

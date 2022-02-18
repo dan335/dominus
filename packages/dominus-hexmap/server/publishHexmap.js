@@ -12,7 +12,7 @@ _s.armies.types.forEach(function(type) {
 
 
 Meteor.publish('gamePiecesAtHex', function(gameId, x, y) {
-	this.unblock();
+	//this.unblock();
 	if (this.userId) {
 		return [
 			Hexes.find({gameId:gameId, x:x, y:y}, {fields: hexFields}),
@@ -35,7 +35,7 @@ DDPRateLimiter.addRule(gamePiecesAtHexSubRule, 5, 5000);
 
 
 Meteor.publish('countries', function(countryIds) {
-	this.unblock();
+	//this.unblock();
 	if (this.userId) {
 		return Countries.find({_id: {$in: countryIds}}, {fields: {paths:1, image:1, imageWithCoords:1}});
 	} else {
@@ -64,7 +64,7 @@ _s.armies.types.forEach(function(type) {
 });
 
 Meteor.publish('countryOnScreen', function(countryId) {
-	this.unblock();
+	//this.unblock();
 	if (this.userId) {
 		return [
 			Countries.find({_id:countryId}, {fields: {paths:1, image:1, imageWithCoords:1}}),

@@ -23,7 +23,7 @@ DDPRateLimiter.addRule(armiesOnScreenSubRule, 5, 5000);
 
 
 Meteor.publish('armiesInCountry', function(countryId) {
-  this.unblock();
+  //this.unblock();
 
   if (this.userId) {
 		return Armies.find({countryId:countryId}, {fields: armyFields});

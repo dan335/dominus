@@ -7,7 +7,7 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.versionsFrom('1.2.1');
+  //api.versionsFrom('1.2.1');
   api.use([
     'momentjs:moment@2.18.1',
     'blaze-html-templates',

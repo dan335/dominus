@@ -1,6 +1,6 @@
 Meteor.methods({
   rensendEmailVerification: function() {
-    this.unblock();
+    //this.unblock();
     if (!this.isSimulation) {
       Accounts.sendVerificationEmail(this.userId);
     }
@@ -8,7 +8,7 @@ Meteor.methods({
 
 
   deleteAvatar: function() {
-    this.unblock();
+    //this.unblock();
     var self = this;
     if (!this.isSimulation) {
       let user = Meteor.users.findOne(this.userId, {fields: {avatarFilename:1}});
@@ -22,7 +22,7 @@ Meteor.methods({
 
 
   uploadAvatarToS3: function(file, type, size) {
-    this.unblock();
+    //this.unblock();
     check(type, String);
 
     var extension = null;
@@ -184,7 +184,7 @@ Meteor.methods({
   },
 
   setGender: function(isMale) {
-    this.unblock();
+    //this.unblock();
     check(isMale, Boolean);
     Meteor.users.update(this.userId, {$set: {male:isMale}});
     Players.update({userId:this.userId}, {$set: {male:isMale}}, {multi:true});

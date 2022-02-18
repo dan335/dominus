@@ -180,7 +180,7 @@ Meteor.methods({
   disbandArmy: function(gameId, armyId) {
     check(gameId, String);
     check(armyId, String);
-    this.unblock();
+    //this.unblock();
     if (!this.isSimulation) {
       dArmies.destroyArmy(armyId);
     }
@@ -190,7 +190,7 @@ Meteor.methods({
   splitArmy: function(gameId, armyId, newArmySoldiers) {
     check(gameId, String);
     check(armyId, String);
-    this.unblock();
+    //this.unblock();
     if (!this.isSimulation) {
       var newArmyId = dArmies.split(gameId, armyId, newArmySoldiers);
       if (newArmyId) {

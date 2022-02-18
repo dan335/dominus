@@ -26,7 +26,7 @@ DDPRateLimiter.addRule(capitalsOnScreenSubRule, 5, 5000);
 
 
 Meteor.publish("capitalsInCountry", function (countryId) {
-  this.unblock();
+  //this.unblock();
   
   if (this.userId) {
     return Capitals.find({countryId:countryId}, {fields: capitalMapFields});

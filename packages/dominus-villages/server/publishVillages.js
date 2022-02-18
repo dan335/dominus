@@ -25,7 +25,7 @@ DDPRateLimiter.addRule(villagesOnScreenSubRule, 5, 5000);
 
 
 Meteor.publish("villagesInCountry", function (countryId) {
-	this.unblock();
+	//this.unblock();
 	
 	if (this.userId) {
 	  return Villages.find({countryId:countryId}, {fields: villageFields});

@@ -43,7 +43,7 @@ DDPRateLimiter.addRule(gamesSignupsSubRule, 5, 5000);
 
 
 Meteor.publish('gameSignups', function(gameId) {
-  this.unblock();
+  //this.unblock();
   return Gamesignups.find({gameId:gameId});
 });
 

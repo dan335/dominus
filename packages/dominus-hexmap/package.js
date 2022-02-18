@@ -11,13 +11,13 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.versionsFrom('1.2.0.2');
+  //api.versionsFrom('1.2.0.2');
   api.use([
     'less',
     'danimal:mapmover',
     'blaze-html-templates',
     'dominus-init',
-    'meteorhacks:unblock@1.1.0'
+    //'meteorhacks:unblock@1.1.0'
   ]);
   api.addFiles([
     'both/namespace.js',

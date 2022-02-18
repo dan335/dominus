@@ -23,7 +23,7 @@ DDPRateLimiter.addRule(castlesOnScreenSubRule, 5, 5000);
 
 
 Meteor.publish("castlesInCountry", function (countryId) {
-	this.unblock();
+	//this.unblock();
 	
 	if (this.userId) {
 	  return Castles.find({countryId:countryId}, {fields: castleFields});

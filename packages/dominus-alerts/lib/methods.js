@@ -1,6 +1,6 @@
 Meteor.methods({
   hideAlertMine: function(playerId, alertType) {
-    this.unblock();
+    //this.unblock();
     check(alertType, String);
     check(playerId, String);
 
@@ -13,7 +13,7 @@ Meteor.methods({
   },
 
   showAlertMine: function(playerId, alertType) {
-    this.unblock();
+    //this.unblock();
     check(alertType, String);
     check(playerId, String);
 
@@ -26,7 +26,7 @@ Meteor.methods({
   },
 
   markAlertAsRead: function(gameId, alert_id) {
-    this.unblock();
+    //this.unblock();
     check(gameId, String);
     check(alert_id, String);
 
@@ -39,7 +39,7 @@ Meteor.methods({
   },
 
   markAllAlertsAsRead: function(playerId) {
-    this.unblock();
+    //this.unblock();
     check(playerId, String);
 
     let player = Players.findOne({_id:playerId, userId:this.userId});
