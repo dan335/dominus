@@ -4,11 +4,11 @@
 # but you can also edit it by hand.
 
 jquery@1.11.10
-less@2.8.0-rc171.0
+less
 random@1.1.0
-accounts-password@1.5.1
+accounts-password
 email@1.2.3
-accounts-ui@1.3.1-rc171.0
+accounts-ui
 danimal:accounts-templates
 danimal:hx
 underscore@1.0.10
@@ -16,8 +16,8 @@ reactive-var@1.0.11
 momentjs:moment
 fortawesome:fontawesome
 danimal:readymanager
-accounts-google@1.3.2-rc171.0
-accounts-facebook@1.3.2-rc171.0
+accounts-google
+accounts-facebook
 fastclick@1.0.13
 d3js:d3
 mrgalaxy:stripe
