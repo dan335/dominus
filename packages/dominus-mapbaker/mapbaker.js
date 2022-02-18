@@ -377,8 +377,9 @@ Mapbaker.createJpgImage = function(inFile, outFile, outFileType, quality) {
       fut['return'](false);
     } else {
       if (Mapbaker.fs.existsSync(outFile)) {
-        Mapbaker.fs.chmod(outFile, 0755);
-        fut['return'](outFile);
+        Mapbaker.fs.chmod(outFile, 0755, () => {
+          fut['return'](outFile);
+        });
       } else {
         fut['return'](false);
       }
