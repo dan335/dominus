@@ -36,7 +36,7 @@ dominus-init
 dominus-armies
 meteor-base@1.5.1
 mobile-experience@1.1.0
-mongo@1.14.0
+mongo@1.14.6
 blaze-html-templates@1.0.4
 session@1.2.0
 tracker@1.2.0
