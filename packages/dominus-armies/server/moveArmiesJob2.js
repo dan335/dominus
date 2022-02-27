@@ -130,7 +130,8 @@ dArmies.moveArmiesJob = function(done) {
           // path.length == 0
           // remove and update index
           //Armypaths.remove(path._id);
-          bulkPaths.find({_id:path._id}).remove();
+          //bulkPaths.find({_id:path._id}).remove();
+          bulkPaths.find({_id:path._id}).deleteOne();
 
           var index = 0;
           var find = {armyId:path.armyId};

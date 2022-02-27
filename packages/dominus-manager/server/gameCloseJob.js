@@ -47,8 +47,9 @@ var cleanupPlayers = function(gameId) {
 	var hasBulkOp = false;
 
   Players.find({gameId:gameId}, {fields:keep}).forEach(function(player) {
-    player.gameIsClosed = true;
-    bulk.find({_id:player._id}).updateOne(player);
+    // player.gameIsClosed = true;
+    // bulk.find({_id:player._id}).updateOne(player);
+    bulk.find({_id:player._id}).updateOne({$set:{gameIsClosed:true}});
     hasBulkOp = true;
   });
 
