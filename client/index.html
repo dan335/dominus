@@ -23,6 +23,12 @@
 </head>
 <body>
 	{{> Template.dynamic template=route}}
-	<script data-collect-dnt="true" async defer src="https://simple.ennogames.com/latest.js"></script>
+	<script
+		data-ignore-pages="/game/*"
+		data-collect-dnt="true"
+		async
+		defer
+		src="https://simple.ennogames.com/latest.js"
+	></script>
 	<noscript><img src="https://simple.ennogames.com/noscript.gif?collect-dnt=true" alt="" referrerpolicy="no-referrer-when-downgrade" /></noscript>
 </body>
