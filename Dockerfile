@@ -22,7 +22,7 @@ RUN apt-get -y update && apt-get install -y --fix-missing \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
     mkdir -p /opt/app
 
-ENV DOMINUS_TEST=false HTTP_FORWARDED_COUNT=1 PORT=80 TERM=xterm
+ENV DOMINUS_TEST=false HTTP_FORWARDED_COUNT=1 PORT=80 TERM=xterm OPENSSL_CONF=/etc/ssl/
 
 ADD .build/dominus.tar.gz /opt/app/
 
