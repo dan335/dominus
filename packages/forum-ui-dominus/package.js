@@ -18,7 +18,7 @@ Package.onUse(function(api) {
     'steeve:reactive-cookie@0.0.8',
     'chuangbo:marked@0.3.5_1',
     'underscore',
-    'ejson'
+    'ejson',
   ]);
   api.addFiles([
     'both/forumSettings.js'

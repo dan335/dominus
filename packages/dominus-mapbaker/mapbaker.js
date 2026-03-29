@@ -8,12 +8,12 @@ Mapbaker = {
   imageSavePath: 'hexes/',
   hexImagePath: process.cwd() + '/../web.browser/app/game_images/',
   svgexport: require('svgexport'),
-  knox: Knox.createClient({
+  knox: (process.env.S3ACCESSKEYID && process.env.S3SECRETACCESSKEY) || process.env.NODE_ENV !== 'development' ? Knox.createClient({
     key: process.env.S3ACCESSKEYID,
     secret: process.env.S3SECRETACCESSKEY,
     bucket: Meteor.settings.public.s3.bucket,
     region: Meteor.settings.public.s3.region
-  }),
+  }) : null,
   hexWidth: _s.mapmaker.hexSize,
   hexHeight: _s.mapmaker.hexSize * (Math.sqrt(3) / 2 * _s.mapmaker.hexSquish),
 };

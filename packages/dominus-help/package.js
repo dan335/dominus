@@ -12,7 +12,7 @@ Package.onUse(function(api) {
     'ecmascript',
     'less',
     'blaze-html-templates',
-    'markdown'
+    'markdown',
   ]);
   api.use('dominus-init@0.0.1', ['client', 'server'], {weak:true});
   api.addFiles([

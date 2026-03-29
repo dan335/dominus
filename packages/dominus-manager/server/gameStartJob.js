@@ -18,7 +18,7 @@ if (process.env.DOMINUS_WORKER == 'true') {
 
     if (game) {
       Games.update(game._id, {$set: {isStarting:true}});
-      startGame(game);
+      dManager.startGame(game);
     }
     return Promise.resolve();
   }));
@@ -27,7 +27,7 @@ if (process.env.DOMINUS_WORKER == 'true') {
 
 
 
-let startGame = function(game) {
+dManager.startGame = function(game, isTest) {
   check(game.name, String);
 
   console.log('--- starting game '+ game.name +' ---');
@@ -47,13 +47,15 @@ let startGame = function(game) {
       makePro = true;
     }
     let playerId = dCastles.createPlayer(game._id, signup.userId, signup.username, makePro);
-    if (playerId) {
+    if (playerId && !isTest) {
       Queues.add('initDailystatsForNewUser', {attempts:10, backoff:{type:'fixed', delay:3000}, playerId:playerId, userId:signup.userId, gameId:game._id}, {delay:0, timeout:1000*60*5}, playerId);
     }
   });
 
-  Queues.add('setupEveryoneChatroom', {gameId:game._id}, {attempts:10, backoff:{type:'fixed', delay:3000}, delay:0, timeout:1000*60*5}, game._id);
-  Queues.add('generateTree', {gameId:game._id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, game._id);
+  if (!isTest) {
+    Queues.add('setupEveryoneChatroom', {gameId:game._id}, {attempts:10, backoff:{type:'fixed', delay:3000}, delay:0, timeout:1000*60*5}, game._id);
+    Queues.add('generateTree', {gameId:game._id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, game._id);
+  }
 
   // start game
   let update = {
@@ -63,10 +65,12 @@ let startGame = function(game) {
   };
   Games.update(game._id, {$set:update});
 
-  // send email to players
-  signups.forEach(function(signup) {
-    Queues.add('sendGameStartedEmail', {gameName:game.name, gameId:game._id, userId:signup.userId}, {delay:0, timeout:1000*60*5}, false);
-  });
+  if (!isTest) {
+    // send email to players
+    signups.forEach(function(signup) {
+      Queues.add('sendGameStartedEmail', {gameName:game.name, gameId:game._id, userId:signup.userId}, {delay:0, timeout:1000*60*5}, false);
+    });
+  }
 
   Gamesignups.remove({gameId:game._id});
 }

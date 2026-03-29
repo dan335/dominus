@@ -123,6 +123,9 @@ var new_dominus_event = function(gameId, dominusPlayer) {
 
 	Games.update(gameId, {$set:set});
 
+	// auto-create next game
+	dManager.createNextGame();
+
 	// send notifications
 	dAlerts.gAlert_newDominus(dominusPlayer.gameId, dominusPlayer._id, lastDominusPlayerId);
 	dAlerts.alert_youAreDominus(dominusPlayer.gameId, dominusPlayer._id);

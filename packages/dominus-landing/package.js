@@ -103,7 +103,6 @@ Package.onUse(function(api) {
   ]);
 });
 
-
 Npm.depends({
   gm: '1.21.1'
 });
