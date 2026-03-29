@@ -26,10 +26,7 @@ if (process.env.DOMINUS_WORKER == 'true') {
 		future.wait();
 
 		// update allies for game
-		Players.find({gameId:job.data.gameId, is_king:true}).forEach(function(player) {
-			var rf = new relation_finder(player._id);
-			rf.start();
-		});
+		dInit.rebuildRelationships(job.data.gameId);
 
 		dManager.checkForDominus(job.data.gameId);
 
@@ -41,6 +38,16 @@ if (process.env.DOMINUS_WORKER == 'true') {
 }
 
 
+
+
+// rebuild all king relationships for a game
+// used by updateAllKingsAllies job and tests
+dInit.rebuildRelationships = function(gameId) {
+	Players.find({gameId:gameId, is_king:true}).forEach(function(player) {
+		var rf = new relation_finder(player._id);
+		rf.start();
+	});
+};
 
 
 relation_finder = function(playerId) {
@@ -154,11 +161,14 @@ relation_finder.prototype.reached_top = function(player) {
 
 		self.bulk.find({_id:player._id}).updateOne({$set: {is_king:true}});
 
+		var future = new Future();
 		self.bulk.execute({}, function(error, result) {
 	    if (error) {
 	      console.error(error);
 	    }
+	    future.return(result);
 	  });
+		future.wait();
 
 		Queues.add('updateVassalAllyCountMultiple', {playerIds:self.team}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, false);
 	}

@@ -449,6 +449,90 @@ if (Meteor.isServer) {
       });
 
 
+      // --- Nightly Rebuild ---
+
+      run('stale is_king:false during rebuild causes false noLongerDominus alert', function() {
+        // This test proves the mechanism of the nightly bug:
+        // relation_finder.traverse_down sets is_king:false for all players,
+        // then reached_top restores is_king:true for the king. If the bulk op
+        // hasn't committed when checkForDominus runs, it sees no kings and
+        // fires a false "no longer dominus" alert.
+        Games.remove({});
+        Players.remove({});
+        Alerts.remove({});
+        GlobalAlerts.remove({});
+        let game = _createTestGame({hasStarted: true});
+        let user1 = _createTestUser({username: 'king_' + Random.id(4)});
+        let user2 = _createTestUser({username: 'vassal_' + Random.id(4)});
+
+        let p1 = Players.insert({gameId: game._id, userId: user1._id, username: user1.username, is_king: true, king: null, lord: null, castle_id: 'c1', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
+        let p2 = Players.insert({gameId: game._id, userId: user2._id, username: user2.username, is_king: false, king: p1, lord: p1, castle_id: 'c2', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
+
+        // establish dominus
+        dManager.checkForDominus(game._id);
+        _testAssert(Players.findOne(p1, {fields:{is_dominus:1}}).is_dominus === true, 'p1 is dominus');
+        Alerts.remove({gameId: game._id});
+        GlobalAlerts.remove({gameId: game._id});
+
+        // simulate the intermediate state: relation_finder has set is_king:false
+        // for everyone but the bulk op restoring is_king:true hasn't committed yet
+        Players.update({gameId: game._id}, {$set: {is_king: false}}, {multi: true});
+        dManager.checkForDominus(game._id);
+
+        // proves: stale is_king:false causes a false alert
+        let falseAlerts = Alerts.find({gameId: game._id, type: 'alert_noLongerDominus'}).count();
+        _testAssert(falseAlerts > 0, 'stale is_king:false causes false noLongerDominus alert');
+
+        Alerts.remove({gameId: game._id});
+        GlobalAlerts.remove({gameId: game._id});
+        _testCleanup(game._id);
+        Games.remove({hasStarted: false, hasClosed: false});
+        _testCleanupUser(user1._id);
+        _testCleanupUser(user2._id);
+      });
+
+      run('nightly rebuild + checkForDominus does not send false alert', function() {
+        // Full nightly flow: rebuildRelationships then checkForDominus.
+        // With the fix (synchronous bulk.execute), is_king is correctly
+        // committed before checkForDominus queries it.
+        Games.remove({});
+        Players.remove({});
+        Alerts.remove({});
+        GlobalAlerts.remove({});
+        let game = _createTestGame({hasStarted: true});
+        let user1 = _createTestUser({username: 'king_' + Random.id(4)});
+        let user2 = _createTestUser({username: 'vassal_' + Random.id(4)});
+        let user3 = _createTestUser({username: 'vassal2_' + Random.id(4)});
+
+        let p1 = Players.insert({gameId: game._id, userId: user1._id, username: user1.username, is_king: true, king: null, lord: null, castle_id: 'c1', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
+        let p2 = Players.insert({gameId: game._id, userId: user2._id, username: user2.username, is_king: false, king: p1, lord: p1, castle_id: 'c2', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
+        let p3 = Players.insert({gameId: game._id, userId: user3._id, username: user3.username, is_king: false, king: p1, lord: p1, castle_id: 'c3', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
+
+        // establish dominus
+        dManager.checkForDominus(game._id);
+        _testAssert(Players.findOne(p1, {fields:{is_dominus:1}}).is_dominus === true, 'p1 is dominus');
+        Alerts.remove({gameId: game._id});
+        GlobalAlerts.remove({gameId: game._id});
+
+        // simulate midnight: rebuild relationships then check dominus
+        dInit.rebuildRelationships(game._id);
+        dManager.checkForDominus(game._id);
+
+        // dominus should be unchanged, no false alerts
+        _testAssert(Players.findOne(p1, {fields:{is_dominus:1}}).is_dominus === true, 'p1 still dominus after rebuild');
+        _testEqual(Alerts.find({gameId: game._id, type: 'alert_noLongerDominus'}).count(), 0, 'no false noLongerDominus alert');
+        _testEqual(GlobalAlerts.find({gameId: game._id, type: 'ga_newDominus'}).count(), 0, 'no false newDominus global alert');
+
+        Alerts.remove({gameId: game._id});
+        GlobalAlerts.remove({gameId: game._id});
+        _testCleanup(game._id);
+        Games.remove({hasStarted: false, hasClosed: false});
+        _testCleanupUser(user1._id);
+        _testCleanupUser(user2._id);
+        _testCleanupUser(user3._id);
+      });
+
+
       // --- Results ---
       console.log('\n========================================');
       console.log('  Game Creation Tests: ' + passed + ' passed, ' + failed + ' failed');
