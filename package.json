@@ -4,7 +4,7 @@
   "description": "game",
   "main": "index.js",
   "dependencies": {
-    "@babel/runtime": "^7.9.6",
+    "@babel/runtime": "^7.17.9",
     "@sendgrid/mail": "^6.5.5",
     "core-js": "^2.5.3",
     "d3": "^3.5.17",

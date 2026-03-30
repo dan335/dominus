@@ -1,5 +1,5 @@
 FROM node:14
-MAINTAINER Daniel Phillips (http://danp.us)
+LABEL maintainer="Daniel Phillips (http://danp.us)"
 
 # timezone
 RUN echo "Etc/UTC" > /etc/timezone && \
@@ -9,7 +9,10 @@ RUN echo "Etc/UTC" > /etc/timezone && \
 # libfontconfig1 is for phantomjs
 # imagemagick for image resizing
 # bzip2 is for phantomjs
-RUN apt-get -y update && apt-get install -y --fix-missing \
+RUN sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' /etc/apt/sources.list && \
+    sed -i 's|http://deb.debian.org/debian-security|http://archive.debian.org/debian-security|g' /etc/apt/sources.list && \
+    sed -i '/buster-updates/d' /etc/apt/sources.list && \
+    apt-get -y update && apt-get install -y --fix-missing \
     apt-utils \
     curl \
     git \
