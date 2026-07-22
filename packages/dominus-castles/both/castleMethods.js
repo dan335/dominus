@@ -25,8 +25,17 @@ Meteor.methods({
 
 				var tax = amount * _s.income.sendToVassalTax;
 
+				// atomically debit the sender, only if they still have enough gold.
+				// The amount > player.gold check above is a separate read, so without
+				// this two concurrent send_gold_to calls could both pass it and drive
+				// the sender's balance negative. Credit the recipient only after the
+				// debit actually applied.
+				var debited = Players.update({_id:player._id, gold:{$gte:amount}}, {$inc: {gold: amount * -1}})
+				if (!debited) {
+					throw new Meteor.Error('You do not have enough gold.')
+				}
+
 				Players.update(playerId, {$inc: {gold: amount - tax}})
-				Players.update(player._id, {$inc: {gold: amount * -1}})
 
 				if (!this.isSimulation) {
 
