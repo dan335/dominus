@@ -533,6 +533,39 @@ if (Meteor.isServer) {
       });
 
 
+      // --- Battle calculator: casualty count ---
+
+      run('findLoses spends all affordable power (no early exit)', function() {
+        // Regression test for fix/battle-casualty-undercount. findLoses removes
+        // soldiers worth powerToLose. The old code used a `fails` counter that
+        // accumulated across passes, so an army holding a persistently
+        // unaffordable expensive unit exited early while cheaper units it should
+        // still lose remained -- an under-count. Pure calculator test, no DB.
+        //
+        // 100 footmen at power 1 (cheap) + 1 catapult at power 100 (never
+        // affordable here). powerToLose = 20 -> exactly 20 footmen should die.
+        // Pre-fix stopped after ~types.length footmen because the catapult
+        // failed every pass; post-fix removes all 20.
+        var a = new BattleArmy();
+        a.unitType = 'army';
+        a.enemies = [];
+        a.finalPowerPerSoldier = {};
+        _s.armies.types.forEach(function(t) { a.units[t] = 0; a.finalPowerPerSoldier[t] = 0; });
+        a.units.footmen = 100;
+        a.units.catapults = 1;
+        a.finalPowerPerSoldier.footmen = 1;
+        a.finalPowerPerSoldier.catapults = 100;
+        a.numUnits = 101;
+        a.powerToLose = 20;
+
+        a.findLoses();
+
+        _testEqual(a.loses.footmen, 20, 'all 20 affordable footmen are lost');
+        _testEqual(a.loses.catapults, 0, 'unaffordable catapult is not lost');
+        _testAssert(a.destroyed === false, 'army with survivors is not destroyed');
+      });
+
+
       // --- Results ---
       console.log('\n========================================');
       console.log('  Game Creation Tests: ' + passed + ' passed, ' + failed + ' failed');
