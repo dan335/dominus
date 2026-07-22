@@ -583,6 +583,148 @@ if (Meteor.isServer) {
 
 
 
+      // --- Auth: disbandArmy ownership ---
+
+      run('disbandArmy rejects a non-owner and keeps the army', function() {
+        // Regression test for fix/auth-disband-army. disbandArmy -> destroyArmy
+        // looked the army up by _id only, so any player could delete any army.
+        // The fix requires the caller to own it.
+        Games.remove({}); Players.remove({}); Armies.remove({});
+        let game = _createTestGame({hasStarted: true});
+        let owner = _createTestUser();
+        let attacker = _createTestUser();
+
+        let armyId = Armies.insert({gameId: game._id, user_id: owner._id, playerId: 'pOwner',
+          x: 0, y: 0, footmen: 5, name: 'testarmy'});
+
+        // invoke the method handler with a chosen this.userId
+        function callAs(userId, method, args) {
+          var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}};
+          return DDP._CurrentInvocation.withValue(inv, function() {
+            return Meteor.server.method_handlers[method].apply(inv, args);
+          });
+        }
+
+        var threw = false;
+        try { callAs(attacker._id, 'disbandArmy', [game._id, armyId]); } catch (e) { threw = true; }
+        _testAssert(threw, 'non-owner disbandArmy throws');
+        _testEqual(Armies.find({_id: armyId}).count(), 1, 'army survives the non-owner attempt');
+
+        // no regression: the owner can disband their own army
+        callAs(owner._id, 'disbandArmy', [game._id, armyId]);
+        _testEqual(Armies.find({_id: armyId}).count(), 0, 'owner can disband own army');
+
+        Armies.remove({gameId: game._id});
+        _testCleanup(game._id);
+        _testCleanupUser(owner._id);
+        _testCleanupUser(attacker._id);
+      });
+
+
+      // --- Battle calculator: dominus ally/enemy ---
+
+      run('dominus army is enemy-not-ally of its own vassal', function() {
+        // Regression test for fix/dominus-attack-ally-enemy. isEnemy has a
+        // dominus override (a dominus can attack anyone's armies); isAlly must
+        // have a matching override so a dominus and its own vassal are never
+        // BOTH enemy and ally (which double-counts the vassal's power in the
+        // battle round). Pure calculator test -- no DB.
+        //
+        // D is dominus; V is D's direct vassal. Relation from D's view is
+        // 'direct_vassal' (V in D.team, D.allies_below, D.vassals).
+        var D = new BattleArmy();
+        D.unitType = 'army'; D.playerId = 'D'; D.is_dominus = true;
+        D.king = 'D'; D.lord = null; D.team = ['V']; D.allies_above = [];
+        D.allies_below = ['V']; D.vassals = ['V'];
+
+        var V = new BattleArmy();
+        V.unitType = 'army'; V.playerId = 'V'; V.is_dominus = false;
+        V.king = 'D'; V.lord = 'D'; V.team = ['D']; V.allies_above = ['D'];
+        V.allies_below = []; V.vassals = [];
+
+        _testAssert(D.isEnemy(V) === true, 'dominus is enemy of its vassal (can attack any army)');
+        _testAssert(D.isAlly(V) === false, 'dominus is NOT also an ally of its vassal');
+
+        // no regression: with D not a dominus, its vassal is a normal ally.
+        D.is_dominus = false;
+        _testAssert(D.isAlly(V) === true, 'non-dominus lord is an ally of its vassal');
+        _testAssert(D.isEnemy(V) === false, 'non-dominus lord is not an enemy of its vassal');
+      });
+
+
+      // --- Auth: splitArmy ownership ---
+
+      run('splitArmy rejects a non-owner and leaves the army intact', function() {
+        // Regression test for fix/auth-split-army. splitArmy -> dArmies.split
+        // looked the army up by _id only (and reset its speed/moveTime), so any
+        // player could stop and fragment an enemy army. The fix requires
+        // ownership.
+        Games.remove({}); Players.remove({}); Armies.remove({});
+        let game = _createTestGame({hasStarted: true});
+        let owner = _createTestUser();
+        let attacker = _createTestUser();
+
+        let armyId = Armies.insert({gameId: game._id, user_id: owner._id, playerId: 'pOwner',
+          x: 0, y: 0, footmen: 10, archers: 0, pikemen: 0, cavalry: 0, catapults: 0,
+          speed: 5, moveTime: 123, name: 'testarmy'});
+
+        function callAs(userId, method, args) {
+          var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}};
+          return DDP._CurrentInvocation.withValue(inv, function() {
+            return Meteor.server.method_handlers[method].apply(inv, args);
+          });
+        }
+
+        var threw = false;
+        try { callAs(attacker._id, 'splitArmy', [game._id, armyId, {footmen: 5}]); } catch (e) { threw = true; }
+        _testAssert(threw, 'non-owner splitArmy throws');
+        _testEqual(Armies.find({gameId: game._id}).count(), 1, 'no new army was split off');
+        let a = Armies.findOne(armyId);
+        _testEqual(a.footmen, 10, 'original army soldiers untouched');
+        _testEqual(a.speed, 5, 'original army movement not reset by a non-owner');
+
+        Armies.remove({gameId: game._id});
+        _testCleanup(game._id);
+        _testCleanupUser(owner._id);
+        _testCleanupUser(attacker._id);
+      });
+
+
+      // --- Auth: change_username scoping ---
+
+      run('change_username cannot rename another player or their castle', function() {
+        // Regression test for fix/auth-change-username. The Players write was
+        // userId-scoped, but the denormalized Castle/Village/Army/Room renames
+        // used playerId only, so passing a victim's playerId renamed their
+        // units. The fix loads the player scoped to the caller and bails.
+        Games.remove({}); Players.remove({}); Castles.remove({});
+        let game = _createTestGame({hasStarted: true});
+        let victim = _createTestUser();
+        let attacker = _createTestUser();
+
+        let victimPid = Players.insert({gameId: game._id, userId: victim._id, username: 'VictimName', is_king: false});
+        let castleId = Castles.insert({gameId: game._id, playerId: victimPid, user_id: victim._id, username: 'VictimName', x: 0, y: 0});
+
+        function callAs(userId, method, args) {
+          var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}};
+          return DDP._CurrentInvocation.withValue(inv, function() {
+            return Meteor.server.method_handlers[method].apply(inv, args);
+          });
+        }
+
+        var threw = false;
+        try { callAs(attacker._id, 'change_username', [victimPid, 'Hacked']); } catch (e) { threw = true; }
+        _testAssert(threw, 'renaming another player throws');
+        _testEqual(Castles.findOne(castleId).username, 'VictimName', 'victim castle username unchanged');
+        _testEqual(Players.findOne(victimPid).username, 'VictimName', 'victim player username unchanged');
+
+        Castles.remove({gameId: game._id});
+        _testCleanup(game._id);
+        _testCleanupUser(victim._id);
+        _testCleanupUser(attacker._id);
+      });
+
+
       // --- Battle calculator: casualty count ---
 
       run('findLoses spends all affordable power (no early exit)', function() {
