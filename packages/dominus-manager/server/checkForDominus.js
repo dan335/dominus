@@ -15,6 +15,22 @@ dManager.checkForDominus = function(gameId) {
 		return;
 	}
 
+	// Guard against a transient "no king" state.
+	// relation_finder (the relationship rebuild) sets is_king:false for every
+	// player in a tree and only restores is_king:true for the king at the end of
+	// the same non-atomic bulk op. If checkForDominus reads during that window it
+	// finds no king, wrongly clears is_dominus, and fires a false
+	// "no longer dominus" alert (re-announcing "new dominus" on the next pass).
+	// In any consistent state with >=2 castle-holders the hierarchy is a forest
+	// whose roots are kings, so there is always at least one is_king:true player.
+	// Zero kings therefore means we are reading an inconsistent/transient state --
+	// bail out without touching is_dominus or alerting. A real dethroning always
+	// leaves at least one king, so this does not suppress legitimate updates.
+	let numKings = Players.find({gameId:gameId, is_king:true, castle_id: {$exists: true, $ne:null}}).count();
+	if (numKings == 0) {
+		return;
+	}
+
 	let dominus = Players.findOne({gameId:gameId, is_dominus:true}, {fields: {gameId:1}});
 	let is_still_dominus = false;
 

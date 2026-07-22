@@ -451,12 +451,17 @@ if (Meteor.isServer) {
 
       // --- Nightly Rebuild ---
 
-      run('stale is_king:false during rebuild causes false noLongerDominus alert', function() {
-        // This test proves the mechanism of the nightly bug:
-        // relation_finder.traverse_down sets is_king:false for all players,
-        // then reached_top restores is_king:true for the king. If the bulk op
-        // hasn't committed when checkForDominus runs, it sees no kings and
-        // fires a false "no longer dominus" alert.
+      run('no-king rebuild window does not clear dominus or fire false alert', function() {
+        // Regression test for the false "no longer dominus" alert race (fix
+        // branch fix/dominus-no-king-race). relation_finder transiently sets
+        // is_king:false for every player mid-rebuild; if checkForDominus reads
+        // during that window it used to see no king, clear is_dominus, and fire
+        // a false alert_noLongerDominus (then re-announce "new dominus" next
+        // pass). The fix bails out when zero kings exist -- an impossible state
+        // whenever >=2 players hold castles, so it can only be a transient read.
+        // This test forces the zero-king window and asserts the dominus is
+        // preserved and no alert fires. On the pre-fix code this FAILS (dominus
+        // cleared + alert fired), which is exactly what it must catch.
         Games.remove({});
         Players.remove({});
         Alerts.remove({});
@@ -474,14 +479,14 @@ if (Meteor.isServer) {
         Alerts.remove({gameId: game._id});
         GlobalAlerts.remove({gameId: game._id});
 
-        // simulate the intermediate state: relation_finder has set is_king:false
-        // for everyone but the bulk op restoring is_king:true hasn't committed yet
+        // simulate the mid-rebuild window: is_king:false committed for everyone
+        // (relation_finder set it and hasn't restored is_king:true yet)
         Players.update({gameId: game._id}, {$set: {is_king: false}}, {multi: true});
         dManager.checkForDominus(game._id);
 
-        // proves: stale is_king:false causes a false alert
-        let falseAlerts = Alerts.find({gameId: game._id, type: 'alert_noLongerDominus'}).count();
-        _testAssert(falseAlerts > 0, 'stale is_king:false causes false noLongerDominus alert');
+        // fix: a transient no-king read is ignored -> dominus preserved, no alert
+        _testAssert(Players.findOne(p1, {fields:{is_dominus:1}}).is_dominus === true, 'dominus preserved during no-king window');
+        _testEqual(Alerts.find({gameId: game._id, type: 'alert_noLongerDominus'}).count(), 0, 'no false noLongerDominus alert');
 
         Alerts.remove({gameId: game._id});
         GlobalAlerts.remove({gameId: game._id});
