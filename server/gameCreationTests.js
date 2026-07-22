@@ -581,6 +581,38 @@ if (Meteor.isServer) {
       });
 
 
+
+
+      // --- Battle calculator: dominus ally/enemy ---
+
+      run('dominus army is enemy-not-ally of its own vassal', function() {
+        // Regression test for fix/dominus-attack-ally-enemy. isEnemy has a
+        // dominus override (a dominus can attack anyone's armies); isAlly must
+        // have a matching override so a dominus and its own vassal are never
+        // BOTH enemy and ally (which double-counts the vassal's power in the
+        // battle round). Pure calculator test -- no DB.
+        //
+        // D is dominus; V is D's direct vassal. Relation from D's view is
+        // 'direct_vassal' (V in D.team, D.allies_below, D.vassals).
+        var D = new BattleArmy();
+        D.unitType = 'army'; D.playerId = 'D'; D.is_dominus = true;
+        D.king = 'D'; D.lord = null; D.team = ['V']; D.allies_above = [];
+        D.allies_below = ['V']; D.vassals = ['V'];
+
+        var V = new BattleArmy();
+        V.unitType = 'army'; V.playerId = 'V'; V.is_dominus = false;
+        V.king = 'D'; V.lord = 'D'; V.team = ['D']; V.allies_above = ['D'];
+        V.allies_below = []; V.vassals = [];
+
+        _testAssert(D.isEnemy(V) === true, 'dominus is enemy of its vassal (can attack any army)');
+        _testAssert(D.isAlly(V) === false, 'dominus is NOT also an ally of its vassal');
+
+        // no regression: with D not a dominus, its vassal is a normal ally.
+        D.is_dominus = false;
+        _testAssert(D.isAlly(V) === true, 'non-dominus lord is an ally of its vassal');
+        _testAssert(D.isEnemy(V) === false, 'non-dominus lord is not an enemy of its vassal');
+      });
+
       // --- Results ---
       console.log('\n========================================');
       console.log('  Game Creation Tests: ' + passed + ' passed, ' + failed + ' failed');
