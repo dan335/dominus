@@ -451,12 +451,17 @@ if (Meteor.isServer) {
 
       // --- Nightly Rebuild ---
 
-      run('stale is_king:false during rebuild causes false noLongerDominus alert', function() {
-        // This test proves the mechanism of the nightly bug:
-        // relation_finder.traverse_down sets is_king:false for all players,
-        // then reached_top restores is_king:true for the king. If the bulk op
-        // hasn't committed when checkForDominus runs, it sees no kings and
-        // fires a false "no longer dominus" alert.
+      run('no-king rebuild window does not clear dominus or fire false alert', function() {
+        // Regression test for the false "no longer dominus" alert race (fix
+        // branch fix/dominus-no-king-race). relation_finder transiently sets
+        // is_king:false for every player mid-rebuild; if checkForDominus reads
+        // during that window it used to see no king, clear is_dominus, and fire
+        // a false alert_noLongerDominus (then re-announce "new dominus" next
+        // pass). The fix bails out when zero kings exist -- an impossible state
+        // whenever >=2 players hold castles, so it can only be a transient read.
+        // This test forces the zero-king window and asserts the dominus is
+        // preserved and no alert fires. On the pre-fix code this FAILS (dominus
+        // cleared + alert fired), which is exactly what it must catch.
         Games.remove({});
         Players.remove({});
         Alerts.remove({});
@@ -474,14 +479,14 @@ if (Meteor.isServer) {
         Alerts.remove({gameId: game._id});
         GlobalAlerts.remove({gameId: game._id});
 
-        // simulate the intermediate state: relation_finder has set is_king:false
-        // for everyone but the bulk op restoring is_king:true hasn't committed yet
+        // simulate the mid-rebuild window: is_king:false committed for everyone
+        // (relation_finder set it and hasn't restored is_king:true yet)
         Players.update({gameId: game._id}, {$set: {is_king: false}}, {multi: true});
         dManager.checkForDominus(game._id);
 
-        // proves: stale is_king:false causes a false alert
-        let falseAlerts = Alerts.find({gameId: game._id, type: 'alert_noLongerDominus'}).count();
-        _testAssert(falseAlerts > 0, 'stale is_king:false causes false noLongerDominus alert');
+        // fix: a transient no-king read is ignored -> dominus preserved, no alert
+        _testAssert(Players.findOne(p1, {fields:{is_dominus:1}}).is_dominus === true, 'dominus preserved during no-king window');
+        _testEqual(Alerts.find({gameId: game._id, type: 'alert_noLongerDominus'}).count(), 0, 'no false noLongerDominus alert');
 
         Alerts.remove({gameId: game._id});
         GlobalAlerts.remove({gameId: game._id});
@@ -533,6 +538,51 @@ if (Meteor.isServer) {
       });
 
 
+      // --- Account deletion: orphan subtree ---
+
+      run('deleting a lord with a missing super-lord promotes its vassals to kings', function() {
+        // Regression test for fix/dominus-orphan-subtree. When a deleted
+        // player's `lord` points at a doc that no longer exists,
+        // deleteGameAccount used to skip vassal reparenting (the if(lord) block
+        // had no else), orphaning the subtree: vassals left is_king:false with a
+        // dangling lord, invisible to the tree/rebuild but still counted by
+        // checkForDominus -> unwinnable game. The fix promotes them to kings.
+        Games.remove({}); Players.remove({});
+        let game = _createTestGame({hasStarted: true});
+        let uP = _createTestUser();
+        let uV = _createTestUser();
+
+        // P points at a missing lord and has one vassal V.
+        let pId = Players.insert({gameId: game._id, userId: uP._id, username: uP.username,
+          is_king: false, lord: 'ghost-missing-lord', king: 'ghost-missing-lord',
+          vassals: [], allies_above: ['ghost-missing-lord'], allies_below: [], team: [], castle_id: 'cP'});
+        let vId = Players.insert({gameId: game._id, userId: uV._id, username: uV.username,
+          is_king: false, lord: pId, king: 'ghost-missing-lord',
+          vassals: [], allies_above: [pId, 'ghost-missing-lord'], allies_below: [], team: [], castle_id: 'cV'});
+        Players.update(pId, {$set: {vassals: [vId], allies_below: [vId]}});
+
+        dGame.deleteGameAccount(pId);
+
+        let v = Players.findOne(vId, {fields: {is_king: 1, lord: 1}});
+        _testAssert(!!v, 'vassal still exists');
+        _testAssert(v.is_king === true, 'orphaned vassal promoted to king');
+        _testAssert(v.lord === null, 'orphaned vassal has no dangling lord');
+        _testAssert(!Players.findOne(pId), 'deleted player removed');
+
+        Alerts.remove({gameId: game._id});
+        GlobalAlerts.remove({gameId: game._id});
+        Armies.remove({gameId: game._id});
+        Villages.remove({gameId: game._id});
+        Markers.remove({gameId: game._id});
+        _testCleanup(game._id);
+        Games.remove({hasStarted: false, hasClosed: false});
+        _testCleanupUser(uP._id);
+        _testCleanupUser(uV._id);
+      });
+
+
+
+
       // --- Battle calculator: casualty count ---
 
       run('findLoses spends all affordable power (no early exit)', function() {
@@ -564,7 +614,6 @@ if (Meteor.isServer) {
         _testEqual(a.loses.catapults, 0, 'unaffordable catapult is not lost');
         _testAssert(a.destroyed === false, 'army with survivors is not destroyed');
       });
-
 
       // --- Results ---
       console.log('\n========================================');

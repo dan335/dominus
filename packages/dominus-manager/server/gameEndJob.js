@@ -73,7 +73,16 @@ var checkForGameEnd = function() {
       Queues.add('updateOverallPlayerRankings', {}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*10}, false);
 
     } else {
-      console.error('game ended but no winning player found', game)
+      // No resolvable winner: the recorded dominus (is_dominus, and the
+      // fallback game.lastDominusPlayerId) no longer exists -- e.g. that player
+      // deleted their account while the countdown was running. Committing
+      // hasEnded:true above without ever setting a closeDate would strand the
+      // game forever (checkForGameClose requires closeDate <= now, so it never
+      // runs) with no winner declared and players never sent to game-over.
+      // Instead, revert hasEnded and cancel the stale countdown so play can
+      // continue; a future real dominus will restart the countdown.
+      console.error('game endDate reached but no winning player found; clearing stale countdown', game._id)
+      Games.update(game._id, {$set: {hasEnded:false, endDate:null, lastDominusPlayerId:null}});
     }
   }
 };
