@@ -160,6 +160,16 @@ dGraphs.updateIncomeRank = function(gameId) {
 	Players.find({gameId:gameId}, {sort: {income:-1}, fields: {userId:1, income:1}}).forEach(function(player) {
 
 		check(player.userId, String);
+
+		// dense ranking: tied values share a rank; rank increases by 1 on each
+		// new (lower) value. Compare with !== null, not truthiness -- a previous
+		// value of 0 (the common case: most players have 0 income) was treated as
+		// "no previous", which inflated the rank of every 0 player and never
+		// collapsed a tie with the top player.
+		if (prevIncome !== null && prevIncome != player.income) {
+			rank++
+		}
+
 		Dailystats.upsert({
 			playerId: player._id,
 			created_at: {$gte: _gs.statsBegin(gameId), $lt: _gs.statsEnd(gameId)}
@@ -167,14 +177,6 @@ dGraphs.updateIncomeRank = function(gameId) {
 			$setOnInsert: {gameId:gameId, playerId:player._id, user_id:player.userId, created_at: new Date()},
 			$set: {incomeRank:rank, updated_at:new Date()}
 		});
-
-		if (prevIncome) {
-			if (prevIncome != player.income) {
-				rank++
-			}
-		} else {
-			rank++
-		}
 
 		prevIncome = player.income;
 	})
@@ -202,6 +204,16 @@ dGraphs.updateVassalRank = function(gameId) {
 	Players.find({gameId:gameId}, {sort:playerSort, fields:playerFields}).forEach(function(player) {
 
 		check(player.userId, String);
+
+		// dense ranking: tied values share a rank; rank increases by 1 on each
+		// new (lower) value. Compare with !== null, not truthiness -- a previous
+		// value of 0 (the common case: most players have no vassals) was treated
+		// as "no previous", which inflated the rank of every 0 player and never
+		// collapsed a tie with the top player.
+		if (prevNumVassals !== null && prevNumVassals != player.num_allies_below) {
+			rank++;
+		}
+
 		Dailystats.upsert({
 			playerId: player._id,
 			created_at: {$gte: _gs.statsBegin(gameId), $lt: _gs.statsEnd(gameId)}
@@ -209,14 +221,6 @@ dGraphs.updateVassalRank = function(gameId) {
 			$setOnInsert: {gameId:gameId, playerId:player._id, user_id:player.userId, created_at: new Date()},
 			$set: {vassalRank:rank, updated_at:new Date()}
 		});
-
-		if (prevNumVassals) {
-			if (prevNumVassals != player.num_allies_below) {
-				rank++;
-			}
-		} else {
-			rank++;
-		}
 
 		prevNumVassals = player.num_allies_below;
 	})
