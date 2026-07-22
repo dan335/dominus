@@ -64,6 +64,21 @@ dGame.deleteGameAccount = function(playerId) {
 
 			// remove from lord
 			dInit.remove_lord_and_vassal(lord._id, player._id);
+		} else {
+			// player.lord points at a lord that no longer exists (e.g. that lord was
+			// deleted first, or a pre-existing dangling pointer). Without this branch
+			// the player's vassals are left orphaned with a dangling lord pointer and
+			// is_king:false -- invisible to generateTree and the nightly rebuild, yet
+			// still counted by checkForDominus, which permanently blocks any dominus
+			// (unwinnable game). Promote them to kings, same as the no-lord branch.
+			if (player.vassals) {
+				player.vassals.forEach(function(vassal_id) {
+					var vassal = Players.findOne(vassal_id, {fields:{_id:1}});
+					if (vassal) {
+						dInit.remove_lord_and_vassal(player._id, vassal._id);
+					}
+				});
+			}
 		}
 	} else {
 		// make vassals kings
