@@ -56,6 +56,18 @@ dArmies.methods.joinBuilding = new ValidatedMethod({
   run({armyId}) {
     // this.unblock();
     if (!this.isSimulation) {
+      // only the owner may join their army into a building -- dArmies.joinBuilding
+      // looks the army up by _id only, so without this a player could force an
+      // enemy army (sitting on its own building hex) to disband into the building.
+      var ownArmy = Armies.findOne({_id:armyId, user_id:this.userId}, {fields: {_id:1}});
+      if (!ownArmy) {
+        var notOwnedError = [{
+          name: 'armies.joinBuilding',
+          type: 'You do not own this army.',
+          details: {armyId}
+        }];
+        throw new ValidationError(notOwnedError);
+      }
       var buildingInfo = dArmies.joinBuilding(armyId);
       if (buildingInfo) {
         return buildingInfo;
