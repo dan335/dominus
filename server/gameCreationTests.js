@@ -533,6 +533,41 @@ if (Meteor.isServer) {
       });
 
 
+      // --- Rankings: tie collapse including zero ---
+
+      run('vassal/income ranks collapse ties including zero values', function() {
+        // Regression test for fix/rankings-tie-zero. The dense ranking used
+        // `if (prevNumVassals)` / `if (prevIncome)`, so a previous value of 0
+        // (the common case) was treated as "no previous" and inflated ranks.
+        // [5,5,0,0,0] used to rank 1,2,2,3,4 instead of 1,1,2,2,2.
+        Games.remove({}); Players.remove({}); Dailystats.remove({});
+        let game = _createTestGame({hasStarted: true, startedAt: new Date()});
+        let mk = function(n) {
+          return Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), username: 'p_' + Random.id(3),
+            num_allies_below: n, income: n, is_king: false, king: null, lord: null, vassals: [],
+            allies_above: [], allies_below: [], team: [], castle_id: 'c_' + Random.id(3)});
+        };
+        let a = mk(5), b = mk(5), c = mk(0), d = mk(0), e = mk(0);
+
+        dGraphs.updateVassalRank(game._id);
+        let vrank = function(pid) { let ds = Dailystats.findOne({playerId: pid}); return ds ? ds.vassalRank : null; };
+        _testEqual(vrank(a), 1, 'top vassal count is rank 1');
+        _testEqual(vrank(b), 1, 'tie with top is also rank 1');
+        _testEqual(vrank(c), 2, 'zero-vassal is rank 2');
+        _testEqual(vrank(d), 2, 'zero-vassal tie is rank 2');
+        _testEqual(vrank(e), 2, 'zero-vassal tie is rank 2');
+
+        dGraphs.updateIncomeRank(game._id);
+        let irank = function(pid) { let ds = Dailystats.findOne({playerId: pid}); return ds ? ds.incomeRank : null; };
+        _testEqual(irank(a), 1, 'top income is rank 1');
+        _testEqual(irank(b), 1, 'income tie with top is rank 1');
+        _testEqual(irank(c), 2, 'zero income is rank 2');
+
+        Dailystats.remove({gameId: game._id});
+        _testCleanup(game._id);
+      });
+
+
       // --- Results ---
       console.log('\n========================================');
       console.log('  Game Creation Tests: ' + passed + ' passed, ' + failed + ' failed');
