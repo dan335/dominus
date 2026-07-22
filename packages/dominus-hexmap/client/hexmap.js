@@ -82,6 +82,7 @@ Template.hexmap.onDestroyed(function() {
       expireIn:10
     });
   }
+  dHexmap.clearHexesElCache();
 });
 
 Template.hexmap.onCreated(function() {
@@ -273,6 +274,7 @@ let setCenterHex = _.debounce(function(hexes_pos) {
 Template.hexmap.destroyed = function() {
 	dHexmap.mapmover.stop();
   removeHexHighlights();
+  dHexmap.clearHexesElCache();
 }
 
 

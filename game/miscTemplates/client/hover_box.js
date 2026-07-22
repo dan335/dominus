@@ -27,7 +27,8 @@ Template.hover_box.helpers({
 		// this is outside of #hexes so it needs to be scaled
 		var x = grid.x * Session.get('hexScale')
 
-		return Session.get('hexes_pos').x + x + offset
+		var hexesPos = (typeof dHexmap !== 'undefined' && dHexmap.getCurrentHexPos) ? dHexmap.getCurrentHexPos() : Session.get('hexes_pos');
+		return hexesPos.x + x + offset
 	},
 
 	top: function() {
@@ -54,7 +55,8 @@ Template.hover_box.helpers({
 		// this is outside of #hexes so it needs to be scaled
 		var y = grid.y * Session.get('hexScale')
 
-		return Session.get('hexes_pos').y + y + offset
+		var hexesPos = (typeof dHexmap !== 'undefined' && dHexmap.getCurrentHexPos) ? dHexmap.getCurrentHexPos() : Session.get('hexes_pos');
+		return hexesPos.y + y + offset
 	},
 
 	objects: function() {
