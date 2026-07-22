@@ -62,6 +62,20 @@ dArmies.moveArmiesJob = function(done) {
 
           var hex = path.hexes[0];
 
+          // Guard against the read-then-pop race that teleports armies. This
+          // loop iterates a cursor snapshot that can be seconds old; if an
+          // overlapping moveArmiesJob (jobs are enqueued every ~5s with no
+          // uniqueId, and a stalled job can be reprocessed) already advanced
+          // this path, popping based on the stale snapshot skips a hex and jumps
+          // the army to a non-adjacent hex. Re-read the path fresh and skip this
+          // tick unless it still matches the snapshot, so we only pop from
+          // current data. Worst case an army waits one tick -- never a teleport.
+          var freshPath = Armypaths.findOne(path._id, {fields: {hexes:1}});
+          if (!freshPath || !freshPath.hexes || freshPath.hexes.length !== path.hexes.length ||
+              freshPath.hexes[0].x !== hex.x || freshPath.hexes[0].y !== hex.y) {
+            return;
+          }
+
           let distance = path.hexes.length-1;
           var timeInMinutes = path.speed * distance;
           var time = timeInMinutes * 60 * 1000; // convert to ms
