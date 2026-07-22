@@ -386,11 +386,16 @@ BattleArmy.prototype.findLoses = function() {
   })
 
   // take away until powerToLose is < smallestSoldierPower
-  var fails = 0;
-  var maxFails = _s.armies.types.length;
   var powerLeft = this.powerToLose;
   var numUnits = this.numUnits;
-  while (powerLeft > 0 && numUnits > 0 && fails < maxFails) {
+  while (powerLeft > 0 && numUnits > 0) {
+    // count removals this pass; stop only when a full pass removes nothing
+    // affordable. The previous code accumulated a `fails` counter across all
+    // passes, so an army holding a persistently-unaffordable expensive unit
+    // (e.g. a lone catapult) would exit early after ~types.length total fails
+    // while cheaper units it should still lose remained affordable -- an
+    // under-count of casualties.
+    var removedThisPass = 0;
     _s.armies.types.forEach(function(type) {
 
       // if there is a unit of this type in army
@@ -402,13 +407,16 @@ BattleArmy.prototype.findLoses = function() {
           loses[type]++;
           numUnits--;
           powerLeft -= self.finalPowerPerSoldier[type];
+          removedThisPass++;
 
-        } else {
-          fails++;
         }
       }
 
     })
+
+    if (removedThisPass === 0) {
+      break;
+    }
   }
 
   if (numUnits == 0) {
