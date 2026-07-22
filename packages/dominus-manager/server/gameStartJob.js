@@ -18,7 +18,20 @@ if (process.env.DOMINUS_WORKER == 'true') {
 
     if (game) {
       Games.update(game._id, {$set: {isStarting:true}});
-      dManager.startGame(game);
+      try {
+        dManager.startGame(game);
+      } catch (e) {
+        // startGame only sets hasStarted:true at the very end, and nothing
+        // else ever resets isStarting. If it throws partway (a createPlayer /
+        // market / tree failure), the game is left hasStarted:false,
+        // isStarting:true forever: the picker query skips isStarting:true, and
+        // createNextGame won't create a replacement while a hasStarted:false
+        // game exists -- so the whole auto-game rotation halts. Reset
+        // isStarting so the job can retry.
+        console.error('startGame failed, resetting isStarting', game._id, e);
+        Games.update(game._id, {$set: {isStarting:false}});
+        throw e;
+      }
     }
     return Promise.resolve();
   }));

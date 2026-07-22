@@ -42,10 +42,14 @@ BattleJob.prototype.runBattle = function() {
 
   // if found a battle
   if (self.battleData) {
-    Battles2.update(self.battleData._id, {$set:{isRunning:true}});
-
-    // abort if already running
-    if (self.battleData.isRunning) {
+    // Atomically claim this battle round. The previous code set isRunning:true
+    // and then checked the STALE self.battleData.isRunning read before the
+    // update, so two concurrent runBattle jobs for the same hex (process(5) +
+    // stalled-job reprocessing) could both pass the guard and run the round,
+    // applying losses and set_lord_and_vassal/setOwner twice. Only the worker
+    // whose conditional update actually flips isRunning to true proceeds.
+    var claimed = Battles2.update({_id:self.battleData._id, isRunning:{$ne:true}}, {$set:{isRunning:true}});
+    if (!claimed) {
       return;
     }
 

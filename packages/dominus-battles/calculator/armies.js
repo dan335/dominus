@@ -197,6 +197,16 @@ BattleArmy.prototype.isAlly = function(otherArmy) {
     return this.playerId == otherArmy.playerId;
   }
 
+  // A dominus's army (and its opponent) is never an ally in army-vs-army.
+  // isEnemy has a matching override that forces these pairings to fight (a
+  // dominus can attack anyone's armies). Without this, a dominus and their own
+  // vassal on the same hex would be classified as BOTH ally and enemy, so the
+  // vassal's power is double-counted on the dominus's side while they also
+  // fight -- corrupting battle resolution. Mirror the isEnemy override here.
+  if ((this.is_dominus || otherArmy.is_dominus) && this.unitType == 'army' && otherArmy.unitType == 'army') {
+    return false;
+  }
+
   var player = {_id:this.playerId, team:this.team, lord:this.lord, allies_above:this.allies_above, allies_below:this.allies_below, king:this.king, vassals:this.vassals};
   var otherPlayerId = otherArmy.playerId;
   var relation = dInit.getPlayersRelationship(player, otherPlayerId);
@@ -386,11 +396,16 @@ BattleArmy.prototype.findLoses = function() {
   })
 
   // take away until powerToLose is < smallestSoldierPower
-  var fails = 0;
-  var maxFails = _s.armies.types.length;
   var powerLeft = this.powerToLose;
   var numUnits = this.numUnits;
-  while (powerLeft > 0 && numUnits > 0 && fails < maxFails) {
+  while (powerLeft > 0 && numUnits > 0) {
+    // count removals this pass; stop only when a full pass removes nothing
+    // affordable. The previous code accumulated a `fails` counter across all
+    // passes, so an army holding a persistently-unaffordable expensive unit
+    // (e.g. a lone catapult) would exit early after ~types.length total fails
+    // while cheaper units it should still lose remained affordable -- an
+    // under-count of casualties.
+    var removedThisPass = 0;
     _s.armies.types.forEach(function(type) {
 
       // if there is a unit of this type in army
@@ -402,13 +417,16 @@ BattleArmy.prototype.findLoses = function() {
           loses[type]++;
           numUnits--;
           powerLeft -= self.finalPowerPerSoldier[type];
+          removedThisPass++;
 
-        } else {
-          fails++;
         }
       }
 
     })
+
+    if (removedThisPass === 0) {
+      break;
+    }
   }
 
   if (numUnits == 0) {
