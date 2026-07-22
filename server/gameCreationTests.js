@@ -533,6 +533,44 @@ if (Meteor.isServer) {
       });
 
 
+      // --- Auth: disbandArmy ownership ---
+
+      run('disbandArmy rejects a non-owner and keeps the army', function() {
+        // Regression test for fix/auth-disband-army. disbandArmy -> destroyArmy
+        // looked the army up by _id only, so any player could delete any army.
+        // The fix requires the caller to own it.
+        Games.remove({}); Players.remove({}); Armies.remove({});
+        let game = _createTestGame({hasStarted: true});
+        let owner = _createTestUser();
+        let attacker = _createTestUser();
+
+        let armyId = Armies.insert({gameId: game._id, user_id: owner._id, playerId: 'pOwner',
+          x: 0, y: 0, footmen: 5, name: 'testarmy'});
+
+        // invoke the method handler with a chosen this.userId
+        function callAs(userId, method, args) {
+          var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}};
+          return DDP._CurrentInvocation.withValue(inv, function() {
+            return Meteor.server.method_handlers[method].apply(inv, args);
+          });
+        }
+
+        var threw = false;
+        try { callAs(attacker._id, 'disbandArmy', [game._id, armyId]); } catch (e) { threw = true; }
+        _testAssert(threw, 'non-owner disbandArmy throws');
+        _testEqual(Armies.find({_id: armyId}).count(), 1, 'army survives the non-owner attempt');
+
+        // no regression: the owner can disband their own army
+        callAs(owner._id, 'disbandArmy', [game._id, armyId]);
+        _testEqual(Armies.find({_id: armyId}).count(), 0, 'owner can disband own army');
+
+        Armies.remove({gameId: game._id});
+        _testCleanup(game._id);
+        _testCleanupUser(owner._id);
+        _testCleanupUser(attacker._id);
+      });
+
+
       // --- Results ---
       console.log('\n========================================');
       console.log('  Game Creation Tests: ' + passed + ' passed, ' + failed + ' failed');
