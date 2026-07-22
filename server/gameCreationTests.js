@@ -533,6 +533,46 @@ if (Meteor.isServer) {
       });
 
 
+      // --- Economy: send_gold_to atomic debit ---
+
+      run('send_gold_to rejects overspend and debits a valid send correctly', function() {
+        // Correctness / no-regression test for fix/economy-send-gold-toctou,
+        // which reordered the transfer to debit the sender first via a
+        // conditional update ({_id, gold:{$gte:amount}}). The true concurrency
+        // fix (two simultaneous calls can't both pass the balance check) is not
+        // reproducible in a single-threaded test, so this asserts the reorder
+        // still rejects an overspend without corrupting gold and that a valid
+        // send debits the sender by the exact amount.
+        Games.remove({}); Players.remove({});
+        let game = _createTestGame({hasStarted: true});
+        let uSender = _createTestUser();
+        let uRecip = _createTestUser();
+
+        let recipPid = Players.insert({gameId: game._id, userId: uRecip._id, username: 'recip', gold: 0});
+        let senderPid = Players.insert({gameId: game._id, userId: uSender._id, username: 'sender', gold: 10, allies_below: [recipPid]});
+
+        function callAs(userId, method, args) {
+          var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}};
+          return DDP._CurrentInvocation.withValue(inv, function() {
+            return Meteor.server.method_handlers[method].apply(inv, args);
+          });
+        }
+
+        var threw = false;
+        try { callAs(uSender._id, 'send_gold_to', [game._id, recipPid, 100]); } catch (e) { threw = true; }
+        _testAssert(threw, 'overspend throws');
+        _testEqual(Players.findOne(senderPid).gold, 10, 'sender gold unchanged after failed overspend (never negative)');
+
+        // valid send: sender is debited by exactly the amount
+        callAs(uSender._id, 'send_gold_to', [game._id, recipPid, 4]);
+        _testEqual(Players.findOne(senderPid).gold, 6, 'sender debited by amount on a valid send');
+
+        _testCleanup(game._id);
+        _testCleanupUser(uSender._id);
+        _testCleanupUser(uRecip._id);
+      });
+
+
       // --- Results ---
       console.log('\n========================================');
       console.log('  Game Creation Tests: ' + passed + ' passed, ' + failed + ' failed');
