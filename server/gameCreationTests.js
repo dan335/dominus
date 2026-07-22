@@ -533,6 +533,49 @@ if (Meteor.isServer) {
       });
 
 
+      // --- Account deletion: orphan subtree ---
+
+      run('deleting a lord with a missing super-lord promotes its vassals to kings', function() {
+        // Regression test for fix/dominus-orphan-subtree. When a deleted
+        // player's `lord` points at a doc that no longer exists,
+        // deleteGameAccount used to skip vassal reparenting (the if(lord) block
+        // had no else), orphaning the subtree: vassals left is_king:false with a
+        // dangling lord, invisible to the tree/rebuild but still counted by
+        // checkForDominus -> unwinnable game. The fix promotes them to kings.
+        Games.remove({}); Players.remove({});
+        let game = _createTestGame({hasStarted: true});
+        let uP = _createTestUser();
+        let uV = _createTestUser();
+
+        // P points at a missing lord and has one vassal V.
+        let pId = Players.insert({gameId: game._id, userId: uP._id, username: uP.username,
+          is_king: false, lord: 'ghost-missing-lord', king: 'ghost-missing-lord',
+          vassals: [], allies_above: ['ghost-missing-lord'], allies_below: [], team: [], castle_id: 'cP'});
+        let vId = Players.insert({gameId: game._id, userId: uV._id, username: uV.username,
+          is_king: false, lord: pId, king: 'ghost-missing-lord',
+          vassals: [], allies_above: [pId, 'ghost-missing-lord'], allies_below: [], team: [], castle_id: 'cV'});
+        Players.update(pId, {$set: {vassals: [vId], allies_below: [vId]}});
+
+        dGame.deleteGameAccount(pId);
+
+        let v = Players.findOne(vId, {fields: {is_king: 1, lord: 1}});
+        _testAssert(!!v, 'vassal still exists');
+        _testAssert(v.is_king === true, 'orphaned vassal promoted to king');
+        _testAssert(v.lord === null, 'orphaned vassal has no dangling lord');
+        _testAssert(!Players.findOne(pId), 'deleted player removed');
+
+        Alerts.remove({gameId: game._id});
+        GlobalAlerts.remove({gameId: game._id});
+        Armies.remove({gameId: game._id});
+        Villages.remove({gameId: game._id});
+        Markers.remove({gameId: game._id});
+        _testCleanup(game._id);
+        Games.remove({hasStarted: false, hasClosed: false});
+        _testCleanupUser(uP._id);
+        _testCleanupUser(uV._id);
+      });
+
+
       // --- Results ---
       console.log('\n========================================');
       console.log('  Game Creation Tests: ' + passed + ' passed, ' + failed + ' failed');
