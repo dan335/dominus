@@ -213,31 +213,14 @@ BattleRound.prototype.handleCastle = function() {
       }
     })
 
+    // The castle goes to the first still-alive enemy army to arrive, per the
+    // help docs ("the castle will go to the first army to arrive that is still
+    // alive"). Removed dead code that tried to walk up to "the highest person
+    // in the tree": numAbove was assigned the allies_above array instead of its
+    // .length, so the comparison never fired, and its body assigned an
+    // undefined variable `dude` that would throw a ReferenceError if reached.
+    // The final assignment always used firstEnemyArmy anyway.
     if (firstEnemyArmy) {
-      // find highest person in this tree
-      // find them by checking who has the least allies_above
-      var castleWinner = firstEnemyArmy;
-      var numAbove = firstEnemyArmy.allies_above
-      _.each(firstEnemyArmy.allies_above, function(personAboveFirstArmy_id) {
-
-        if (personAboveFirstArmy_id != castle.playerId) {
-
-          var personAboveFirstArmy = _.find(self.armies, function(a) {
-            return a.playerId == personAboveFirstArmy_id;
-          })
-
-          if (personAboveFirstArmy) {
-            if (personAboveFirstArmy.allies_above.length < numAbove) {
-              castleWinner = dude;
-              numAbove = personAboveFirstArmy.allies_above.length;
-            }
-          }
-        }
-
-      })
-    }
-
-    if (castleWinner) {
       castle.becameVassalOf_armyId = firstEnemyArmy._id;
       castle.becameVassalOfPlayerId = firstEnemyArmy.playerId;
       firstEnemyArmy.tookCastle = true;
