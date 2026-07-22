@@ -1,5 +1,16 @@
 Meteor.methods({
   pauseJobQueue: function() {
+    // allow trusted server-side calls (this.connection === null, e.g. the
+    // relationship-rebuild job that pauses the queue while it runs); block
+    // client (DDP) calls from non-admins -- otherwise any player could freeze
+    // battles/income/movement for every game on the server.
+    if (this.connection) {
+      var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
+      if (!user || !user.admin) {
+        throw new Meteor.Error('not-authorized', 'Must be admin.');
+      }
+    }
+
     let Future = Npm.require('fibers/future');
 
     Settings.upsert({}, {$set: {isPaused:true}});
@@ -17,6 +28,14 @@ Meteor.methods({
 
 
   resumeJobQueue: function() {
+    // allow trusted server-side calls; block non-admin client calls (see pauseJobQueue).
+    if (this.connection) {
+      var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
+      if (!user || !user.admin) {
+        throw new Meteor.Error('not-authorized', 'Must be admin.');
+      }
+    }
+
     let Future = Npm.require('fibers/future');
 
     Settings.upsert({}, {$set: {isPaused:false}});
@@ -34,6 +53,16 @@ Meteor.methods({
 
 
   clearUniqueIdsForJob: function(jobName) {
+    // allow trusted server-side calls; block non-admin client calls (see pauseJobQueue).
+    if (this.connection) {
+      var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
+      if (!user || !user.admin) {
+        throw new Meteor.Error('not-authorized', 'Must be admin.');
+      }
+    }
+
+    check(jobName, String);
+
     const queue = Queues[jobName];
 
     if (!queue) {

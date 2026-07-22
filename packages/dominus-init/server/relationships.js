@@ -264,7 +264,14 @@ var create_lord_and_vassal = function(lord_id, vassal_id) {
 	} else if (lord.king){
 		newKing = lord.king;
 	} else {
-		newKing = getKingOf(vassal_id);
+		// resolve the LORD's king (see comment above: "king of lord").
+		// getKingOf(vassal_id) is wrong here: this runs before the bulk that sets
+		// vassal.lord = lord_id has executed, and the precondition requires
+		// vassal.lord to be null, so getKingOf(vassal_id) returns vassal_id itself.
+		// That would point the whole vassal subtree's king at a mid-tree node,
+		// making checkForDominus count them as non-vassals and blocking a
+		// legitimate dominus until the nightly rebuild.
+		newKing = getKingOf(lord_id);
 	}
 
 	if (!newKing) {
@@ -368,7 +375,7 @@ var updateVassalAllyCountMultiple = function(playerIds) {
 
 		var dsFind = {playerId: player._id, created_at: {$gte: _gs.statsBegin(player.gameId), $lt: _gs.statsEnd(player.gameId)}};
     var dsSet = {numVassals:num_allies_below, updated_at:new Date()};
-    var dsSetOnInsert = {_id:Random.id, gameId:player.gameId, user_id:player.userId, playerId:player._id, created_at: new Date()};
+    var dsSetOnInsert = {_id:Random.id(), gameId:player.gameId, user_id:player.userId, playerId:player._id, created_at: new Date()};
     bulkDailystats.find(dsFind).upsert().updateOne({$set:dsSet, $setOnInsert:dsSetOnInsert});
 
 		hasBulkOp = true;
@@ -389,7 +396,7 @@ var updateVassalAllyCountMultiple = function(playerIds) {
 	    }
 	    futureDailystats.return(result);
 	  });
-	  futurePlayers.wait();
+	  futureDailystats.wait();
 	}
 
 };
