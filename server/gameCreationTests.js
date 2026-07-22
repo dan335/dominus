@@ -618,6 +618,8 @@ if (Meteor.isServer) {
         _testCleanup(game._id);
         _testCleanupUser(owner._id);
         _testCleanupUser(attacker._id);
+      });
+
 
       // --- Battle calculator: dominus ally/enemy ---
 
@@ -647,6 +649,44 @@ if (Meteor.isServer) {
         D.is_dominus = false;
         _testAssert(D.isAlly(V) === true, 'non-dominus lord is an ally of its vassal');
         _testAssert(D.isEnemy(V) === false, 'non-dominus lord is not an enemy of its vassal');
+      });
+
+
+      // --- Auth: splitArmy ownership ---
+
+      run('splitArmy rejects a non-owner and leaves the army intact', function() {
+        // Regression test for fix/auth-split-army. splitArmy -> dArmies.split
+        // looked the army up by _id only (and reset its speed/moveTime), so any
+        // player could stop and fragment an enemy army. The fix requires
+        // ownership.
+        Games.remove({}); Players.remove({}); Armies.remove({});
+        let game = _createTestGame({hasStarted: true});
+        let owner = _createTestUser();
+        let attacker = _createTestUser();
+
+        let armyId = Armies.insert({gameId: game._id, user_id: owner._id, playerId: 'pOwner',
+          x: 0, y: 0, footmen: 10, archers: 0, pikemen: 0, cavalry: 0, catapults: 0,
+          speed: 5, moveTime: 123, name: 'testarmy'});
+
+        function callAs(userId, method, args) {
+          var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}};
+          return DDP._CurrentInvocation.withValue(inv, function() {
+            return Meteor.server.method_handlers[method].apply(inv, args);
+          });
+        }
+
+        var threw = false;
+        try { callAs(attacker._id, 'splitArmy', [game._id, armyId, {footmen: 5}]); } catch (e) { threw = true; }
+        _testAssert(threw, 'non-owner splitArmy throws');
+        _testEqual(Armies.find({gameId: game._id}).count(), 1, 'no new army was split off');
+        let a = Armies.findOne(armyId);
+        _testEqual(a.footmen, 10, 'original army soldiers untouched');
+        _testEqual(a.speed, 5, 'original army movement not reset by a non-owner');
+
+        Armies.remove({gameId: game._id});
+        _testCleanup(game._id);
+        _testCleanupUser(owner._id);
+        _testCleanupUser(attacker._id);
       });
 
       // --- Results ---
