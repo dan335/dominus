@@ -689,6 +689,41 @@ if (Meteor.isServer) {
         _testCleanupUser(attacker._id);
       });
 
+
+      // --- Auth: change_username scoping ---
+
+      run('change_username cannot rename another player or their castle', function() {
+        // Regression test for fix/auth-change-username. The Players write was
+        // userId-scoped, but the denormalized Castle/Village/Army/Room renames
+        // used playerId only, so passing a victim's playerId renamed their
+        // units. The fix loads the player scoped to the caller and bails.
+        Games.remove({}); Players.remove({}); Castles.remove({});
+        let game = _createTestGame({hasStarted: true});
+        let victim = _createTestUser();
+        let attacker = _createTestUser();
+
+        let victimPid = Players.insert({gameId: game._id, userId: victim._id, username: 'VictimName', is_king: false});
+        let castleId = Castles.insert({gameId: game._id, playerId: victimPid, user_id: victim._id, username: 'VictimName', x: 0, y: 0});
+
+        function callAs(userId, method, args) {
+          var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}};
+          return DDP._CurrentInvocation.withValue(inv, function() {
+            return Meteor.server.method_handlers[method].apply(inv, args);
+          });
+        }
+
+        var threw = false;
+        try { callAs(attacker._id, 'change_username', [victimPid, 'Hacked']); } catch (e) { threw = true; }
+        _testAssert(threw, 'renaming another player throws');
+        _testEqual(Castles.findOne(castleId).username, 'VictimName', 'victim castle username unchanged');
+        _testEqual(Players.findOne(victimPid).username, 'VictimName', 'victim player username unchanged');
+
+        Castles.remove({gameId: game._id});
+        _testCleanup(game._id);
+        _testCleanupUser(victim._id);
+        _testCleanupUser(attacker._id);
+      });
+
       // --- Results ---
       console.log('\n========================================');
       console.log('  Game Creation Tests: ' + passed + ' passed, ' + failed + ' failed');

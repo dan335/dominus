@@ -76,7 +76,12 @@ Meteor.methods({
 		check(username, String);
 		check(playerId, String);
 
-		let player = Players.findOne(playerId, {fields: {is_king:1, username:1, gameId:1}});
+		// scope to the caller's own player -- otherwise passing another player's id
+		// renames that victim's denormalized castle/village/army/chatroom names
+		// (the writes below use player._id) and fires a global name-change alert
+		// attributed to them, even though the authoritative Players write is
+		// already userId-scoped.
+		let player = Players.findOne({_id:playerId, userId:this.userId}, {fields: {is_king:1, username:1, gameId:1}});
 		if (!player) {
 			throw new Meteor.Error('No player found.');
 		}
