@@ -264,7 +264,14 @@ var create_lord_and_vassal = function(lord_id, vassal_id) {
 	} else if (lord.king){
 		newKing = lord.king;
 	} else {
-		newKing = getKingOf(vassal_id);
+		// resolve the LORD's king (see comment above: "king of lord").
+		// getKingOf(vassal_id) is wrong here: this runs before the bulk that sets
+		// vassal.lord = lord_id has executed, and the precondition requires
+		// vassal.lord to be null, so getKingOf(vassal_id) returns vassal_id itself.
+		// That would point the whole vassal subtree's king at a mid-tree node,
+		// making checkForDominus count them as non-vassals and blocking a
+		// legitimate dominus until the nightly rebuild.
+		newKing = getKingOf(lord_id);
 	}
 
 	if (!newKing) {
