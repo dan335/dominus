@@ -618,6 +618,8 @@ if (Meteor.isServer) {
         _testCleanup(game._id);
         _testCleanupUser(owner._id);
         _testCleanupUser(attacker._id);
+      });
+
 
       // --- Battle calculator: dominus ally/enemy ---
 
