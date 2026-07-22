@@ -192,6 +192,13 @@ Meteor.methods({
     check(armyId, String);
     //this.unblock();
     if (!this.isSimulation) {
+      // only the owner may split an army -- dArmies.split looks up by _id only
+      // and also resets the army's speed/moveTime, so without this any player
+      // could stop and fragment an opponent's army mid-move.
+      var army = Armies.findOne({_id:armyId, gameId:gameId}, {fields: {user_id:1}});
+      if (!army || army.user_id !== this.userId) {
+        throw new Meteor.Error('not-authorized', 'You do not own this army.');
+      }
       var newArmyId = dArmies.split(gameId, armyId, newArmySoldiers);
       if (newArmyId) {
         return newArmyId;
