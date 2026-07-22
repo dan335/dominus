@@ -182,6 +182,12 @@ Meteor.methods({
     check(armyId, String);
     //this.unblock();
     if (!this.isSimulation) {
+      // only the owner may disband an army -- otherwise any player could
+      // delete any opponent's army by id (destroyArmy looks up by _id only).
+      var army = Armies.findOne({_id:armyId, gameId:gameId}, {fields: {user_id:1}});
+      if (!army || army.user_id !== this.userId) {
+        throw new Meteor.Error('not-authorized', 'You do not own this army.');
+      }
       dArmies.destroyArmy(armyId);
     }
   },
@@ -237,7 +243,7 @@ Meteor.methods({
     var hasSoldiers = false;
     var buildingHasEnough = true;
     _s.armies.types.forEach(function(type) {
-      if (typeof(soldiers[type] != "undefined")) {
+      if (typeof soldiers[type] != "undefined") {
 
         check(soldiers[type], Match.Integer);
 

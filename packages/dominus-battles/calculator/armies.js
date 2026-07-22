@@ -197,6 +197,16 @@ BattleArmy.prototype.isAlly = function(otherArmy) {
     return this.playerId == otherArmy.playerId;
   }
 
+  // A dominus's army (and its opponent) is never an ally in army-vs-army.
+  // isEnemy has a matching override that forces these pairings to fight (a
+  // dominus can attack anyone's armies). Without this, a dominus and their own
+  // vassal on the same hex would be classified as BOTH ally and enemy, so the
+  // vassal's power is double-counted on the dominus's side while they also
+  // fight -- corrupting battle resolution. Mirror the isEnemy override here.
+  if ((this.is_dominus || otherArmy.is_dominus) && this.unitType == 'army' && otherArmy.unitType == 'army') {
+    return false;
+  }
+
   var player = {_id:this.playerId, team:this.team, lord:this.lord, allies_above:this.allies_above, allies_below:this.allies_below, king:this.king, vassals:this.vassals};
   var otherPlayerId = otherArmy.playerId;
   var relation = dInit.getPlayersRelationship(player, otherPlayerId);
