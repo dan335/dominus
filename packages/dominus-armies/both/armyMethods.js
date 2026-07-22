@@ -236,7 +236,7 @@ Meteor.methods({
     var hasSoldiers = false;
     var buildingHasEnough = true;
     _s.armies.types.forEach(function(type) {
-      if (typeof(soldiers[type] != "undefined")) {
+      if (typeof soldiers[type] != "undefined") {
 
         check(soldiers[type], Match.Integer);
 
