@@ -2,7 +2,7 @@ var lastPos = {x: null, y: null};
 var lastScale = null;
 
 // During long drags, occasionally commit Session so country loading / center_hex
-// still track the view (center_hex itself is already debounced 500ms).
+// still track the view (center_hex itself is throttled to 500ms).
 // Drag end always does a hard commit.
 var commitHexesPosThrottled = _.throttle(function() {
   dHexmap.commitHexesPos();
@@ -34,6 +34,15 @@ dHexmap.mapmover = new Mapmover(function(x, y, scale) {
   dHexmap.commitHexesPos();
 });
 
-dHexmap.mapmover.throttle = 33;
+// Assigning .throttle after construction is a no-op: the Mapmover constructor
+// already created _changed with _.throttle(fn, 100), so drags updated at 10fps
+// — the map moved in visible steps. Rebuild the throttled callback at ~60fps;
+// the visual-only hot path above is cheap enough for that now.
+dHexmap.mapmover.throttle = 16;
+dHexmap.mapmover._changed = _.throttle(function() {
+  var m = dHexmap.mapmover;
+  m.callback(m.moveX, m.moveY, m.scale);
+}, dHexmap.mapmover.throttle);
+
 dHexmap.mapmover.minScale = _s.init.hexScaleMin;
 dHexmap.mapmover.maxScale = _s.init.hexScaleMax;

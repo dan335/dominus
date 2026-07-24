@@ -1,5 +1,10 @@
 Template.hover_box.helpers({
 	draw: function() {
+		// Hide while panning: position only syncs on Session commits (~400ms
+		// during a drag), so mid-drag the box floats visibly out of place.
+		if (typeof dHexmap !== 'undefined' && dHexmap.mapmover && dHexmap.mapmover.isDraggingOrScalingReactive.get()) {
+			return false;
+		}
 		return (Session.get('hover_on_object') || Session.get('hover_on_hover_box'));
 	},
 
