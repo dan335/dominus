@@ -19,11 +19,16 @@ docker save $IMAGE | ssh -C $SERVER "docker load"
 # `up -d` recreates the containers because the image ID changed.
 ssh $SERVER "cd ~/server && docker compose up -d dominus-web dominus-worker && docker image prune -f"
 
+# The app can take a while to boot (Mongo Atlas connection etc.) — traefik
+# returns 502 until then, so poll instead of a single check.
 echo "Waiting for app to come up..."
-sleep 15
-if curl -sf -o /dev/null https://dominusgame.net/; then
-    echo "OK: dominusgame.net is up"
-else
-    echo "FAIL: site not responding"
-    exit 1
-fi
+tries=0
+until sleep 10 && curl -sf -o /dev/null https://dominusgame.net/; do
+    tries=$((tries+1))
+    if [ "$tries" -ge 18 ]; then
+        echo "FAIL: dominusgame.net not responding after 3 minutes"
+        exit 1
+    fi
+    echo "  not up yet, retrying..."
+done
+echo "OK: dominusgame.net is up"

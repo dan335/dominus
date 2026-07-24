@@ -35,8 +35,20 @@ Assert-LastExitCode "docker save | ssh | docker load"
 ssh $SERVER "cd ~/server && docker compose up -d dominus-web dominus-worker && docker image prune -f"
 Assert-LastExitCode "docker compose up"
 
+# The app can take a while to boot (Mongo Atlas connection etc.) — traefik
+# returns 502 until then, so poll instead of a single check.
 Write-Host "Waiting for app to come up..."
-Start-Sleep -Seconds 15
-curl.exe -sf -o NUL https://dominusgame.net/
-Assert-LastExitCode "health check https://dominusgame.net/"
-Write-Host "OK: dominusgame.net is up"
+$deadline = (Get-Date).AddMinutes(3)
+while ($true) {
+    Start-Sleep -Seconds 10
+    curl.exe -sf -o NUL https://dominusgame.net/
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "OK: dominusgame.net is up"
+        break
+    }
+    if ((Get-Date) -gt $deadline) {
+        Write-Error "FAILED: dominusgame.net not responding after 3 minutes"
+        exit 1
+    }
+    Write-Host "  not up yet, retrying..."
+}
