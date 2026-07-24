@@ -27,7 +27,10 @@ Template.hover_box.helpers({
 		// this is outside of #hexes so it needs to be scaled
 		var x = grid.x * Session.get('hexScale')
 
-		var hexesPos = (typeof dHexmap !== 'undefined' && dHexmap.getCurrentHexPos) ? dHexmap.getCurrentHexPos() : Session.get('hexes_pos');
+		// Read Session unconditionally so this helper stays reactive on pan
+		// commits; getCurrentHexPos itself never registers the dependency.
+		var sessionPos = Session.get('hexes_pos');
+		var hexesPos = (typeof dHexmap !== 'undefined' && dHexmap.getCurrentHexPos) ? dHexmap.getCurrentHexPos() : sessionPos;
 		return hexesPos.x + x + offset
 	},
 
@@ -55,7 +58,10 @@ Template.hover_box.helpers({
 		// this is outside of #hexes so it needs to be scaled
 		var y = grid.y * Session.get('hexScale')
 
-		var hexesPos = (typeof dHexmap !== 'undefined' && dHexmap.getCurrentHexPos) ? dHexmap.getCurrentHexPos() : Session.get('hexes_pos');
+		// Read Session unconditionally so this helper stays reactive on pan
+		// commits; getCurrentHexPos itself never registers the dependency.
+		var sessionPos = Session.get('hexes_pos');
+		var hexesPos = (typeof dHexmap !== 'undefined' && dHexmap.getCurrentHexPos) ? dHexmap.getCurrentHexPos() : sessionPos;
 		return hexesPos.y + y + offset
 	},
 
