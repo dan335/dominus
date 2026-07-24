@@ -1,35 +1,91 @@
-// offset your position on the map
-// this is pixel position not coordinates
-dHexmap.offsetHexes = function(offsetX, offsetY) {
-  check(offsetX, validNumber);
-  check(offsetY, validNumber);
-  var hexPos = Session.get('hexes_pos');
-  if (hexPos) {
-    x = hexPos.x + offsetX;
-		y = hexPos.y + offsetY;
-		dHexmap.moveHexesTo(x, y);
+// Cached DOM node for the SVG map layer (avoid jQuery lookup every pan frame).
+var hexesEl = null;
+
+var getHexesEl = function() {
+  // Invalidate if the map template was destroyed/recreated (detached node).
+  if (hexesEl && !(document.body && document.body.contains(hexesEl))) {
+    hexesEl = null;
   }
+  if (!hexesEl) {
+    hexesEl = document.getElementById('hexes');
+  }
+  return hexesEl;
 };
 
-// TODO: https://davidwalsh.name/translate3d
-// move the map to a position
-// this is pixel position not coordinates
-dHexmap.moveHexesTo = function(pixelX, pixelY) {
-  check(pixelX, validNumber);
-	check(pixelY, validNumber);
+// Call when Template.hexmap is destroyed so the next enter re-queries #hexes.
+dHexmap.clearHexesElCache = function() {
+  hexesEl = null;
+};
+
+// Prefer live mapPos (updated every visual pan frame). Session may lag during drag.
+dHexmap.getCurrentHexPos = function() {
+  if (typeof mapPos !== 'undefined' && mapPos && typeof mapPos.x === 'number' && isFinite(mapPos.x)) {
+    return mapPos;
+  }
+  return Session.get('hexes_pos');
+};
+
+// Visual pan only: update canvas mapPos + SVG CSS transform. No Session.set.
+// Used on the drag hot path so Meteor/Blaze are not invalidated every mousemove.
+dHexmap.moveHexesToVisual = function(pixelX, pixelY) {
+  pixelX = parseFloat(pixelX);
+  pixelY = parseFloat(pixelY);
+  // Keep hot path cheap but avoid silent NaN blanking the map.
+  if (!isFinite(pixelX) || !isFinite(pixelY)) {
+    return;
+  }
+
   var hexScale = Session.get('hexScale');
   if (!hexScale) {
     hexScale = 1;
   }
 
-  // for map, instead of using session
-  mapPos = {x:pixelX, y:pixelY};
+  mapPos = {x: pixelX, y: pixelY};
 
-  pixelX = parseFloat(pixelX);
-  pixelY = parseFloat(pixelY);
-  //$('#hexes').attr('transform', 'translate('+pixelX+','+pixelY+') scale('+hexScale+')')
-  $('#hexes').attr('style', 'transform:translate3d('+pixelX+'px,'+pixelY+'px, 0px) scale3d('+hexScale+', '+hexScale+', 1)')
-  Session.set('hexes_pos', {x:pixelX, y:pixelY})
+  var el = getHexesEl();
+  if (el) {
+    el.style.transform =
+      'translate3d(' + pixelX + 'px,' + pixelY + 'px, 0px) scale3d(' +
+      hexScale + ', ' + hexScale + ', 1)';
+  }
+};
+
+// Commit map position to Session (subscriptions, hover box, center_hex tracking).
+dHexmap.commitHexesPos = function() {
+  if (typeof mapPos === 'undefined' || !mapPos) {
+    return;
+  }
+  if (!isFinite(mapPos.x) || !isFinite(mapPos.y)) {
+    return;
+  }
+  var cur = Session.get('hexes_pos');
+  if (cur && cur.x === mapPos.x && cur.y === mapPos.y) {
+    return;
+  }
+  Session.set('hexes_pos', {x: mapPos.x, y: mapPos.y});
+};
+
+// Visual offset only (drag hot path). No Session.set.
+dHexmap.offsetHexesVisual = function(offsetX, offsetY) {
+  offsetX = parseFloat(offsetX);
+  offsetY = parseFloat(offsetY);
+  if (!isFinite(offsetX) || !isFinite(offsetY)) {
+    return;
+  }
+  var hexPos = dHexmap.getCurrentHexPos();
+  if (hexPos) {
+    dHexmap.moveHexesToVisual(hexPos.x + offsetX, hexPos.y + offsetY);
+  }
+};
+
+// move the map to a position (visual + Session commit)
+// this is pixel position not coordinates
+// Used by centerOnHex, nav panel, etc.
+dHexmap.moveHexesTo = function(pixelX, pixelY) {
+  check(pixelX, validNumber);
+  check(pixelY, validNumber);
+  dHexmap.moveHexesToVisual(pixelX, pixelY);
+  dHexmap.commitHexesPos();
 };
 
 // center the map on a hex
@@ -37,54 +93,60 @@ dHexmap.moveHexesTo = function(pixelX, pixelY) {
 // why * -1 ?????
 dHexmap.centerOnHex = function(x, y) {
   check(x, Match.Integer);
-	check(y, Match.Integer);
+  check(y, Match.Integer);
 
   var hexScale = Session.get('hexScale')
-	var canvasSize = Session.get('canvas_size');
+  var canvasSize = Session.get('canvas_size');
 
   if (!hexScale) {
     hexScale = 1;
   }
 
-	if (canvasSize && hexScale) {
+  if (canvasSize && hexScale) {
     var grid = Hx.coordinatesToPos(x, y, _s.init.hexSize, _s.init.hexSquish)
 
-		var x = canvasSize.width/2
-		var y = canvasSize.height/2
+    var x = canvasSize.width/2
+    var y = canvasSize.height/2
 
-		x += grid.x * hexScale * -1
-		y += grid.y * hexScale * -1
+    x += grid.x * hexScale * -1
+    y += grid.y * hexScale * -1
 
-		dHexmap.moveHexesTo(x, y)
+    dHexmap.moveHexesTo(x, y)
   }
 };
 
 dHexmap.setHexScale = function(scale) {
   check(scale, validNumber);
   Session.set('hexScale', scale);
+  // Re-apply transform at current pos so scale change updates SVG immediately.
+  var hexPos = dHexmap.getCurrentHexPos();
+  if (hexPos) {
+    dHexmap.moveHexesToVisual(hexPos.x, hexPos.y);
+  }
   _saveHexScale();
 };
 
 dHexmap.getCoordinatesFromEvent = function(event) {
   // get click position
-	// if is a touch event
-	if (_.contains(['touchstart', 'touchend', 'touchcancel', 'touchmove'], event.type)) {
-		var x = event.originalEvent.touches[0].pageX
-		var y = event.originalEvent.touches[0].pageY
-	} else {
-		var x = event.clientX || event.pageX
-		var y = event.clientY || event.pageY
-	}
+  // if is a touch event
+  if (_.contains(['touchstart', 'touchend', 'touchcancel', 'touchmove'], event.type)) {
+    var x = event.originalEvent.touches[0].pageX
+    var y = event.originalEvent.touches[0].pageY
+  } else {
+    var x = event.clientX || event.pageX
+    var y = event.clientY || event.pageY
+  }
 
-	var hexesPos = Session.get('hexes_pos')
-	var hexScale = s.hex_size * Session.get('hexScale')
+  // Use live map position so pathfinding stays accurate during pan.
+  var hexesPos = dHexmap.getCurrentHexPos()
+  var hexScale = s.hex_size * Session.get('hexScale')
 
-	if (hexesPos && hexScale) {
-		// get hex coordinates
-		var coord = Hx.posToCoordinates(x-hexesPos.x, y-hexesPos.y, hexScale, s.hex_squish)
+  if (hexesPos && hexScale) {
+    // get hex coordinates
+    var coord = Hx.posToCoordinates(x-hexesPos.x, y-hexesPos.y, hexScale, s.hex_squish)
 
-		return coord
-	}
+    return coord
+  }
 }
 
 
