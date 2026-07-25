@@ -258,9 +258,11 @@ Template.hexmap.onRendered(function() {
 });
 
 
-// Throttle, not debounce: a debounce is starved by the ~400ms commits during a
+// Throttle, not debounce: a debounce is starved by the commits during a
 // drag and never fired until the drag ended, freezing the minimap camera border
 // and deferring country loading. Throttle fires during sustained drags too.
+// 200ms paces the minimap camera border and countryIdsOnscreen; commits arrive
+// every ~150ms during a drag (see commitHexesPosThrottled in mapmover.js).
 let setCenterHex = _.throttle(function(hexes_pos) {
   let pixel = dHexmap.grid_to_pixel(hexes_pos.x, hexes_pos.y)
   if (pixel) {
@@ -270,7 +272,7 @@ let setCenterHex = _.throttle(function(hexes_pos) {
     let y = coords.y * -1
     Session.set('center_hex', {x:x, y:y})
   }
-}, 500);
+}, 200);
 
 
 

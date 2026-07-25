@@ -2,11 +2,12 @@ var lastPos = {x: null, y: null};
 var lastScale = null;
 
 // During long drags, occasionally commit Session so country loading / center_hex
-// still track the view (center_hex itself is throttled to 500ms).
-// Drag end always does a hard commit.
+// still track the view (center_hex itself is throttled to 200ms).
+// Drag end always does a hard commit. This interval also paces the minimap
+// camera border, which reads center_hex — keep the two in the same ballpark.
 var commitHexesPosThrottled = _.throttle(function() {
   dHexmap.commitHexesPos();
-}, 400);
+}, 150);
 
 dHexmap.mapmover = new Mapmover(function(x, y, scale) {
   // beginning of move — sync last* so the first delta is 0
