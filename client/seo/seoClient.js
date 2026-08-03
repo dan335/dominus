@@ -68,9 +68,6 @@ function removeSsrBlock() {
 
 
 Meteor.startup(function() {
-  var booted = false;
-  var lastViewportMode = null;
-
   Tracker.autorun(function() {
     var path = SimpleRouter.path.get();
     if (path === null || path === undefined) return;
@@ -79,15 +76,13 @@ Meteor.startup(function() {
     var viewportMode = meta.viewport === 'game' ? 'game' : 'site';
 
     // The game map needs a fixed 850px viewport; marketing pages want
-    // device-width. Browsers are unreliable about re-laying out an existing
-    // page when the viewport changes underneath them (iOS Safari especially),
-    // so cross that boundary with a real page load. Entering a game already
-    // triggers a heavy subscription load, so a reload costs little there.
-    if (booted && lastViewportMode && lastViewportMode !== viewportMode) {
-      window.location.reload();
-      return;
-    }
-    lastViewportMode = viewportMode;
+    // device-width. Swap the meta tag in place - do NOT force a page reload to
+    // cross that boundary. Reloading on the way into a game meant re-parsing
+    // the whole bundle, re-establishing every subscription and rebuilding the
+    // map from scratch, which made opening the map noticeably slower.
+    //
+    // Cold loads (bookmarks, refreshes, crawlers, external links) get the right
+    // viewport from the server, and that is what search engines evaluate.
 
     document.title = meta.title;
     setMeta('meta[name="description"]', 'name', 'description', meta.description || '');
@@ -99,8 +94,6 @@ Meteor.startup(function() {
     setMeta('meta[name="twitter:description"]', 'name', 'twitter:description', meta.description || '');
     setLink('canonical', meta.canonical);
     setViewport(viewportMode === 'game' ? SEO.VIEWPORT_GAME : SEO.VIEWPORT_SITE);
-
-    booted = true;
   });
 
   Tracker.afterFlush(removeSsrBlock);
