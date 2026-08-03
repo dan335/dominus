@@ -1,0 +1,36 @@
+<template name="guide">
+  <div id="guide">
+
+    {{> topNav}}
+
+    <div class="container" id="guideContainer">
+      <h1>{{h1}}</h1>
+      <p class="guideLead">{{lead}}</p>
+
+      {{{intro}}}
+
+      <nav class="guideToc">
+        <strong>Contents</strong>
+        <ul>
+          {{#each sections}}
+            <li><a href="#{{id}}">{{title}}</a></li>
+          {{/each}}
+        </ul>
+      </nav>
+
+      {{#each sections}}
+        <section id="{{id}}">
+          <h2>{{title}}</h2>
+          {{{html}}}
+        </section>
+      {{/each}}
+
+      <p class="guideCta">
+        <a href="/games" class="btn btn-primary btn-lg">Join a Game</a>
+      </p>
+    </div>
+
+    {{> landingFooter}}
+
+  </div>
+</template>

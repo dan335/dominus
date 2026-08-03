@@ -1,0 +1,40 @@
+{
+  "name": "Dominus",
+  "short_name": "Dominus",
+  "description": "A free multiplayer social strategy game. Conquer castles, gain vassals and climb the feudal tree to become the Dominus.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#2b2b2b",
+  "theme_color": "#2b2b2b",
+  "categories": ["games", "strategy"],
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/touch-icon-ipad.png",
+      "sizes": "76x76",
+      "type": "image/png"
+    },
+    {
+      "src": "/touch-icon-iphone-retina.png",
+      "sizes": "120x120",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-196x196.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/touch-icon-ipad-retina.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    }
+  ]
+}

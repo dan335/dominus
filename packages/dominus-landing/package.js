@@ -55,6 +55,7 @@ Package.onUse(function(api) {
     'topNav/client/topNav.js',
     'topNav/client/topNav.less',
     'client/landingFooter.html',
+    'client/landingFooter.js',
     'landingGames/client/landingGames.html',
     'landingGames/client/landingGames.js',
     'landingGames/client/landingGames.less',

@@ -7,7 +7,7 @@
     <div class="container" id="landingGames" style="margin-top: -150px;">
       {{#if Template.subscriptionsReady}}
         {{#if hasFutureGames}}
-          <div class="sectionTitle">Games Starting Soon</div>
+          <h2 class="sectionTitle">Games Starting Soon</h2>
           <div class="sectionHelp">Sign up for a game and you will get an email when it starts.</div>
           <div class="row">
             {{#each futureGames}}
@@ -19,7 +19,7 @@
         {{/if}}
 
         {{#if hasCurrentGames}}
-          <div class="sectionTitle">Current Games</div>
+          <h2 class="sectionTitle">Current Games</h2>
           <div class="row">
             {{#each currentGames}}
               {{> landingGame}}

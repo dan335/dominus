@@ -11,6 +11,12 @@
       //font-family: @titleFontFamily;
       margin-top: 30px;
       text-shadow: 0px 2px 2px #333;
+
+      // these are <h2> for document outline / SEO. reset bootstrap's heading
+      // defaults so they render exactly as the plain divs used to.
+      margin-bottom: 0;
+      font-weight: inherit;
+      line-height: inherit;
     }
 
     .sectionHelp {
@@ -37,6 +43,12 @@
 
 .landingTitleAboveContainer {
   font-size: 200%;
+
+  // used as an <h1> on /rankings, /results, /oldresults and /profile/:id.
+  // reset bootstrap's heading defaults so it renders as the plain div did.
+  margin: 0;
+  font-weight: inherit;
+  line-height: inherit;
 
   img {
     box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);

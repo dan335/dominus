@@ -1,0 +1,86 @@
+// Styling for the server rendered content block.
+//
+// This block is real content served to every visitor, not hidden text for
+// crawlers. It must stay visible and legible until Blaze paints over it -
+// hiding it with display:none or off-screen positioning would be cloaking.
+//
+// Colors match the site theme (@bodyBackground / @bodyTextColor in
+// packages/dominus-init/client/colors.import.less), inlined here because
+// app level less files in this project don't import package variables.
+
+#seoSsr {
+  background-color: hsl(150, 15%, 10%);
+  color: hsl(0, 0%, 90%);
+  min-height: 100vh;
+  padding: 24px 16px 64px 16px;
+  font-size: 16px;
+  line-height: 1.6;
+
+  .seoSsrInner {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  a {
+    color: #6fb3e8;
+  }
+
+  .seoSsrNav {
+    margin-bottom: 32px;
+    font-size: 15px;
+
+    a {
+      margin-right: 16px;
+    }
+  }
+
+  h1 {
+    font-size: 34px;
+    margin: 0 0 8px 0;
+  }
+
+  h2 {
+    font-size: 24px;
+    margin: 32px 0 8px 0;
+  }
+
+  h3,
+  h4 {
+    font-size: 18px;
+    margin: 20px 0 6px 0;
+  }
+
+  .seoSsrLead {
+    font-size: 20px;
+    font-weight: 300;
+    margin-bottom: 20px;
+  }
+
+  ul,
+  ol {
+    padding-left: 22px;
+  }
+
+  li {
+    margin-bottom: 6px;
+  }
+
+  blockquote {
+    border-left: 3px solid hsl(150, 15%, 25%);
+    padding: 4px 0 4px 14px;
+    margin: 14px 0;
+    font-size: 16px;
+    color: hsl(0, 0%, 78%);
+  }
+
+  .seoSsrLinks {
+    margin-top: 40px;
+    padding-left: 0;
+    list-style: none;
+
+    li {
+      display: inline-block;
+      margin-right: 16px;
+    }
+  }
+}
