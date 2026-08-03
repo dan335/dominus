@@ -31,8 +31,13 @@ cmd /c "docker save $IMAGE | ssh -C $SERVER ""docker load"""
 Assert-LastExitCode "docker save | ssh | docker load"
 
 # No `docker compose pull` — there is no upstream registry anymore.
-# `up -d` recreates the containers because the image ID changed.
-ssh $SERVER "cd ~/server && docker compose up -d dominus-web dominus-worker && docker image prune -f"
+#
+# --force-recreate is required. `up -d` alone does NOT reliably recreate: the
+# build produces a multi-arch manifest list and compose's up-to-date check does
+# not resolve through it, so it prints "Container server-dominus-web-1  Running"
+# and keeps the old container even though docker load just replaced the image.
+# That is how this deploy silently no-opped for four months.
+ssh $SERVER "cd ~/server && docker compose up -d --force-recreate dominus-web dominus-worker"
 Assert-LastExitCode "docker compose up"
 
 # The app can take a while to boot (Mongo Atlas connection etc.) — traefik
@@ -42,13 +47,30 @@ $deadline = (Get-Date).AddMinutes(3)
 while ($true) {
     Start-Sleep -Seconds 10
     curl.exe -sf -o NUL https://dominusgame.net/
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "OK: dominusgame.net is up"
-        break
-    }
+    if ($LASTEXITCODE -eq 0) { break }
     if ((Get-Date) -gt $deadline) {
         Write-Error "FAILED: dominusgame.net not responding after 3 minutes"
         exit 1
     }
     Write-Host "  not up yet, retrying..."
 }
+
+# "Site responds" is NOT proof the deploy landed — the OLD container answers 200
+# just as happily. Compare the commit baked into the served bundle against the
+# commit we just built. This is the check that would have caught the
+# four-month-stale deploy on day one.
+$expected = (git rev-parse HEAD).Trim()
+$html = curl.exe -s https://dominusgame.net/
+$live = ""
+if ($html -match '%22gitCommitHash%22%3A%22([a-f0-9]+)%22') { $live = $matches[1] }
+Write-Host "  expected commit: $expected"
+Write-Host "  live commit:     $live"
+if ($expected -ne $live) {
+    Write-Error "FAILED: dominusgame.net is NOT running the current commit"
+    exit 1
+}
+Write-Host "OK: dominusgame.net is up and running the current commit"
+
+# Prune only after a verified deploy, so a failed one leaves the old image
+# recoverable. Note this clears dangling images for every project on the host.
+ssh $SERVER "docker image prune -f"
