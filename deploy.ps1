@@ -60,7 +60,9 @@ while ($true) {
 # commit we just built. This is the check that would have caught the
 # four-month-stale deploy on day one.
 $expected = (git rev-parse HEAD).Trim()
-$html = curl.exe -s https://dominusgame.net/
+# -join: curl.exe output is a line array, and -match on an array filters lines
+# without populating $matches — the verify step then crashes on $matches[1].
+$html = (curl.exe -s https://dominusgame.net/) -join "`n"
 $live = ""
 if ($html -match '%22gitCommitHash%22%3A%22([a-f0-9]+)%22') { $live = $matches[1] }
 Write-Host "  expected commit: $expected"
