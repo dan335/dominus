@@ -1,28 +1,55 @@
 #!/bin/sh
-# Registry-free deploy for Mac/Linux (also works from Git Bash on Windows).
-# The image tag still says registry.gitlab.com but nothing contacts GitLab —
-# the image is streamed to the server over SSH instead of pushed to a registry.
+# Registry-free deploy — ONE script for Mac/Linux/Windows (deploy.bat is a thin
+# wrapper around this; the old deploy.ps1 is folded in here). The image tag
+# still says registry.gitlab.com but nothing contacts GitLab — the image is
+# streamed to the server over SSH instead of pushed to a registry.
 set -e
 
 SERVER=dan@104.236.39.83
 IMAGE=registry.gitlab.com/danphi/dominus:latest
 
 rm -rf .build
-meteor build .build --architecture os.linux.x86_64
+# meteor is a .bat on Windows, which Git Bash cannot exec directly — go through
+# cmd. --allow-superuser matches the old deploy.ps1 (meteor refuses admin
+# shells otherwise). Known Windows quirk: meteor-tool can keep spinning after
+# writing a complete .build/dominus.tar.gz — if the build seems stuck long
+# after the tarball stops changing, verify it with tar -tzf and kill meteor.
+case "$(uname -s)" in
+    MINGW*|MSYS*) cmd //c "meteor build .build --architecture os.linux.x86_64 --allow-superuser" ;;
+    *) meteor build .build --architecture os.linux.x86_64 ;;
+esac
 
 docker build -t $IMAGE --platform linux/x86_64 .
 
-echo "Streaming image to $SERVER (ssh -C compresses in transit)..."
-docker save $IMAGE | ssh -C $SERVER "docker load"
-
-# No `docker compose pull` — there is no upstream registry anymore.
+# The whole remote side runs in ONE SSH session: the server rate-limits SSH
+# connections, and several in quick succession trip the block mid-deploy.
 #
-# --force-recreate is required. `up -d` alone does NOT reliably recreate: the
-# build produces a multi-arch manifest list and compose's up-to-date check does
-# not resolve through it, so it prints "Container server-dominus-web-1  Running"
-# and keeps the old container even though docker load just replaced the image.
-# That is how this deploy silently no-opped for four months.
-ssh $SERVER "cd ~/server && docker compose up -d --force-recreate dominus-web dominus-worker"
+# No docker compose pull — there is no upstream registry anymore.
+#
+# --force-recreate is required. Plain up -d does NOT reliably recreate: the
+# build produces a multi-arch manifest list and the compose up-to-date check
+# does not resolve through it, so it prints "Container server-dominus-web-1
+# Running" and keeps the old container even though docker load just replaced
+# the image. That is how this deploy silently no-opped for four months.
+echo "Streaming image to $SERVER and deploying (single SSH session)..."
+docker save $IMAGE | ssh -C $SERVER "
+    set -e
+    docker load
+    cd ~/server
+    docker compose up -d --force-recreate dominus-web dominus-worker
+    EXPECTED=\$(docker image inspect -f '{{.Id}}' $IMAGE)
+    for c in server-dominus-web-1 server-dominus-worker-1; do
+        LIVE=\$(docker inspect -f '{{.Image}}' \$c)
+        echo \"  \$c: \$LIVE\"
+        if [ \"\$EXPECTED\" != \"\$LIVE\" ]; then
+            echo \"FAIL: \$c is NOT running the image just deployed\" >&2
+            exit 1
+        fi
+    done
+    # Prune only after the image-ID check, so a failed deploy leaves the old
+    # image recoverable. Clears dangling images for every project on the host.
+    docker image prune -f
+"
 
 # Wait for the app to boot — traefik returns 502 until Mongo Atlas connects.
 echo "Waiting for app to come up..."
@@ -49,7 +76,3 @@ if [ "$EXPECTED" != "$LIVE" ]; then
     exit 1
 fi
 echo "OK: dominusgame.net is up and running the current commit"
-
-# Prune only after a verified deploy, so a failed one leaves the old image
-# recoverable. Note this clears dangling images for every project on the host.
-ssh $SERVER "docker image prune -f"
