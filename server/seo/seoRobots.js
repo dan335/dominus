@@ -9,6 +9,13 @@
 
 
 // Paths that are gated, private, or have nothing worth indexing.
+//
+// Only routes marked robots:'noindex' in seoRoutes.js belong here.  The
+// 'noindex-follow' routes (/signin, /forgotpassword, /battle/*, /alert/*, and
+// /createaccount) are deliberately absent: a Disallow stops the fetch, so the
+// crawler never sees their noindex meta tag or X-Robots-Tag header and can
+// still index them URL-only from inbound links.  One signal per path - these
+// use the tag, which is the more precise of the two.
 var DISALLOW = [
   '/game/',
   '/forum',
@@ -18,10 +25,6 @@ var DISALLOW = [
   '/store',
   '/mailinglist',
   '/deleteAccount',
-  '/signin',
-  '/forgotpassword',
-  '/battle/',
-  '/alert/',
   '/astroepatreon'
 ];
 
