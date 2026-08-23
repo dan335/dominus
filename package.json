@@ -8,7 +8,7 @@
     "@sendgrid/mail": "^6.5.5",
     "core-js": "^2.5.3",
     "d3": "^3.5.17",
-    "jquery": "^2.2.4",
+    "jquery": "^3.5.0",
     "moment": "^2.18.1",
     "node-bcrypt": "0.0.1",
     "svgexport": "^0.3.2"
