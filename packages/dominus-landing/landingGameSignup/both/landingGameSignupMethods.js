@@ -24,9 +24,14 @@ Meteor.methods({
     }
 
     let user = Meteor.users.findOne(self.userId, {fields: {banned:1, admin:1, pro:1, proTokens:1, verifiedEmail:1}});
-    if (!user || user.banned) {
+    if (!user) {
       throw new Meteor.Error('User not found.');
     }
+
+    if (user.banned) {
+      throw new Meteor.Error('banned', 'Your account has been banned. If you think this is a mistake, contact us on Discord: https://discord.gg/b59g5pE');
+    }
+
     if (!user.verifiedEmail) {
       throw new Meteor.Error('Please verify your email before signing up for a game.');
     }

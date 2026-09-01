@@ -10,7 +10,13 @@
           <div class="landingGameContainer">
             <div class="forumBoxBody" style="text-align:center;">
               <br><br><br><br>
-              Please login and verify email to access forum.
+              {{#if isBanned}}
+                Your account has been banned.
+                <br><br>
+                If you think this is a mistake, contact us on <a href="https://discord.gg/b59g5pE" target="_blank" rel="noopener">Discord</a>.
+              {{else}}
+                Please login and verify email to access forum.
+              {{/if}}
               <br><br><br><br>
             </div>
           </div>

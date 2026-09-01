@@ -17,9 +17,14 @@ Meteor.methods({
 
     // get username
     let user = Meteor.users.findOne(this.userId, {fields: {banned:1, admin:1, pro:1, proTokens:1, username:1, verifiedEmail:1}});
-    if (!user || user.banned) {
+    if (!user) {
       throw new Meteor.Error('userNotFound', 'User not found.');
     }
+
+    if (user.banned) {
+      throw new Meteor.Error('banned', 'Your account has been banned. If you think this is a mistake, contact us on Discord: https://discord.gg/b59g5pE');
+    }
+
     if (!username) {
       username = user.username;
     }

@@ -115,8 +115,12 @@ Meteor.methods({
     }
 
     let user = Meteor.users.findOne(Meteor.userId(), {fields: {username:1, verifiedEmail:1, banned:1}});
-    if (!user || !user.verifiedEmail || user.banned) {
+    if (!user || !user.verifiedEmail) {
       throw new Meteor.Error('No user found.');
+    }
+
+    if (user.banned) {
+      throw new Meteor.Error('banned', 'Your account has been banned. If you think this is a mistake, contact us on Discord: https://discord.gg/b59g5pE');
     }
 
     let topic = {

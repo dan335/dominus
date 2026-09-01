@@ -13,6 +13,11 @@ Template.forum.helpers({
 
       return true;
     }
+  },
+
+  isBanned: function() {
+    let user = Meteor.users.findOne(Meteor.userId(), {fields: {banned:1}})
+    return user && user.banned;
   }
 })
 
