@@ -347,7 +347,7 @@ var updateVassalAllyCountMultiple = function(playerIds) {
 	var hasBulkOp = false;
 
 	var find = {_id: {$in: playerIds}};
-	var options = {fields: {gameId:1, userId:1, team:1, allies_above:1, allies_below:1}};
+	var options = {fields: {gameId:1, userId:1, team:1, vassals:1, allies_above:1, allies_below:1}};
 	Players.find(find, options).forEach(function(player) {
 
 		var num_vassals = 0;
@@ -400,6 +400,9 @@ var updateVassalAllyCountMultiple = function(playerIds) {
 	}
 
 };
+
+// exposed for server/bugFixTests.js
+dInit.updateVassalAllyCountMultiple = updateVassalAllyCountMultiple;
 
 
 
