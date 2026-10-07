@@ -268,7 +268,7 @@ Queues._waitForResult = function(promise) {
 };
 
 
-// wait for a Redis/Bull promise inside a fiber; returns the error, or null on success
+// wait for a Bull promise inside a fiber; returns the error, or null on success
 Queues._waitFor = function(promise) {
   let future = new Future();
   promise.then(function() {
@@ -278,6 +278,89 @@ Queues._waitFor = function(promise) {
   });
   return future.wait();
 };
+
+
+// Pause every queue on every worker (Bull global pause, stored in Redis).
+// isManual marks a pause made from the admin panel, which the stuck-pause
+// safety net below leaves alone. If any queue fails to pause, everything is
+// resumed again and this throws, so a failed pause never leaves the game
+// half-stopped.
+Queues.pauseAll = function(isManual) {
+  Settings.upsert({}, {$set: {isPaused:true, pausedAt:new Date(), manualPause:!!isManual}});
+
+  let errors = [];
+  Queues.queueNames.forEach(function(jobName) {
+    let error = Queues._waitFor(Queues[jobName].pause());
+    if (error) {
+      errors.push(jobName + ': ' + error.message);
+    }
+  });
+
+  if (errors.length) {
+    console.error('--- could not pause job queue, resuming ---', errors);
+    try {
+      Queues.resumeAll();
+    } catch (error) {
+      // the safety net retries the resume
+    }
+    throw new Meteor.Error('pause-failed', errors.join('; '));
+  }
+};
+
+
+// Resume every queue. Tries all of them even if one fails. If any failed,
+// Settings keeps isPaused so the safety net retries, and this throws.
+Queues.resumeAll = function() {
+  let errors = [];
+  Queues.queueNames.forEach(function(jobName) {
+    let error = Queues._waitFor(Queues[jobName].resume());
+    if (error) {
+      errors.push(jobName + ': ' + error.message);
+    }
+  });
+
+  if (errors.length) {
+    console.error('--- could not resume job queue ---', errors);
+    throw new Meteor.Error('resume-failed', errors.join('; '));
+  }
+
+  Settings.upsert({}, {$set: {isPaused:false}, $unset: {pausedAt:'', manualPause:''}});
+};
+
+
+// Safety net: a pause made by server code (not from the admin panel) that is
+// still in place after maxMs is treated as stuck and resumed.
+Queues.stuckPauseMaxMs = 1000*60*15;
+
+Queues.resumeIfStuck = function(now) {
+  let settings = Settings.findOne({}, {fields: {isPaused:1, pausedAt:1, manualPause:1}});
+  if (!settings || !settings.isPaused || settings.manualPause) {
+    return false;
+  }
+
+  // a pause from before pausedAt existed has no time; treat it as stuck
+  let pausedAt = settings.pausedAt ? settings.pausedAt.getTime() : 0;
+  if ((now || new Date()).getTime() - pausedAt < Queues.stuckPauseMaxMs) {
+    return false;
+  }
+
+  console.error('--- job queue paused since ' + settings.pausedAt + ', resuming ---');
+  Queues.resumeAll();
+  return true;
+};
+
+Meteor.startup(function() {
+  if (process.env.DOMINUS_WORKER == 'true') {
+    SyncedCron.add({
+      name: 'resume stuck job queue',
+      schedule: function(parser) {return parser.cron('* * * * *');},
+      job: function() {
+        Queues.resumeIfStuck();
+      }
+    });
+  }
+});
+
 
 
 // ---------------------

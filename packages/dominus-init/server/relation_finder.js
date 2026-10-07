@@ -14,28 +14,55 @@
 const Future = Npm.require('fibers/future');
 
 if (process.env.DOMINUS_WORKER == 'true') {
-
 	Queues.updateAllKingsAllies.process(Meteor.bindEnvironment(function(job) {
-		Meteor.call('pauseJobQueue');
-
-		// wait a couple seconds for jobs to finish
-		let future = new Future();
-		Meteor.setTimeout(function() {
-			future.return(true);
-		}, 1000*5);
-		future.wait();
-
-		// update allies for game
-		dInit.rebuildRelationships(job.data.gameId);
-
-		dManager.checkForDominus(job.data.gameId);
-
-		Queues.add('cleanupAllKingChatrooms', {gameId:job.data.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, job.data.gameId);
-
-		Meteor.call('resumeJobQueue');
+		dInit.updateAllKingsAlliesJob(job.data.gameId);
 		return Promise.resolve();
 	}));
 }
+
+
+// Rebuild relationships for one game, or for every running game when gameId
+// is not given (the midnight job). The queues are paused once for the whole
+// run and always resumed, even when a rebuild throws. Each game is rebuilt on
+// its own, so one bad game can't stop the others.
+dInit.updateAllKingsAlliesWaitMs = 1000*5;
+
+dInit.updateAllKingsAlliesJob = function(gameId) {
+	let gameIds;
+	if (gameId) {
+		gameIds = [gameId];
+	} else {
+		gameIds = Games.find({hasStarted:true, hasEnded:false}, {fields: {_id:1}}).map(function(game) {
+			return game._id;
+		});
+	}
+
+	if (!gameIds.length) {
+		return;
+	}
+
+	Meteor.call('pauseJobQueue');
+
+	try {
+		// wait a couple seconds for jobs to finish
+		Meteor._sleepForMs(dInit.updateAllKingsAlliesWaitMs);
+
+		gameIds.forEach(function(id) {
+			try {
+				// update allies for game
+				dInit.rebuildRelationships(id);
+
+				dManager.checkForDominus(id);
+
+				Queues.add('cleanupAllKingChatrooms', {gameId:id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, id);
+			} catch (error) {
+				console.error('updateAllKingsAllies failed for game ' + id, error);
+			}
+		});
+	} finally {
+		Meteor.call('resumeJobQueue');
+	}
+};
 
 
 

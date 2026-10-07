@@ -11,19 +11,8 @@ Meteor.methods({
       }
     }
 
-    let Future = Npm.require('fibers/future');
-
-    Settings.upsert({}, {$set: {isPaused:true}});
-
-    Queues.queueNames.forEach(function(jobName) {
-      let future = new Future();
-      Queues[jobName].pause().then(Meteor.bindEnvironment(function() {
-        future.return(true);
-      })).catch(error => {
-        console.log(error);
-      })
-      future.wait();
-    });
+    // a pause from the admin panel is deliberate; the stuck-pause safety net leaves it alone
+    Queues.pauseAll(!!this.connection);
   },
 
 
@@ -36,19 +25,7 @@ Meteor.methods({
       }
     }
 
-    let Future = Npm.require('fibers/future');
-
-    Settings.upsert({}, {$set: {isPaused:false}});
-
-    Queues.queueNames.forEach(function(jobName) {
-      let future = new Future();
-      Queues[jobName].resume().then(Meteor.bindEnvironment(function() {
-        future.return(true);
-      })).then(error => {
-        console.log(error);
-      })
-      future.wait();
-    });
+    Queues.resumeAll();
   },
 
 
