@@ -45,3 +45,30 @@ Meteor.startup(function () {
   Countries._ensureIndex({gameId:1, "hexes.x":1, "hexes.y":1});
   Countries._ensureIndex({gameId:1});
 });
+
+
+// Server performance indexes (Oct 2026). Each was checked with explain() on
+// MongoDB 6.0 and 8.0 against the exact queries that use it. Each call is
+// wrapped so one failure is logged and the others are still created.
+Meteor.startup(function () {
+  const ensure = function(collection, name, keys) {
+    try {
+      collection._ensureIndex(keys);
+    } catch (error) {
+      console.error('index ' + name + ' failed', error);
+    }
+  };
+
+  // top nav (every connection), profile, SEO and settings look players up by userId alone
+  ensure(Players, 'players userId', {userId:1});
+
+  // myAlerts: sorted by created_at and limited, without an in-memory sort.
+  // Replaces {"playerIds.playerId":1} above, which can be dropped once this one exists.
+  ensure(Alerts, 'alerts playerId created_at', {"playerIds.playerId":1, created_at:-1});
+
+  // unreadAlerts, polled while oplog is disabled for alerts
+  ensure(Alerts, 'alerts playerId read', {"playerIds.playerId":1, "playerIds.read":1});
+
+  // the marker update on every army step, and marker removal when units die
+  ensure(Markers, 'markers unitId unitType', {unitId:1, unitType:1});
+});

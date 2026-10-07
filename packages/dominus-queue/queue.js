@@ -49,6 +49,28 @@ Queues.trackJob = function(type, duration) {
 }
 
 
+// Bull 2 emits 'failed' after every failed attempt, including attempts it will
+// retry. Only release the uniqueId once the job is in the failed set for good,
+// otherwise a duplicate can be queued while the retry is still pending.
+Queues.onJobFailed = function(job) {
+  if (!job.data.uniqueId) {
+    return;
+  }
+
+  let future = new Future();
+  job.isFailed().then(function(isFailed) {
+    future.return(isFailed);
+  }).catch(function(error) {
+    console.error('could not read state of failed job', job.data.jobName, error);
+    future.return(true);
+  });
+
+  if (future.wait()) {
+    Queues.removeUniqueId(job.data.jobName, job.data.uniqueId);
+  }
+};
+
+
 // create a job queue
 Queues.create = function(jobName) {
   check(jobName, String);
@@ -65,21 +87,13 @@ Queues.create = function(jobName) {
 
 
     Queues[jobName].on('failed', Meteor.bindEnvironment(function(job, error) {
-      // remove unique job
-      if (job.data.uniqueId) {
-        Queues.removeUniqueId(job.data.jobName, job.data.uniqueId)
-      }
+      Queues.onJobFailed(job);
     }));
 
 
-    Queues[jobName].on('stalled', Meteor.bindEnvironment(function(job) {
-      // remove unique job
-      if (job.data.uniqueId) {
-        Queues.removeUniqueId(job.data.jobName, job.data.uniqueId)
-      }
-
-      //job.remove();
-    }));
+    // A stalled job is moved back to wait and runs again, so its uniqueId must
+    // stay until that run completes or finally fails. Removing it here let a
+    // duplicate job in while the stalled one was still queued.
 
 
     Queues[jobName].on('completed', Meteor.bindEnvironment(function(job, result) {
@@ -225,19 +239,127 @@ Meteor.startup(function() {
 
 // called from admin ui
 Queues.clearUniqueIdsForJob = function(jobName) {
-  const uniqueKey = Queues.getKeyString(jobName);
   const queue = Queues[jobName];
 
   if (!queue) {
     return;
   }
 
-  let future = new Future();
-  queue.client.set(uniqueKey, EJSON.stringify([]), Meteor.bindEnvironment(function(error, result) {
-    future.return(result);
-  }));
-  future.wait();
+  // the per-id keys, plus the list key the old code used
+  let keys = Queues._uniqueKeysForJob(jobName).concat([Queues.getKeyString(jobName)]);
+  Queues._waitFor(queue.client.del.apply(queue.client, keys));
 }
+
+
+
+// wait for a Redis/Bull promise inside a fiber; returns its result, throws its error
+Queues._waitForResult = function(promise) {
+  let future = new Future();
+  promise.then(function(result) {
+    future.return({result:result});
+  }).catch(function(error) {
+    future.return({error:error || new Error('unknown error')});
+  });
+  let out = future.wait();
+  if (out.error) {
+    throw out.error;
+  }
+  return out.result;
+};
+
+
+// wait for a Bull promise inside a fiber; returns the error, or null on success
+Queues._waitFor = function(promise) {
+  let future = new Future();
+  promise.then(function() {
+    future.return(null);
+  }).catch(function(error) {
+    future.return(error || new Error('unknown error'));
+  });
+  return future.wait();
+};
+
+
+// Pause every queue on every worker (Bull global pause, stored in Redis).
+// isManual marks a pause made from the admin panel, which the stuck-pause
+// safety net below leaves alone. If any queue fails to pause, everything is
+// resumed again and this throws, so a failed pause never leaves the game
+// half-stopped.
+Queues.pauseAll = function(isManual) {
+  Settings.upsert({}, {$set: {isPaused:true, pausedAt:new Date(), manualPause:!!isManual}});
+
+  let errors = [];
+  Queues.queueNames.forEach(function(jobName) {
+    let error = Queues._waitFor(Queues[jobName].pause());
+    if (error) {
+      errors.push(jobName + ': ' + error.message);
+    }
+  });
+
+  if (errors.length) {
+    console.error('--- could not pause job queue, resuming ---', errors);
+    try {
+      Queues.resumeAll();
+    } catch (error) {
+      // the safety net retries the resume
+    }
+    throw new Meteor.Error('pause-failed', errors.join('; '));
+  }
+};
+
+
+// Resume every queue. Tries all of them even if one fails. If any failed,
+// Settings keeps isPaused so the safety net retries, and this throws.
+Queues.resumeAll = function() {
+  let errors = [];
+  Queues.queueNames.forEach(function(jobName) {
+    let error = Queues._waitFor(Queues[jobName].resume());
+    if (error) {
+      errors.push(jobName + ': ' + error.message);
+    }
+  });
+
+  if (errors.length) {
+    console.error('--- could not resume job queue ---', errors);
+    throw new Meteor.Error('resume-failed', errors.join('; '));
+  }
+
+  Settings.upsert({}, {$set: {isPaused:false}, $unset: {pausedAt:'', manualPause:''}});
+};
+
+
+// Safety net: a pause made by server code (not from the admin panel) that is
+// still in place after maxMs is treated as stuck and resumed.
+Queues.stuckPauseMaxMs = 1000*60*15;
+
+Queues.resumeIfStuck = function(now) {
+  let settings = Settings.findOne({}, {fields: {isPaused:1, pausedAt:1, manualPause:1}});
+  if (!settings || !settings.isPaused || settings.manualPause) {
+    return false;
+  }
+
+  // a pause from before pausedAt existed has no time; treat it as stuck
+  let pausedAt = settings.pausedAt ? settings.pausedAt.getTime() : 0;
+  if ((now || new Date()).getTime() - pausedAt < Queues.stuckPauseMaxMs) {
+    return false;
+  }
+
+  console.error('--- job queue paused since ' + settings.pausedAt + ', resuming ---');
+  Queues.resumeAll();
+  return true;
+};
+
+Meteor.startup(function() {
+  if (process.env.DOMINUS_WORKER == 'true') {
+    SyncedCron.add({
+      name: 'resume stuck job queue',
+      schedule: function(parser) {return parser.cron('* * * * *');},
+      job: function() {
+        Queues.resumeIfStuck();
+      }
+    });
+  }
+});
 
 
 
@@ -276,91 +398,68 @@ Queues.clearUniqueIdsForJob = function(jobName) {
 
 
 
+// Each uniqueId is its own Redis key that expires after 20 minutes, set with
+// SET NX so checking and adding is one atomic step. The old code kept all ids
+// of a job type in one JSON list and rewrote it with GET then SET, so two
+// processes could undo each other's change, and a bug dropped every stored id
+// on the next add.
+Queues.uniqueIdTtlMs = 1000*60*20;
+
+// returns true if the id was free and is now taken, false if it is already taken
 Queues.addUniqueId = function(jobName, uniqueId) {
-  // cutoff, delete uniqueIds past this time
-  let cutoff = moment().subtract(20, 'minutes');
-
-  let uniques = Queues.getUniqueIds(jobName);
-  const uniqueKey = Queues.getKeyString(jobName);
-
-  // remove old uniqueIds
-  uniques = uniques.filter(function(u) {
-    let arr = u.split('$');
-    // if id has date in it
-    if (arr.length == 2) {
-      // keep if date is after cutoff
-      let date = moment(new Date(arr[1]));
-      return date.isAfter(cutoff);
+  let future = new Future();
+  Queues[jobName].client.set(Queues.getKeyString(jobName, uniqueId), '1', 'PX', Queues.uniqueIdTtlMs, 'NX', function(error, result) {
+    if (error) {
+      // if Redis can't answer, queue the job: a duplicate is safer than a lost job
+      console.error('could not check uniqueId', jobName, uniqueId, error);
+      future.return(true);
     } else {
-      // if no date then keep
-      // all new ones should have date
-      // old ones don't, can remove this later
-      return true;
+      future.return(result === 'OK');
     }
   });
-
-  // check if uniqueId is in redis
-  let id = _.find(uniques, function(u) {
-    let arr = u.split('$');
-    return arr[0] == uniqueId;
-  });
-
-  // do not add job if found
-  if (id) {
-    return false
-  }
-
-  // add uniqueId to redis
-  uniques = _.union(uniques, uniqueId+'$'+new Date().getTime());
-  uniques = EJSON.stringify(uniques);
-
-  let futureSet = new Future();
-  Queues[jobName].client.set(uniqueKey, uniques, Meteor.bindEnvironment(function(error, result) {
-    futureSet.return(result);
-  }));
-  futureSet.wait();
-  return true;
+  return future.wait();
 }
 
 
 Queues.removeUniqueId = function(jobName, uniqueId) {
-  let uniques = Queues.getUniqueIds(jobName);
-  const uniqueKey = Queues.getKeyString(jobName);
-
-  // remove
-  uniques = _.filter(uniques, function(u) {
-    let arr = u.split('$');
-    return arr[0] == uniqueId;
-  });
-
-  const newUniquesString = EJSON.stringify(uniques);
-
-  let futureSet = new Future();
-  Queues[jobName].client.set(uniqueKey, newUniquesString, Meteor.bindEnvironment(function(error, result) {
-    futureSet.return(result);
-  }));
-  futureSet.wait();
-}
-
-
-Queues.getUniqueIds = function(jobName) {
-  let uniques = [];
-  const uniqueKey = 'dominus:unique:'+jobName;
-
   let future = new Future();
-  Queues[jobName].client.get(uniqueKey, Meteor.bindEnvironment(function(error, result) {
+  Queues[jobName].client.del(Queues.getKeyString(jobName, uniqueId), function(error, result) {
     future.return(result);
-  }));
-  const uniquesString = future.wait();
-
-  if (uniquesString) {
-    uniques = EJSON.parse(uniquesString);
-  }
-
-  return uniques;
+  });
+  future.wait();
 }
 
 
-Queues.getKeyString = function(jobName) {
-  return 'dominus:unique:'+jobName;
+// keys of the stored ids of a job type
+Queues._uniqueKeysForJob = function(jobName) {
+  const client = Queues[jobName].client;
+  const pattern = Queues.getKeyString(jobName) + ':*';
+  let keys = [];
+  let cursor = '0';
+  do {
+    let reply = Queues._waitForResult(client.scan(cursor, 'MATCH', pattern, 'COUNT', 1000));
+    cursor = reply[0];
+    keys = keys.concat(reply[1]);
+  } while (cursor !== '0');
+  return _.uniq(keys);
+}
+
+
+// the ids currently stored for a job type
+Queues.getUniqueIds = function(jobName) {
+  const prefix = Queues.getKeyString(jobName) + ':';
+  return Queues._uniqueKeysForJob(jobName).map(function(key) {
+    return key.substring(prefix.length);
+  });
+}
+
+
+// with a uniqueId: that id's key; without: the job type's prefix (and the
+// key of the old list)
+Queues.getKeyString = function(jobName, uniqueId) {
+  let key = 'dominus:unique:'+jobName;
+  if (uniqueId !== undefined) {
+    key += ':'+uniqueId;
+  }
+  return key;
 }

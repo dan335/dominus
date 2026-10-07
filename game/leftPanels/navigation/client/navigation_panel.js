@@ -39,7 +39,7 @@ Template.navigation_panel.events({
 		check(x, validNumber);
 		check(y, validNumber);
 		if (!isNaN(x) && !isNaN(y)) {
-			Meteor.call('coords_to_id', x, y, 'hex', function(error, hexId) {
+			Meteor.call('coords_to_id', Session.get('gameId'), x, y, 'hex', function(error, hexId) {
 				if (!error && hexId) {
 					SimpleRouter.go('/game/'+Session.get('gameId')+'/hex/'+x+'/'+y);
 					dHexmap.centerOnHex(x, y);

@@ -145,8 +145,11 @@ Meteor.startup(function() {
 				Queues.add('resetQueueStats', {}, {delay:0, timeout:1000*60*5}, false);
         Games.find({hasStarted:true, hasEnded:false}, {fields: {_id:1}}).forEach(function(game) {
       		Queues.add('dailystatsNumVassalsEveryone', {gameId:game._id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, game._id);
-      		Queues.add('updateAllKingsAllies', {gameId:game._id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, game._id);
       	});
+
+				// one job for every game: it pauses the queues once, not once per game.
+				// No retries: a failed game is logged and skipped inside the job.
+				Queues.add('updateAllKingsAllies', {}, {delay:0, timeout:1000*60*10}, 'allGames');
       }
     });
   }

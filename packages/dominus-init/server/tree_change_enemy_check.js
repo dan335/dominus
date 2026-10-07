@@ -48,7 +48,7 @@ var check_for_enemies_here = function(gameId, building, type) {
 			}
 
 			if (_.contains(canAttack, relation)) {
-				if (!attackCreatesLoop(building.x,building.y)) {
+				if (!dInit.attackCreatesLoop(gameId, building.x, building.y)) {
 					Queues.add('runBattle', {gameId:gameId, x:building.x, y:building.y}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, gameId+'_'+building.x+'_'+building.y);
 				}
 			}
@@ -92,7 +92,7 @@ var enemies_together_check = function(gameId) {
 						var canAttack = ['enemy', 'enemy_ally']
 						if (_.contains(canAttack, relation)) {
 
-							if (!attackCreatesLoop(army.x, army.y)) {
+							if (!dInit.attackCreatesLoop(gameId, army.x, army.y)) {
 								Queues.add('runBattle', {gameId:gameId, x:army.x, y:army.y}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, gameId+'_'+army.x+'_'+army.y);
 							}
 						}
@@ -104,13 +104,18 @@ var enemies_together_check = function(gameId) {
 }
 
 
-var attackCreatesLoop = function(x, y) {
+// Would attacking at x,y start an endless capture loop: the castle owner here
+// has an army on the castle of someone who has an army here. Every lookup is
+// scoped to the game, otherwise a castle or army at the same coordinates in
+// another open game could skip a real battle or miss a real loop.
+dInit.attackCreatesLoop = function(gameId, x, y) {
+	check(gameId, String);
 	var isLoop = false
 
-	var castleHere = Castles.findOne({x:x, y:y}, {fields: {playerId:1}})
+	var castleHere = Castles.findOne({gameId:gameId, x:x, y:y}, {fields: {playerId:1}})
 	if (castleHere) {
 
-		var armiesHere = Armies.find({x:x, y:y}, {fields: {playerId:1}})
+		var armiesHere = Armies.find({gameId:gameId, x:x, y:y}, {fields: {playerId:1}})
 		armiesHere.forEach(function(armyHere) {
 
 			// don't check armies on their own castle
@@ -121,7 +126,7 @@ var attackCreatesLoop = function(x, y) {
 				if (castle) {
 
 					// is there an army at their castle owned by castleHere
-					if (Armies.find({x:castle.x, y:castle.y, playerId:castleHere.playerId}).count() > 0) {
+					if (Armies.find({gameId:gameId, x:castle.x, y:castle.y, playerId:castleHere.playerId}).count() > 0) {
 						isLoop = true
 					}
 				}
