@@ -206,7 +206,7 @@ Meteor.methods({
     var last_move_at = null;
     if (path.index == 1) {
       var fields = {last_move_at:1};
-      var otherPath = Armypaths.findOne({user_id:self.userId, index:path.index-1}, {fields:fields});
+      var otherPath = Armypaths.findOne({user_id:self.userId, armyId:path.armyId, index:path.index-1}, {fields:fields});
       if (!otherPath) {
         console.error('no otherPath found in decreasePathIndex');
         return false;
@@ -218,7 +218,7 @@ Meteor.methods({
     var findThis = {index:path.index, user_id:self.userId, armyId:path.armyId};
     var set = {last_move_at:last_move_at, index:path.index-1};
     if (self.isSimulation) {
-      Armypaths.update(findThis, {$inc:{index:-1}, $set:set});
+      Armypaths.update(findThis, {$set:set});
     } else {
       bulk.find(findThis).updateOne({$set:set});
     }
@@ -292,7 +292,7 @@ Meteor.methods({
     // move other path down
     var find2 = {_id:{$ne:path._id}, index:path.index+1, user_id:self.userId, armyId:path.armyId};
     if (self.isSimulation) {
-      Armypaths.update(find, {$set:{index:path.index, last_move_at:path.last_move_at}});
+      Armypaths.update(find2, {$set:{index:path.index, last_move_at:path.last_move_at}});
     } else {
       bulk.find(find2).update({$set:{index:path.index, last_move_at:path.last_move_at}});
     }
