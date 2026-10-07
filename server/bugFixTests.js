@@ -700,8 +700,9 @@ if (Meteor.isServer) {
         let gameB = 'bf_g_' + Random.id(), gameA = c[1] ? 'bf_g_' + Random.id() : gameB;
         let armyA = 'bf_a_' + Random.id(), armyB = 'bf_b_' + Random.id();
         try {
-          // A is inserted first so a lookup without armyId finds A's path
-          insertPaths(gameA, userId, armyA, [HOURS_3, HOURS_3]);
+          // A is inserted first so a lookup without armyId finds A's path.
+          // paused keeps the live moveArmiesJob (DOMINUS_WORKER) from moving A mid-test.
+          insertPaths(gameA, userId, armyA, [HOURS_3, HOURS_3], {paused: true});
           let aBefore = Armypaths.find({armyId: armyA}).fetch();
           let b = insertPaths(gameB, userId, armyB, [MINUTE, MINUTE]);
           let bTime = time(Armypaths.findOne(b[0]).last_move_at);
@@ -797,7 +798,8 @@ if (Meteor.isServer) {
       let userId = 'bf_u_' + Random.id(), gameId = 'bf_g_' + Random.id();
       let armyA = 'bf_a_' + Random.id(), armyB = 'bf_b_' + Random.id();
       try {
-        insertPaths(gameId, userId, armyA, [HOURS_3]);
+        // paused keeps the live moveArmiesJob (DOMINUS_WORKER) from moving A mid-test
+        insertPaths(gameId, userId, armyA, [HOURS_3], {paused: true});
         // B's only waypoint sits at index 1 (broken indexes)
         let b = Armypaths.insert({gameId: gameId, armyId: armyB, user_id: userId, index: 1, x: 9, y: 9,
           paused: false, speed: 10, hexes: null, countryIds: null, last_move_at: new Date(Date.now() - MINUTE)});
