@@ -157,6 +157,11 @@ if (process.env.DOMINUS_WORKER == 'true') {
 
 if (process.env.DOMINUS_WORKER == 'true') {
   Queues.bakeCountry.process(Meteor.bindEnvironment(function(job) {
+    return Mapbaker.processBakeCountryJob(job);
+  }));
+}
+
+Mapbaker.processBakeCountryJob = function(job) {
     // can't get returning an error to work
     // because of meteor.bindEnvironment and promises i think
     // so just return true for now
@@ -170,7 +175,7 @@ if (process.env.DOMINUS_WORKER == 'true') {
     if (!data) {
       //return Promise.reject(new Error('No data return from bakeCountry.'));
       console.error(job.data.countryId, 'failed to bake');
-      //return Promise.resolve();
+      return Promise.resolve();
     }
 
     const file = Mapbaker.imageSavePath + data.imageObject.filename;
@@ -182,7 +187,7 @@ if (process.env.DOMINUS_WORKER == 'true') {
     if (!Mapbaker.fs.existsSync(file+'.svg') || !Mapbaker.fs.existsSync(fileWithCoords+'.svg')) {
       //return Promise.reject(new Error('svg file not created in bakeCountry.'));
       console.error(job.data.countryId, 'failed to bake');
-      //return Promise.resolve();
+      return Promise.resolve();
     }
 
     Mapbaker.fs.chmodSync(file+'.svg', 0755);
@@ -197,7 +202,7 @@ if (process.env.DOMINUS_WORKER == 'true') {
     if (!jpgFile || !jpgFileWithCoords) {
       //return Promise.reject(new Error('Error creating jpg image.'));
       console.error(job.data.countryId, 'failed to bake');
-      //return Promise.resolve();
+      return Promise.resolve();
     }
 
     if (Meteor.settings.public.s3.serveBakesFromS3) {
@@ -221,8 +226,7 @@ if (process.env.DOMINUS_WORKER == 'true') {
     //job.progress(100);
 
     return Promise.resolve();
-  }));
-}
+};
 
 
 // also write svg to disk

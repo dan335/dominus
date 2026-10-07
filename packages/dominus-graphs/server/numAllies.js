@@ -25,7 +25,7 @@ dGraphs.dailystatsNumVassalsEveryone = function(gameId) {
 
 		var f = {playerId:player._id, created_at: {$gte: _gs.statsBegin(gameId), $lt: _gs.statsEnd(gameId)}};
     var set = {numVassals:num_allies_below, updated_at:new Date()};
-    var setOnInsert = {_id:Random.id, gameId:gameId, playerId:player._id, user_id:player.userId, created_at: new Date()};
+    var setOnInsert = {_id:Random.id(), gameId:gameId, playerId:player._id, user_id:player.userId, created_at: new Date()};
     bulk.find(f).upsert().updateOne({$set:set, $setOnInsert:setOnInsert});
 	})
 

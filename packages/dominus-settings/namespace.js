@@ -2,6 +2,19 @@
 // converting to _gs
 _s = {};
 
+// limit to fields that are settings
+// the settings files only read these flags from the game
+let settingsFields = {
+  isRelaxed:1,
+  isSpeed:1,
+  isCrazyFast:1,
+  isSuperSpeed:1,
+  isKingOfHill:1,
+  isProOnly:1,
+  maxPlayers:1,
+  isNoLargeResources:1
+};
+
 // settings might be different per game
 // when server starts observe games and fill in cachedSettings
 // with settings per game
@@ -15,8 +28,9 @@ _gs = {
           return cachedGame._id == gameId;
         });
 
+        // games that are not running are not cached
         if (!game) {
-          game = Games.findOne(gameId);
+          game = Games.findOne(gameId, {fields:settingsFields});
         }
       } else {
         game = Games.findOne(gameId);
@@ -38,17 +52,8 @@ _gs = {
 if (Meteor.isServer) {
   cachedGames = {};
 
-  // limit to fields that are settings
-  let fields = {
-    isRelaxed:1,
-    isSpeed:1,
-    isCrazyFast:1,
-    isSuperSpeed:1,
-    isKingOfHill:1,
-    isProOnly:1,
-    maxPlayers:1,
-    isNoLargeResources:1
-  };
+  // exposed for server/bugFixTests.js
+  _gs._cachedGames = cachedGames;
 
   let cacheGame = function(game) {
     if (game) {
@@ -56,7 +61,7 @@ if (Meteor.isServer) {
     }
   };
 
-  let query = Games.find({hasStarted:true, hasEnded:false}, {fields:fields});
+  let query = Games.find({hasStarted:true, hasEnded:false}, {fields:settingsFields});
   query.observe({
     added: function(game) {
       cacheGame(game);
@@ -65,7 +70,7 @@ if (Meteor.isServer) {
       cacheGame(game);
     },
     removed: function(game) {
-      cacheGame(game);
+      delete cachedGames[game._id];
     }
   });
 }

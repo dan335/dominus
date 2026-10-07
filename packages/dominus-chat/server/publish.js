@@ -87,12 +87,11 @@ DDPRateLimiter.addRule(recentchatsSubRule, 5, 5000);
 
 
 Meteor.publish('room_list', function(gameId, playerId) {
-	if (gameId && playerId) {
-		var sub = this
+	if (typeof gameId === 'string' && typeof playerId === 'string' && gameId && playerId) {
 		var cur = Rooms.find({members:playerId}, {fields: {_id:1}})
-		Mongo.Collection._publishCursor(cur, sub, 'room_list')
+		Mongo.Collection._publishCursor(cur, this, 'room_list')
 	}
-	return sub.ready()
+	this.ready()
 });
 
 var room_listSubRule = {

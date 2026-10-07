@@ -52,7 +52,7 @@ var collectVillageIncome = function() {
 				const numAbove = player.allies_above.length;
 				if (numAbove) {
 
-					let percentToLords = 1;
+					let percentPerLord = 1;
 					if (numAbove <= _s.income.maxToLords / _s.income.percentToLords) {
 						percentPerLord = _s.income.percentToLords;
 					} else {
@@ -104,3 +104,6 @@ var collectVillageIncome = function() {
 		playerFuture.wait();
 	}
 }
+
+// exposed for server/bugFixTests.js
+dIncome.collectVillageIncome = collectVillageIncome;
