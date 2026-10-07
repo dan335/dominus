@@ -1,5 +1,6 @@
 Meteor.methods({
-  coords_to_id: function(x, y, type) {
+  coords_to_id: function(gameId, x, y, type) {
+    check(gameId, String);
     check(x, validNumber);
     check(y, validNumber);
     check(type, String);
@@ -8,7 +9,7 @@ Meteor.methods({
 
     switch (type) {
       case 'hex':
-        var h = Hexes.findOne({x: x, y: y}, {fields: {_id: 1}});
+        var h = Hexes.findOne({gameId: gameId, x: x, y: y}, {fields: {_id: 1}});
         if (h) {
           id = h._id;
         }
@@ -28,10 +29,6 @@ getResourcesGatheredAtHex: function(gameId, x, y) {
   var resources = dVillages.resourcesFromSurroundingHexes(gameId, x, y, _s.villages.num_rings_village);
   return resources;
 },
-
-  doesHexExist: function(x,y) {
-      return Hexes.find({x:x, y:y}).count() == 1
-  },
 })
 
 

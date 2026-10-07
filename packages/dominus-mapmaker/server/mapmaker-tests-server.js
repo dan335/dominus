@@ -419,14 +419,14 @@ Tinytest.add('mapmaker.multipleFindStartHexForNewCountry', function(test) {
     test.isTrue(Number(coords.y) === coords.y && coords.y%1 === 0);
 
     // make sure there is not a hex there
-    test.equal(Hexes.find({x:coords.x, y:coords.y}).count(), 0);
+    test.equal(Hexes.find({gameId:gameId, x:coords.x, y:coords.y}).count(), 0);
 
     // make sure it's next to another hex
     var found = false;
     for (var d=0; d<6; d++) {
       if (!found) {
         var neighborCoord = Hx.getNeighbor(coords.x, coords.y, d);
-        var neighbor = Hexes.findOne({x:neighborCoord.x, y:neighborCoord.y});
+        var neighbor = Hexes.findOne({gameId:gameId, x:neighborCoord.x, y:neighborCoord.y});
         if (neighbor) {
           found = true;
         }
