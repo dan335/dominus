@@ -48,22 +48,60 @@ function setViewport(content) {
 // visible until Blaze has actually painted.  If the JS bundle fails to load it
 // never gets removed, which is strictly better than the blank page this app
 // used to serve.
-function removeSsrBlock() {
-  var block = document.getElementById('seoSsr');
-  if (!block || !block.parentNode) return;
-
+function hasPainted(block) {
   // make sure Blaze actually rendered something before pulling the fallback
-  var painted = false;
   var children = document.body.children;
   for (var i = 0; i < children.length; i++) {
     var node = children[i];
     if (node === block) continue;
     if (node.tagName === 'SCRIPT' || node.tagName === 'LINK') continue;
-    painted = true;
-    break;
+    return true;
   }
+  return false;
+}
 
-  if (painted) block.parentNode.removeChild(block);
+
+// Returns true once there is no block left to remove.
+function removeSsrBlock() {
+  var block = document.getElementById('seoSsr');
+  if (!block || !block.parentNode) return true;
+  if (!hasPainted(block)) return false;
+  block.parentNode.removeChild(block);
+  return true;
+}
+
+
+// Data pages (waitForData in seoRoutes.js) paint their heading at once and
+// their data only when the DDP subscriptions are ready.  Pulling the block on
+// first paint left a heading and a loading spinner, and that is exactly what
+// Googlebot indexed: it does not support WebSockets, so its subscriptions may
+// never become ready.  Keep the block until they are.
+//
+// DDP._allSubscriptionsReady is what spiderable used for the same question.
+// If it is ever missing, fall back to the old remove-on-paint behaviour.
+function dataReady() {
+  if (!Meteor.status().connected) return false;
+  if (typeof DDP === 'undefined' || typeof DDP._allSubscriptionsReady !== 'function') return true;
+  return DDP._allSubscriptionsReady();
+}
+
+
+var initialPath = null;
+var waitTimer = null;
+
+function stopWaiting() {
+  if (waitTimer) Meteor.clearInterval(waitTimer);
+  waitTimer = null;
+}
+
+function removeSsrBlockWhenDataReady() {
+  // two ready checks in a row, so Blaze has had a flush to render what the
+  // subscriptions delivered
+  var readyTicks = 0;
+  waitTimer = Meteor.setInterval(function() {
+    readyTicks = dataReady() ? readyTicks + 1 : 0;
+    if (readyTicks >= 2 && removeSsrBlock()) stopWaiting();
+  }, 250);
 }
 
 
@@ -73,6 +111,24 @@ Meteor.startup(function() {
     if (path === null || path === undefined) return;
 
     var meta = SEO.resolve(path);
+
+    // The server already wrote the right head for the URL the page was loaded
+    // on, and for /result and /profile it is richer than anything the client
+    // can build (SEO.dynamic is server only).  Overwriting it on load replaced
+    // "Game 365 Results - Won by ..." with a generic "Game Results | Dominus"
+    // in the rendered page Google indexes.  Only touch the head after a
+    // navigation.
+    //
+    // The crawlable block describes that same URL, so once the user navigates
+    // away it is stale.
+    if (initialPath === null) {
+      initialPath = SEO.normalizePath(path);
+      if (initialPath === SEO.normalizePath(window.location.pathname)) return;
+    } else if (SEO.normalizePath(path) !== initialPath) {
+      stopWaiting();
+      removeSsrBlock();
+    }
+
     var viewportMode = meta.viewport === 'game' ? 'game' : 'site';
 
     // The game map needs a fixed 850px viewport; marketing pages want
@@ -96,5 +152,8 @@ Meteor.startup(function() {
     setViewport(viewportMode === 'game' ? SEO.VIEWPORT_GAME : SEO.VIEWPORT_SITE);
   });
 
-  Tracker.afterFlush(removeSsrBlock);
+  Tracker.afterFlush(function() {
+    if (SEO.resolve(window.location.pathname).waitForData) removeSsrBlockWhenDataReady();
+    else removeSsrBlock();
+  });
 });
