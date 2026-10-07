@@ -35,7 +35,7 @@ Meteor.publish('forumTopics', function(sort, numShow, categoryId, filter) {
     case 'all':
       break;
     case 'pastMonth':
-      let cutoff = moment.subtract(1, 'months').toDate();
+      let cutoff = moment().subtract(1, 'months').toDate();
       find.updatedAt = {$gte:cutoff};
       break;
   }
