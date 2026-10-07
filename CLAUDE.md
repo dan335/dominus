@@ -32,6 +32,8 @@ Meteor.call('runGameCreationTests')
 
 Tests are defined in `server/gameCreationTests.js` and run as a Meteor method. Results print to the server console and return as an object to the shell.
 
+The tests remove every document in several collections (`Games.remove({})` etc.), so only run them against a local development database. The method refuses calls from clients and from production builds.
+
 ## Environment Variables
 
 Required: `MAIL_URL`, `S3ACCESSKEYID`, `S3SECRETACCESSKEY`, `DOMINUS_WORKER=true`, `DOMINUS_ADMIN_EMAIL`, `DOMINUS_TEST=false`
