@@ -1,6 +1,8 @@
 // Game Creation Tests
 // Run from meteor shell:   Meteor.call('runGameCreationTests')
-// Or via URL in browser:   (open browser console) Meteor.call('runGameCreationTests', function(err, r) { console.log(r); })
+// These tests wipe whole collections (Games, Players, Armies, ...). Only run them
+// against a local development database. The method refuses client calls and
+// production builds.
 
 if (Meteor.isServer) {
 
@@ -77,6 +79,10 @@ if (Meteor.isServer) {
 
   Meteor.methods({
     'runGameCreationTests': function() {
+      // Never reachable from a client: the tests remove every document in several collections.
+      if (this.connection) throw new Meteor.Error('not-allowed');
+      if (Meteor.isProduction) throw new Meteor.Error('not-allowed', 'never run the tests against production');
+
       let results = [];
       let passed = 0;
       let failed = 0;
@@ -93,7 +99,28 @@ if (Meteor.isServer) {
       }
 
 
-      // --- Game Lifecycle ---
+      // --- Guard ---
+
+      run('runGameCreationTests refuses client calls and changes nothing', function() {
+        let collections = [Games, Players, Armies, Castles, Alerts, GlobalAlerts, Dailystats];
+        let counts = function() { return collections.map(function(c) { return c.find().count(); }).join(','); };
+        let before = counts();
+        [null, 'someUserId'].forEach(function(userId) {
+          let inv = {userId: userId, isSimulation: false, connection: {id: 'fakeClient'}, unblock: function() {}};
+          let error = null;
+          try {
+            DDP._CurrentInvocation.withValue(inv, function() {
+              return Meteor.server.method_handlers['runGameCreationTests'].apply(inv, []);
+            });
+          } catch (e) {
+            error = e;
+          }
+          _testAssert(error && error.error === 'not-allowed', 'client call throws not-allowed (userId ' + userId + ')');
+        });
+        _testEqual(counts(), before, 'no collection counts changed');
+      });
+
+
 
       run('game insert has correct default flags', function() {
         let game = _createTestGame();
