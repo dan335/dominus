@@ -878,6 +878,17 @@ if (Meteor.isServer) {
         cleanupUser: _testCleanupUser
       });
 
+      // --- Server performance fixes (server/perfFixTests.js) ---
+
+      _perfFixTests(run, {
+        assert: _testAssert,
+        equal: _testEqual,
+        createTestGame: _createTestGame,
+        createTestUser: _createTestUser,
+        cleanup: _testCleanup,
+        cleanupUser: _testCleanupUser
+      });
+
       // --- Results ---
       console.log('\n========================================');
       console.log('  Game Creation Tests: ' + passed + ' passed, ' + failed + ' failed, ' + skipped + ' skipped');
