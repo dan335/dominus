@@ -132,12 +132,11 @@ Meteor.publish('rightPanelTree', function(playerId) {
 		let player = Players.findOne(playerId, {fields: {allies_above:1}});
 		if (player) {
 			var fields = {name:1, x:1, y:1, castle_id:1, lord:1, username:1}
-			var cur = Players.find({_id: {$in:player.allies_above}}, {fields: fields})
+			var cur = Players.find({_id: {$in:player.allies_above || []}}, {fields: fields})
 			Mongo.Collection._publishCursor(cur, this, 'right_panel_tree_players')
 		}
-	} else {
-		this.ready();
 	}
+	this.ready();
 });
 
 var rightPanelTreeSubRule = {
