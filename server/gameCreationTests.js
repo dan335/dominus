@@ -86,10 +86,16 @@ if (Meteor.isServer) {
       let results = [];
       let passed = 0;
       let failed = 0;
+      let skipped = 0;
 
+      // a test can return 'skip' when it doesn't apply to this process
       function run(name, fn) {
         try {
-          fn();
+          if (fn() === 'skip') {
+            results.push({name: name, status: 'SKIP'});
+            skipped++;
+            return;
+          }
           results.push({name: name, status: 'PASS'});
           passed++;
         } catch(e) {
@@ -859,17 +865,28 @@ if (Meteor.isServer) {
         _testCleanup(game._id);
       });
 
+      // --- Bugs found along the way (server/bugFixTests.js) ---
+
+      _bugFixTests(run, {
+        assert: _testAssert,
+        equal: _testEqual,
+        createTestGame: _createTestGame,
+        createTestUser: _createTestUser,
+        cleanup: _testCleanup,
+        cleanupUser: _testCleanupUser
+      });
+
       // --- Results ---
       console.log('\n========================================');
-      console.log('  Game Creation Tests: ' + passed + ' passed, ' + failed + ' failed');
+      console.log('  Game Creation Tests: ' + passed + ' passed, ' + failed + ' failed, ' + skipped + ' skipped');
       console.log('========================================');
       results.forEach(function(r) {
-        let icon = r.status === 'PASS' ? '+' : 'X';
+        let icon = r.status === 'PASS' ? '+' : (r.status === 'SKIP' ? '-' : 'X');
         console.log('  [' + icon + '] ' + r.name + (r.error ? ' -- ' + r.error : ''));
       });
       console.log('');
 
-      return {passed: passed, failed: failed, results: results};
+      return {passed: passed, failed: failed, skipped: skipped, results: results};
     }
   });
 }
