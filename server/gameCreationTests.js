@@ -121,7 +121,9 @@ if (Meteor.isServer) {
           } catch (e) {
             error = e;
           }
-          _testAssert(error && error.error === 'not-allowed', 'client call throws not-allowed (userId ' + userId + ')');
+          // logged out calls are refused by server/methodGate.js before the method runs
+          let expected = userId ? 'not-allowed' : 'not-authorized';
+          _testAssert(error && error.error === expected, 'client call throws ' + expected + ' (userId ' + userId + ')');
         });
         _testEqual(counts(), before, 'no collection counts changed');
       });
@@ -881,6 +883,17 @@ if (Meteor.isServer) {
       // --- Server performance fixes (server/perfFixTests.js) ---
 
       _perfFixTests(run, {
+        assert: _testAssert,
+        equal: _testEqual,
+        createTestGame: _createTestGame,
+        createTestUser: _createTestUser,
+        cleanup: _testCleanup,
+        cleanupUser: _testCleanupUser
+      });
+
+      // --- Spectators can't change a game (server/spectatorTests.js) ---
+
+      _spectatorTests(run, {
         assert: _testAssert,
         equal: _testEqual,
         createTestGame: _createTestGame,

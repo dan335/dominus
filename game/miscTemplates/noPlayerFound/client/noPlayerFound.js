@@ -1,7 +1,8 @@
 Template.noPlayerFound.helpers({
+  // spectators see the spectatorBanner instead
   show: function() {
-    let playerId = Session.get('playerId');
-    return !playerId;
+    let mode = Session.get('gameViewMode');
+    return mode == 'loading' || mode == 'joining';
   },
 
   gameId: function() {

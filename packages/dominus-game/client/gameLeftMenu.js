@@ -1,6 +1,10 @@
 Template.gameLeftMenu.helpers({
-  _sPanels: function() {
-    return _s.panels;
+  leftPanels: function() {
+    // spectators only get panels that don't need a player
+    if (dInit.isSpectating()) {
+      return _.where(_s.panels.leftPanels, {spectator:true});
+    }
+    return _s.panels.leftPanels;
   },
 
   utctime: function() {

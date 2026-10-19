@@ -251,14 +251,13 @@ Template.rp_info_castle.created = function() {
 	});
 
 
+	// null when spectating
 	self.playerData = new ReactiveVar(null);
 	this.autorun(function() {
-		let find = {gameId:Session.get('gameId'), userId:Meteor.userId()};
+		let playerId = Session.get('playerId');
 		let options = {fields: {vassalIncome:1, castleIncome:1, lastIncomeUpdate:1, vassals: 1, allies_below: 1, lord: 1}};
-		var player = Players.findOne(find, options);
-		if (player) {
-			self.playerData.set(player);
-		}
+		var player = playerId ? Players.findOne(playerId, options) : null;
+		self.playerData.set(player || null);
 	});
 
 

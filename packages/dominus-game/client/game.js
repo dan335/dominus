@@ -1,16 +1,54 @@
+// how long to wait for the createPlayer job after joining before spectating
+var joiningTimeout = 1000 * 60 * 2;
+
+// anyone who isn't a player in this game spectates
+// only players get a playerId so everything that lets you act keys off it
+// returns {mode:'loading'|'joining'|'player'|'spectator', playerId}
+var getViewMode = function(gameId, playerSubReady) {
+  if (Meteor.loggingIn()) {
+    return {mode:'loading'};
+  }
+
+  let userId = Meteor.userId();
+  if (!userId) {
+    return {mode:'spectator'};
+  }
+
+  let user = Meteor.users.findOne(userId, {fields: {verifiedEmail:1, banned:1}});
+  if (!user) {
+    return {mode:'loading'};
+  }
+
+  if (user.banned || !user.verifiedEmail) {
+    return {mode:'spectator'};
+  }
+
+  let player = Players.findOne({gameId:gameId, userId:userId}, {fields: {_id:1}});
+  if (player) {
+    return {mode:'player', playerId:player._id};
+  }
+
+  if (!playerSubReady) {
+    return {mode:'loading'};
+  }
+
+  // createPlayer is a job so the player shows up a few seconds after joining
+  let joining = Session.get('joiningGame');
+  if (joining && joining.gameId == gameId && Date.now() - joining.at < joiningTimeout) {
+    return {mode:'joining'};
+  }
+
+  return {mode:'spectator'};
+};
+
+var isSpectatorPanel = function(template) {
+  return !!_.findWhere(_s.panels.leftPanels, {template:template, spectator:true});
+};
+
 Template.game.helpers({
-  hasAccess: function() {
-    let userId = Meteor.userId();
-    if (userId) {
-      let user = Meteor.users.findOne(userId, {fields: {verifiedEmail:1, banned:1}});
-      if (user) {
-        if (user.banned || !user.verifiedEmail) {
-          return false;
-        }
-        return true;
-      }
-      return false;
-    }
+  showGameUi: function() {
+    let mode = Session.get('gameViewMode');
+    return mode == 'player' || mode == 'spectator';
   },
 
   playerId: function() {
@@ -19,6 +57,9 @@ Template.game.helpers({
 
   isPanelOpen: function(data) {
     let panel = data.hash.panel;
+    if (dInit.isSpectating() && !isSpectatorPanel(panel)) {
+      return false;
+    }
     let panelsOpen = Session.get('leftPanelsOpen');
     return _.contains(panelsOpen, panel);
   },
@@ -26,6 +67,10 @@ Template.game.helpers({
   rp_template: function() {
 		var template = Session.get('rp_template')
 		if (template) {
+			// spectators only get the info panels, never the action panels
+			if (dInit.isSpectating() && !_.contains(_s.panels.spectatorRightPanels, template)) {
+				return 'empty_template';
+			}
 			return template;
 		} else {
 			return 'empty_template';
@@ -149,17 +194,47 @@ Template.game.onCreated(function() {
   });
 
 
-  // store playerId in session variable
+  // playing or spectating
+  // store playerId in session variable, null unless playing
+  var self = this;
   Session.setDefault('playerId', null);
+  Session.set('gameViewMode', 'loading');
+  self.playerSubReady = new ReactiveVar(false);
+  self.joiningTimer = null;
+  let prevMode = null;
+
   this.autorun(function() {
-    let userId = Meteor.userId();
     let gameId = Session.get('gameId');
-    if (userId && gameId) {
-      let player = Players.findOne({gameId:gameId, userId:userId}, {fields: {_id:1}});
-      if (player) {
-        Session.set('playerId', player._id);
-      }
+    let view = getViewMode(gameId, self.playerSubReady.get());
+
+    if (view.mode == 'player') {
+      Session.set('joiningGame', null);
     }
+
+    // a stale joining flag falls back to spectating
+    if (view.mode == 'joining' && !self.joiningTimer) {
+      let joining = Session.get('joiningGame');
+      self.joiningTimer = Meteor.setTimeout(function() {
+        self.joiningTimer = null;
+        Session.set('joiningGame', null);
+      }, Math.max(joiningTimeout - (Date.now() - joining.at), 0));
+    }
+
+    if (view.mode == 'spectator') {
+      Session.set('mouse_mode', 'default');
+    }
+
+    // went from spectating or joining to playing (logging in passes through
+    // loading), let the hexmap center on the player's castle
+    if (view.mode == 'player' && (prevMode == 'spectator' || prevMode == 'joining')) {
+      Session.set('hexScale', undefined);
+    }
+    if (view.mode != 'loading') {
+      prevMode = view.mode;
+    }
+
+    Session.set('playerId', view.playerId || null);
+    Session.set('gameViewMode', view.mode);
   })
 
   // if gameId is not set send to game list
@@ -183,7 +258,17 @@ Template.game.onCreated(function() {
     let gameId = Session.get('gameId');
     if (gameId) {
       Meteor.subscribe('game', gameId);
-      Meteor.subscribe('player', gameId); // user's player for this game
+    }
+  });
+
+  // user's player for this game, spectators don't have one
+  this.autorun(function() {
+    let gameId = Session.get('gameId');
+    if (gameId && Meteor.userId()) {
+      let handle = Meteor.subscribe('player', gameId);
+      self.playerSubReady.set(handle.ready());
+    } else {
+      self.playerSubReady.set(false);
     }
   });
 
@@ -232,14 +317,17 @@ Template.game.onCreated(function() {
 
   		Meteor.subscribe('market', gameId);
 
-  		// villages must always be loaded
-  		// so that we know how many villages a player has
-  		Meteor.subscribe('left_panel_villages', gameId);
-  		Meteor.subscribe('left_panel_castle', gameId);
+      // the rest is the user's own stuff
+      if (Meteor.userId()) {
+    		// villages must always be loaded
+    		// so that we know how many villages a player has
+    		Meteor.subscribe('left_panel_villages', gameId);
+    		Meteor.subscribe('left_panel_castle', gameId);
 
-      Meteor.subscribe('myArmies', gameId);
+        Meteor.subscribe('myArmies', gameId);
 
-      Meteor.subscribe('myArmyPaths', gameId);
+        Meteor.subscribe('myArmyPaths', gameId);
+      }
     }
 	});
 
@@ -286,6 +374,10 @@ let onResizeWindow = _.debounce(function() {
 
 
 Template.game.onDestroyed(function() {
+  if (this.joiningTimer) {
+    Meteor.clearTimeout(this.joiningTimer);
+  }
+  Session.set('gameViewMode', undefined);
   Session.set('playerId', undefined);
   Session.get('gameId', undefined);
   Session.set('hexScale', undefined);

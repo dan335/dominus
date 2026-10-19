@@ -218,9 +218,22 @@ Meteor.methods({
 
   createArmyFromBuilding: function(gameId, buildingType, buildingId, soldiers) {
     check(gameId, String);
+    check(buildingType, String);
+    check(buildingId, String);
+    check(soldiers, Object);
     var userId = Meteor.userId();
 
+    if (!userId) {
+      throw new Meteor.Error('not-authorized', 'You must be logged in.');
+    }
+
     // get building
+    // client copies of castles and villages don't have gameId
+    var buildingFind = {_id:buildingId, user_id:userId};
+    if (!this.isSimulation) {
+      buildingFind.gameId = gameId;
+    }
+
     var building;
     var fields = {x:1, y:1, playerId:1};
     _s.armies.types.forEach(function(type) {
@@ -228,15 +241,35 @@ Meteor.methods({
     })
     switch (buildingType) {
       case 'castle':
-        building = Castles.findOne({_id:buildingId, user_id:userId}, {fields:fields});
+        building = Castles.findOne(buildingFind, {fields:fields});
         break;
       case 'village':
-        building = Villages.findOne({_id:buildingId, user_id:userId}, {fields:fields});
+        building = Villages.findOne(buildingFind, {fields:fields});
         break;
     }
 
     if (!building) {
       throw new Meteor.Error('no building found');
+    }
+
+    // get player before taking soldiers out of the building
+    if (!this.isSimulation) {
+      let playerFields = {
+        team: 1,
+        lord: 1,
+        allies_above: 1,
+        allies_below: 1,
+        king: 1,
+        vassals: 1,
+        is_dominus: 1,
+        userId: 1,
+      };
+      let find = {gameId:gameId, userId:userId};
+      var player = Players.findOne(find, {fields:playerFields});
+
+      if (!player) {
+        throw new Meteor.Error('not-authorized', 'You are not a player in this game.');
+      }
     }
 
     // check soldiers
@@ -272,56 +305,36 @@ Meteor.methods({
     });
     switch (buildingType) {
       case 'castle':
-        Castles.update({_id:buildingId, user_id:userId}, {$inc:inc});
+        Castles.update(buildingFind, {$inc:inc});
         break;
       case 'village':
-        Villages.update({_id:buildingId, user_id:userId}, {$inc:inc});
+        Villages.update(buildingFind, {$inc:inc});
         break;
     }
 
     if (!this.isSimulation) {
+      // create army
+      var army = dArmies.create(player._id, soldiers, building.x, building.y);
+      if (army) {
 
-      // get player
-      let playerFields = {
-        team: 1,
-        lord: 1,
-        allies_above: 1,
-        allies_below: 1,
-        king: 1,
-        vassals: 1,
-        is_dominus: 1,
-        userId: 1,
-      };
-      let find = {gameId:gameId, userId:userId};
-      let player = Players.findOne(find, playerFields);
-
-      if (player) {
-        // create army
-        var army = dArmies.create(player._id, soldiers, building.x, building.y);
-        if (army) {
-
-          if (dInit.isEnemyHere(gameId, army.x, army.y, player)) {
-            Queues.add('runBattle', {gameId:gameId, x:building.x, y:building.y}, {attempts:10, backoff:{type:'fixed', delay:3000}, delay:0, timeout:1000*60*5}, gameId+'_'+building.x+'_'+building.y);
-          }
-
-          return army;
-
-        } else {
-          // couldn't create army so give back to building
-          switch (buildingType) {
-            case 'castle':
-              Castles.update({_id:buildingId, user_id:userId}, {$inc:soldiers});
-              break;
-            case 'village':
-              Villages.update({_id:buildingId, user_id:userId}, {$inc:soldiers});
-              break;
-          }
-
-          throw new Meteor.error('could not create army');
+        if (dInit.isEnemyHere(gameId, army.x, army.y, player)) {
+          Queues.add('runBattle', {gameId:gameId, x:building.x, y:building.y}, {attempts:10, backoff:{type:'fixed', delay:3000}, delay:0, timeout:1000*60*5}, gameId+'_'+building.x+'_'+building.y);
         }
 
+        return army;
+
       } else {
-        console.error('could not find player in createArmy');
+        // couldn't create army so give back to building
+        switch (buildingType) {
+          case 'castle':
+            Castles.update(buildingFind, {$inc:soldiers});
+            break;
+          case 'village':
+            Villages.update(buildingFind, {$inc:soldiers});
+            break;
+        }
+
+        throw new Meteor.Error('could not create army');
       }
     }
   }

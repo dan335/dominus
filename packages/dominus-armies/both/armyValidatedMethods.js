@@ -6,7 +6,8 @@ dArmies.methods.combineArmies = new ValidatedMethod({
   validate: null,
   run({gameId, armyId}) {
     var self = this;
-    var fields = {x:1, y:1, last_move_at:1};
+    check(armyId, String);
+    var fields = {x:1, y:1, last_move_at:1, gameId:1};
     var army = Armies.findOne({_id:armyId, user_id:this.userId}, {fields:fields});
     if (army) {
       var soldiers = {};
@@ -20,7 +21,11 @@ dArmies.methods.combineArmies = new ValidatedMethod({
 
       var latestMove = moment(new Date(army.last_move_at));
 
+      // client copies of armies may not have gameId
       var find = {_id:{$ne:army._id}, user_id:this.userId, x:army.x, y:army.y};
+      if (!self.isSimulation) {
+        find.gameId = army.gameId;
+      }
       var armies = Armies.find(find, {fields:fields});
       armies.forEach(function(otherArmy) {
 

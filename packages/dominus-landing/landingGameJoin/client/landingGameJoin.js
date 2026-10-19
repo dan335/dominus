@@ -41,6 +41,8 @@ Template.landingGameJoin.events({
         $(button).attr('disabled', false);
         $(button).html(buttonText);
       } else {
+        // player is created by a job, show loading instead of spectating until it shows up
+        Session.set('joiningGame', {gameId:Session.get('gameId'), at:Date.now()});
         SimpleRouter.go('/game/'+Session.get('gameId'));
       }
     });

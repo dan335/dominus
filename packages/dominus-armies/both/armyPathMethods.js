@@ -8,6 +8,10 @@ Meteor.methods({
     check(armyId, String);
     check(gameId, String);
 
+    if (!self.userId) {
+      throw new Meteor.Error('not-authorized', 'You must be logged in.');
+    }
+
     // check x,y
     if (!dFunc.isInt(x) || !dFunc.isInt(y)) {
       throw new ValidationError([
@@ -17,6 +21,16 @@ Meteor.methods({
           details: {}
         }
       ]);
+    }
+
+    // only the owner may move an army -- the move jobs look paths up by armyId
+    // only, so a path added to someone else's army would move it
+    var army;
+    if (!self.isSimulation) {
+      army = Armies.findOne({_id:armyId, gameId:gameId, user_id:self.userId}, {fields: {last_move_at:1, speed:1}});
+      if (!army) {
+        throw new Meteor.Error('not-authorized', 'You do not own this army.');
+      }
     }
 
     // check max number of paths
@@ -87,11 +101,8 @@ Meteor.methods({
     // path always gets army speed
     // reset last_move_at when aremy moves, is created or add index 0 path
     if (!self.isSimulation) {
-      let army = Armies.findOne({_id:armyId, user_id:self.userId}, {fields: {last_move_at:1, speed:1}});
-      if (army) {
-        path.last_move_at = army.last_move_at;
-        path.speed = army.speed;
-      }
+      path.last_move_at = army.last_move_at;
+      path.speed = army.speed;
     }
 
     path._id = Armypaths.insert(path);
@@ -105,6 +116,10 @@ Meteor.methods({
   removeArmyPath: function(pathId) {
     var self = this;
     check(pathId, String);
+
+    if (!self.userId) {
+      throw new Meteor.Error('not-authorized', 'You must be logged in.');
+    }
 
     if (!self.isSimulation) {
       var future = new Future();
@@ -186,6 +201,10 @@ Meteor.methods({
     var self = this;
     check(pathId, String);
 
+    if (!self.userId) {
+      throw new Meteor.Error('not-authorized', 'You must be logged in.');
+    }
+
     if (!self.isSimulation) {
       var future = new Future();
       var bulk = Armypaths.rawCollection().initializeOrderedBulkOp();
@@ -258,6 +277,10 @@ Meteor.methods({
     var self = this;
     check(pathId, String);
 
+    if (!self.userId) {
+      throw new Meteor.Error('not-authorized', 'You must be logged in.');
+    }
+
     if (!self.isSimulation) {
       var future = new Future();
       var bulk = Armypaths.rawCollection().initializeOrderedBulkOp();
@@ -320,12 +343,20 @@ Meteor.methods({
 
 
   pauseMovement: function(armyId) {
+    check(armyId, String);
+    if (!this.userId) {
+      throw new Meteor.Error('not-authorized', 'You must be logged in.');
+    }
     var find = {armyId:armyId, user_id:this.userId};
     var options = {$set: {paused:true}};
     Armypaths.update(find, options, {multi:true});
   },
 
   resumeMovement: function(armyId) {
+    check(armyId, String);
+    if (!this.userId) {
+      throw new Meteor.Error('not-authorized', 'You must be logged in.');
+    }
     var find = {armyId:armyId, user_id:this.userId};
     var options = {$set: {paused:false}};
     Armypaths.update(find, options, {multi:true});

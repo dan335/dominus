@@ -14,6 +14,7 @@ Meteor.publish('dominusPopupGameId', function(gameId) {
 
 var dominusPopupGameIdSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'dominusPopupGameId'
 }
@@ -37,6 +38,7 @@ Meteor.publish('dominusPopupPlayer', function(playerId) {
 
 var dominusPopupPlayerSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'dominusPopupPlayer'
 }

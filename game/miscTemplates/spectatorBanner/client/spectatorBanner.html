@@ -1,0 +1,24 @@
+<template name="spectatorBanner">
+    {{#if isSpectating}}
+        <div id="spectatorBanner" class="popupPanelContainer">
+            <div class="popupPanelBg">
+                <div><i class="fa fa-eye"></i>&nbsp; Spectating <b>{{gameName}}</b></div>
+                <div class="light_text">You can watch but can't do anything in this game.</div>
+                <div class="spectatorBannerButtons">
+                    {{#if currentUser}}
+                        {{#if verifiedEmail}}
+                            {{#if canJoin}}
+                                <button class="btn btn-sm btn-primary" id="spectatorJoinButton">Join Game</button>
+                            {{/if}}
+                        {{else}}
+                            <div class="light_text">Verify your email to join a game.</div>
+                        {{/if}}
+                    {{else}}
+                        <button class="btn btn-sm btn-primary" id="spectatorSignInButton">Sign In to Play</button>
+                    {{/if}}
+                    <button class="btn btn-sm btn-default" id="spectatorGamesButton">Back to Games</button>
+                </div>
+            </div>
+        </div>
+    {{/if}}
+</template>

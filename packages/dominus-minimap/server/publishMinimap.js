@@ -22,6 +22,7 @@ Meteor.publish('user_buildings_for_minimap', function(playerId) {
 
 var user_buildings_for_minimapSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'user_buildings_for_minimap'
 }

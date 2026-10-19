@@ -1,10 +1,11 @@
 Meteor.publish('landingGames', function() {
-  var landingGameFields = {isNoLargeResources:1, isKingOfHill:1, isRelaxed:1, isSpeed:1, isSuperSpeed:1, isCrazyFast:1, isProOnly:1, numPlayers:1, startAt:1, maxPlayers:1, name:1, desc:1, hasEnded:1, hasStarted:1};
+  var landingGameFields = {isNoLargeResources:1, isKingOfHill:1, isRelaxed:1, isSpeed:1, isSuperSpeed:1, isCrazyFast:1, isProOnly:1, numPlayers:1, startAt:1, maxPlayers:1, name:1, desc:1, hasEnded:1, hasStarted:1, dominusAchieved:1};
   return Games.find({hasEnded:false}, {fields:landingGameFields});
 });
 
 var landingGamesSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'landingGames'
 }
@@ -20,6 +21,7 @@ Meteor.publish('landingGame', function(gameId) {
 
 var landingGameSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'landingGame'
 }
@@ -34,6 +36,7 @@ Meteor.publish('gamesSignups', function() {
 
 var gamesSignupsSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'gamesSignups'
 }
@@ -49,6 +52,7 @@ Meteor.publish('gameSignups', function(gameId) {
 
 var gameSignupsSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'gameSignups'
 }

@@ -1,7 +1,7 @@
 Template.treeUser.helpers({
     relation: function() {
       if (this && this._id) {
-        return dInit.getRelationshipClient(this._id);
+        return dInit.getRelationshipClient(this._id) || 'enemy';
       }
     }
 });

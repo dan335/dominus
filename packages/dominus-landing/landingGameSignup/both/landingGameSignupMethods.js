@@ -85,8 +85,14 @@ Meteor.methods({
     });
   },
 
+  // userId argument is ignored -- you can only cancel your own signup
   cancelSignupForGame: function(userId, gameId) {
     var self = this;
+    check(gameId, String);
+
+    if (!self.userId) {
+      throw new Meteor.Error('not-authorized', 'You must be logged in.');
+    }
 
     let signup = Gamesignups.findOne({gameId:gameId, userId:this.userId});
     if (!signup) {
@@ -110,9 +116,6 @@ Meteor.methods({
       Meteor.users.update(self.userId, {$inc: {proTokens:1}});
     }
 
-    Gamesignups.remove({
-      gameId:gameId,
-      userId:userId
-    });
+    Gamesignups.remove({_id:signup._id, userId:self.userId});
   }
 });

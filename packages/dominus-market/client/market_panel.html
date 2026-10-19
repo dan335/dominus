@@ -36,7 +36,9 @@
 		</div>
 
 
-		{{> marketBuySell}}
+		{{#unless isSpectating}}
+			{{> marketBuySell}}
+		{{/unless}}
 		{{> marketPriceChart}}
 		{{> marketVolumeChart}}
 

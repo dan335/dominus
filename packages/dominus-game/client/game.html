@@ -1,15 +1,12 @@
 <template name="game">
   <div id="hexmapContainer">
-    {{#if hasAccess}}
-      {{> hexmap}}
-    {{/if}}
+    {{> hexmap}}
   </div>
 
   {{> topNav}}
 
-  {{#if hasAccess}}
     <div id="leftPanels">
-      {{#if playerId}}
+      {{#if showGameUi}}
         {{> gameLeftMenu}}
 
         {{#if isPanelOpen panel="help_panel"}}
@@ -61,12 +58,10 @@
 
 
     <div id="rightPanels">
-      {{#if playerId}}
+      {{#if showGameUi}}
         {{> Template.dynamic template=rp_template data=rp_template_data}}
       {{/if}}
       {{> popup_panel}}
       <div style="clear:both;"></div>
     </div>
-
-  {{/if}}
 </template>

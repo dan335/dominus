@@ -63,10 +63,21 @@ Template.registerHelper('date_landingGames', function(jsDate) {
 	return moment(new Date(jsDate)).format('dddd M/D h:mma');
 })
 
+// used for colors, spectators see everyone as an enemy
 Template.registerHelper('relationship', function(playerId) {
 	if (playerId) {
-		return dInit.getRelationshipClient(playerId);
+		return dInit.getRelationshipClient(playerId) || 'enemy';
 	}
+});
+
+// true when viewing a game without being a player in it
+// set by the game template, see packages/dominus-game/client/game.js
+dInit.isSpectating = function() {
+	return Session.get('gameViewMode') == 'spectator';
+}
+
+Template.registerHelper('isSpectating', function() {
+	return dInit.isSpectating();
 });
 
 Template.registerHelper('date_duration_humanize', function(ms) {

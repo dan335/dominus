@@ -7,6 +7,7 @@ Meteor.publish('battle', function(id) {
 
 var battleSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'battle'
 }
@@ -26,16 +27,16 @@ Meteor.publish('battle_notifications_at_hex', function(gameId, x, y) {
     gameId:1
   };
 
-  if (this.userId) {
-    if (typeof x != 'undefined' && typeof y != 'undefined') {
-      return Battles2.find({gameId:gameId, x:x, y:y, isOver:false}, {fields:fields});
-    }
+  // public so logged out spectators can watch
+  if (Match.test(gameId, String) && Match.test(x, Match.Integer) && Match.test(y, Match.Integer)) {
+    return Battles2.find({gameId:gameId, x:x, y:y, isOver:false}, {fields:fields});
   }
   this.ready();
 });
 
 var battle_notifications_at_hexSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'battle_notifications_at_hex'
 }
@@ -52,6 +53,7 @@ Meteor.publish('fight', function(id) {
 
 var fightSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'fight'
 }
@@ -68,6 +70,7 @@ Meteor.publish('lastFightInBattle', function(battle_id) {
 
 var lastFightInBattleSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'lastFightInBattle'
 }
@@ -85,6 +88,7 @@ Meteor.publish('roundtitles', function(battle_id) {
 
 var roundtitlesSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'roundtitles'
 }

@@ -78,7 +78,8 @@ Template.villageFlagMapObject.onCreated(function() {
 	self.autorun(function() {
     let data = Template.currentData();
     if (data && data.playerId) {
-			self.flagColor.set(dInit.getRelationshipClient(data.playerId));
+			// spectators have no relationship, show as enemy
+			self.flagColor.set(dInit.getRelationshipClient(data.playerId) || 'enemy');
     }
 	});
 });

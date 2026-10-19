@@ -187,13 +187,15 @@
 			{{/if}}		<!-- is owner -->
 
 
-			<div class="panel panel-default panel-body">
-				{{#unless is_owner}}
-					<!-- <button class="btn btn-primary btn-block" id="reportPlayerButton">Report Player</button> -->
-					<button class="btn btn-primary btn-block" id="createChatButton">Create chatroom</button>
-				{{/unless}}
-				{{> infoPanelMarkerButton}}
-			</div>
+			{{#unless isSpectating}}
+				<div class="panel panel-default panel-body">
+					{{#unless is_owner}}
+						<!-- <button class="btn btn-primary btn-block" id="reportPlayerButton">Report Player</button> -->
+						<button class="btn btn-primary btn-block" id="createChatButton">Create chatroom</button>
+					{{/unless}}
+					{{> infoPanelMarkerButton}}
+				</div>
+			{{/unless}}
 
 		{{else}}
 			<div class="pad_group" style="text-align:center;">

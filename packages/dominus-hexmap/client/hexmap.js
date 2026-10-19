@@ -19,6 +19,9 @@ Template.hexmap.helpers({
 
 var lastMouseMove = 0;
 
+// zoom level for spectators, they don't have a saved one
+var spectatorHexScale = 0.75;
+
 Template.hexmap.events({
 	'mousemove .countryMouseCatcher': function(event, template) {
     event.preventDefault();
@@ -105,12 +108,26 @@ Template.hexmap.onCreated(function() {
   // if is something in url then center on it
   this.autorun(function() {
 		if (Session.get('canvas_size')) {
-			if (!Session.get('hexScale')) {
-				var player = Players.findOne({gameId:Session.get('gameId'), userId:Meteor.userId()}, {fields: {castle_id:1, hex_scale:1, x:1, y:1}})
-				if (player && player.hex_scale) {
-					Session.set('hexScale', player.hex_scale)
+			if (!Session.get('hexScale') && dInit.isSpectating()) {
+				// spectators have no castle, center on the url or somewhere interesting
+				let gameId = Session.get('gameId');
+				if (Games.findOne(gameId, {fields: {_id:1}})) {
+					Session.set('hexScale', spectatorHexScale);
+					let pathArray = SimpleRouter.path.get().split('/');
+					let x = parseInt(pathArray[4]);
+					let y = parseInt(pathArray[5]);
+					if (dFunc.isInt(x) && dFunc.isInt(y)) {
+						dHexmap.centerOnHex(x, y);
+					} else {
+						let hex = dHexmap.spectatorStartHex(gameId);
+						dHexmap.centerOnHex(hex.x, hex.y);
+					}
 				}
+			} else if (!Session.get('hexScale')) {
+				var player = Players.findOne({gameId:Session.get('gameId'), userId:Meteor.userId()}, {fields: {castle_id:1, hex_scale:1, x:1, y:1}})
+				// a new player's castle_id arrives just after the player, wait for it so the map centers on the castle
 				if (player && player.hex_scale && player.castle_id) {
+					Session.set('hexScale', player.hex_scale)
           let path = SimpleRouter.path.get();
           let pathArray = path.split('/');
           if (pathArray.length < 4) {

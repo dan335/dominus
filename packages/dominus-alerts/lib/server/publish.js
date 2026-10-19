@@ -1,6 +1,7 @@
+// public so logged out spectators can watch
 Meteor.publish('globalAlerts', function(gameId, numShow) {
     numShow = Math.min(numShow, 150);
-    if(this.userId) {
+    if (Match.test(gameId, String) && Match.test(numShow, Match.Integer)) {
         return GlobalAlerts.find({gameId:gameId},{sort:{created_at:-1}, limit:numShow});
     } else {
         this.ready();
@@ -9,6 +10,7 @@ Meteor.publish('globalAlerts', function(gameId, numShow) {
 
 var globalAlertsSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'globalAlerts'
 }
@@ -16,8 +18,9 @@ DDPRateLimiter.addRule(globalAlertsSubRule, 30, 5000);
 
 
 
+// public so logged out spectators can watch
 Meteor.publish('globalAlert', function(id) {
-    if(this.userId) {
+    if (Match.test(id, String)) {
         return GlobalAlerts.find(id);
     } else {
         this.ready();
@@ -26,6 +29,7 @@ Meteor.publish('globalAlert', function(id) {
 
 var globalAlertSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'globalAlert'
 }
@@ -66,6 +70,7 @@ Meteor.publish('alertPlayer', function(playerId) {
 
 var alertPlayerSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'alertPlayer'
 }
@@ -82,6 +87,7 @@ Meteor.publish('alertArmy', function(army_id) {
 
 var alertArmySubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'alertArmy'
 }
@@ -98,6 +104,7 @@ Meteor.publish('alertVillage', function(village_id) {
 
 var alertVillageSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'alertVillage'
 }
@@ -114,6 +121,7 @@ Meteor.publish('alertCastle', function(castle_id) {
 
 var alertCastleSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'alertCastle'
 }
@@ -131,6 +139,7 @@ Meteor.publish('alertCapital', function(capital_id) {
 
 var alertCapitalSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'alertCapital'
 }
@@ -177,6 +186,7 @@ Meteor.publish('battleAlertTitles', function(gameId, numShow) {
 
 var battleAlertTitlesSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'battleAlertTitles'
 }

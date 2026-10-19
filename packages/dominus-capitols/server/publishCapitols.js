@@ -45,8 +45,9 @@ DDPRateLimiter.addRule(capitalsOnScreenSubRule, 5, 5000);
 
 
 
+// public so logged out spectators can watch
 Meteor.publish('capitalForHexInfo', function(id) {
-	if(this.userId) {
+	if (Match.test(id, String)) {
 		var self = this;
 		var query = Capitals.find(id, {fields:capitalRightPanelFields});
 		Mongo.Collection._publishCursor(query, self, 'right_panel_capitals');
@@ -58,6 +59,7 @@ Meteor.publish('capitalForHexInfo', function(id) {
 
 var capitalForHexInfoSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'capitalForHexInfo'
 }

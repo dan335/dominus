@@ -2,9 +2,11 @@
 	<div id="stats_panel" class="leftPanel">
 		<div class="panel_title"><i class="fa fa-bar-chart-o fa-lg"></i> &nbsp;Graphs</div>
 
-		{{> incomeGraph}}
-		{{> rankGraph}}
-		{{> numVassalsGraph}}
+		{{#unless isSpectating}}
+			{{> incomeGraph}}
+			{{> rankGraph}}
+			{{> numVassalsGraph}}
+		{{/unless}}
 		{{> playersGraph}}
 		{{> soldierWorthGraph}}
 

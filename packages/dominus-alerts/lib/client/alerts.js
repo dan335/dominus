@@ -6,7 +6,10 @@ alertSharedEvents = {
       Template.instance().isOpen.set(false)
     } else {
       Template.instance().isOpen.set(true)
-      Meteor.call('markAlertAsRead', template.data.gameId, template.data._id)
+      // spectators have no alerts to mark
+      if (Session.get('playerId')) {
+        Meteor.call('markAlertAsRead', template.data.gameId, template.data._id)
+      }
     }
   },
 

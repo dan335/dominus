@@ -90,6 +90,7 @@
                     {{#if alreadyJoinedGame}}
                       <button class="btn btn-primary gotoGameButton"><i class="fa fa-play-circle fa-lg"></i>&nbsp; Go to Game</button>
                     {{else}}
+                      {{> spectateGameButton}}
                       {{#unless dominusAchieved}}
                         {{#unless isFull}}
                           <button class="btn btn-primary joinGameButton"><i class="fa fa-pencil-square-o fa-lg"></i>&nbsp; Join Game</button>
@@ -106,9 +107,15 @@
                     {{/if}}
                   {{/if}}
                 {{else}}
+                  {{#if hasStarted}}
+                    {{> spectateGameButton}}
+                  {{/if}}
                   Email not yet verified.
                 {{/if}}
               {{else}}
+                {{#if hasStarted}}
+                  {{> spectateGameButton}}
+                {{/if}}
                 <button class="btn btn-primary gameSignInButton"><i class="fa fa-play-circle fa-lg"></i>&nbsp; Sign In</button>
               {{/if}}
             </td>
@@ -161,4 +168,9 @@
       </div>
     </div>
   </div>
+</template>
+
+
+<template name="spectateGameButton">
+  <button class="btn btn-default spectateGameButton"><i class="fa fa-eye fa-lg"></i>&nbsp; Spectate</button>
 </template>

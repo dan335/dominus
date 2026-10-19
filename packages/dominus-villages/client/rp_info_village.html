@@ -129,17 +129,19 @@
 				</div>
 			{{/unless}}
 
-			<div class="panel panel-default panel-body">
-				{{#if is_owner}}
-					{{#if canUpgrade}}
-						<button type="button" class="btn btn-sm btn-primary btn-block" id="upgradeVillageButton">Upgrade Village</button>
+			{{#unless isSpectating}}
+				<div class="panel panel-default panel-body">
+					{{#if is_owner}}
+						{{#if canUpgrade}}
+							<button type="button" class="btn btn-sm btn-primary btn-block" id="upgradeVillageButton">Upgrade Village</button>
+						{{/if}}
+						<button type="button" class="btn btn-sm btn-primary btn-block" id="destroy_village_button">Destroy Village</button>
+					{{else}}
+						<button class="btn btn-primary btn-block" id="createChatButton">Create chatroom</button>
 					{{/if}}
-					<button type="button" class="btn btn-sm btn-primary btn-block" id="destroy_village_button">Destroy Village</button>
-				{{else}}
-					<button class="btn btn-primary btn-block" id="createChatButton">Create chatroom</button>
-				{{/if}}
-				{{> infoPanelMarkerButton}}
-			</div>
+					{{> infoPanelMarkerButton}}
+				</div>
+			{{/unless}}
 
 
 

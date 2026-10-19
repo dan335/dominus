@@ -6,6 +6,11 @@ Mapmaker = {
 
     var mouseMode = Session.get('mouse_mode');
 
+    // spectators can only look
+    if (dInit.isSpectating()) {
+      mouseMode = 'default';
+    }
+
     if (mouseMode == 'default') {
 
       dInit.select('hex', coordX, coordY, null);

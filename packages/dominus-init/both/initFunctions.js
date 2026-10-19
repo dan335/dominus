@@ -1,18 +1,18 @@
-// uses Meteor.userId()
+// uses Session playerId
+// returns null when spectating, there is no relationship to show
 dInit.getRelationshipClient = function(otherPlayerId) {
   check(otherPlayerId, String);
 
-  let gameId = Session.get('gameId');
-  let userId = Meteor.userId();
-  if (gameId && userId) {
+  let playerId = Session.get('playerId');
+  if (playerId) {
     var fields = {userId:1, lord:1, allies_above:1, allies_below:1, team:1, king:1, vassals:1}
-  	var player = Players.findOne({gameId:gameId, userId:userId}, {fields: fields})
+  	var player = Players.findOne(playerId, {fields: fields})
     if (player) {
       return dInit.getPlayersRelationship(player, otherPlayerId);
-    } else {
-      return 'enemy';
     }
   }
+
+  return null;
 }
 
 
@@ -28,6 +28,24 @@ dInit.getRelationshipServer = function(playerId, otherPlayerId) {
     console.error('player not found in dInit.getRelationshipServer', playerId, otherPlayerId);
     return null;
   }
+}
+
+
+// throws unless userId has a player in gameId, returns the player's id
+// used by server/methodGate.js so spectators can't act in a game
+dInit.requirePlayerInGame = function(userId, gameId) {
+  check(gameId, String);
+
+  if (!userId) {
+    throw new Meteor.Error('not-authorized', 'You must be logged in.');
+  }
+
+  let player = Players.findOne({gameId:gameId, userId:userId}, {fields: {_id:1}});
+  if (!player) {
+    throw new Meteor.Error('not-authorized', 'You are not a player in this game.');
+  }
+
+  return player._id;
 }
 
 

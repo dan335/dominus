@@ -221,7 +221,7 @@ Meteor.methods({
 			return false;
 		}
 
-		var room = Rooms.findOne(room_id)
+		var room = Rooms.findOne({_id:room_id, gameId:gameId})
 		if (room) {
 			// make sure member_id is a member of room
 			if (!_.contains(room.members, member_id)) {

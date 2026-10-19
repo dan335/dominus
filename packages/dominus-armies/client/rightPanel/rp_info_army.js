@@ -75,7 +75,8 @@ Template.rp_info_army.helpers({
 	},
 
 	is_owner: function() {
-		if (this && this.user_id == Meteor.userId()) {
+		// spectators don't own anything here even if logged in
+		if (this && Session.get('playerId') && this.user_id == Meteor.userId()) {
 			return true
 		}
 	},

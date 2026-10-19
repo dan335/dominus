@@ -1,6 +1,14 @@
 Meteor.methods({
   addChatToRoom: function(gameId, room_id, text) {
+    check(gameId, String);
+    check(room_id, String);
+    check(text, String);
     this.unblock();
+
+    if (!this.userId) {
+      return false;
+    }
+
     let player = Players.findOne({gameId:gameId, userId:this.userId}, {fields: {_id:1}});
     if (!player) {
       return false;
@@ -10,8 +18,14 @@ Meteor.methods({
 
     text = text.toString().trim();
 
+    // room must be in this game and the player must be a member
+    // every player is in the everyone room, a job adds new players to its members
     var fields = {owner:1, admins:1};
-    var room = Rooms.findOne(room_id, {fields:fields});
+    var find = {_id:room_id, gameId:gameId, $or: [{members:player._id}, {type:'everyone'}]};
+    var room = Rooms.findOne(find, {fields:fields});
+    if (!room) {
+      throw new Meteor.Error('not-authorized', 'You are not in this chatroom.');
+    }
 
     // don't check for reports if person is owner or admin of room
     // owner and admins can always chat
@@ -40,7 +54,7 @@ Meteor.methods({
     })
 
     Rooms.update(room_id, {$set:{latestChatDate:chatDate}});
-    Recentchats.upsert({room_id:room_id}, {$set: {gameId:gameId, room_id:room_id, updated_at:chatDate}})
+    Recentchats.upsert({room_id:room_id, gameId:gameId}, {$set: {gameId:gameId, room_id:room_id, updated_at:chatDate}})
   }
 });
 

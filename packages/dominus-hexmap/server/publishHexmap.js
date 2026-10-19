@@ -11,9 +11,10 @@ _s.armies.types.forEach(function(type) {
 });
 
 
+// public so logged out spectators can watch
 Meteor.publish('gamePiecesAtHex', function(gameId, x, y) {
 	//this.unblock();
-	if (this.userId) {
+	if (Match.test(gameId, String) && Match.test(x, Match.Integer) && Match.test(y, Match.Integer)) {
 		return [
 			Hexes.find({gameId:gameId, x:x, y:y}, {fields: hexFields}),
 			Castles.find({gameId:gameId, x:x, y:y}, {fields: castleFields}),
@@ -27,6 +28,7 @@ Meteor.publish('gamePiecesAtHex', function(gameId, x, y) {
 
 var gamePiecesAtHexSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'gamePiecesAtHex'
 }
@@ -63,9 +65,10 @@ _s.armies.types.forEach(function(type) {
 	capitalMapFields[type] = 1;
 });
 
+// public so logged out spectators can watch
 Meteor.publish('countryOnScreen', function(countryId) {
 	//this.unblock();
-	if (this.userId) {
+	if (Match.test(countryId, String)) {
 		return [
 			Countries.find({_id:countryId}, {fields: {paths:1, image:1, imageWithCoords:1}}),
 			Armies.find({countryId:countryId}, {fields: armyFields}),
@@ -78,18 +81,20 @@ Meteor.publish('countryOnScreen', function(countryId) {
 	}
 });
 
-var countrySubRule = {
+var countryOnScreenSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
-  name: 'country'
+  name: 'countryOnScreen'
 }
-DDPRateLimiter.addRule(countrySubRule, 20, 5000);
+DDPRateLimiter.addRule(countryOnScreenSubRule, 60, 5000);
 
 
 
 var countryIndexFields = {neighbors:1, minX:1, maxX:1, minY:1, maxY:1, minZ:1, maxZ:1, gameId:1};
+// public so logged out spectators can watch
 Meteor.publish('countryIndex', function(gameId) {
-	if (this.userId) {
+	if (Match.test(gameId, String)) {
 		var sub = this
 		var cur = Countries.find({gameId:gameId}, {fields: countryIndexFields});
 		Mongo.Collection._publishCursor(cur, sub, 'countryindex');
@@ -101,6 +106,7 @@ Meteor.publish('countryIndex', function(gameId) {
 
 var countryIndexSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'countryIndex'
 }

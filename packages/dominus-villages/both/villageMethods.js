@@ -158,7 +158,12 @@ Meteor.methods({
     check(gameId, String);
 
     // get village
-    var village = Villages.findOne({_id:villageId, user_id:this.userId})
+    // client copies of villages don't have gameId
+    var villageFind = {_id:villageId, user_id:this.userId};
+    if (!this.isSimulation) {
+      villageFind.gameId = gameId;
+    }
+    var village = Villages.findOne(villageFind)
 
     if (!village) {
         throw new Meteor.Error('No village found.')

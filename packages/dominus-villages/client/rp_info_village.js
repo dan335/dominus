@@ -91,7 +91,8 @@ Template.rp_info_village.helpers({
 	},
 
 	is_owner: function() {
-		if (this) {
+		// spectators don't own anything here even if logged in
+		if (this && Session.get('playerId')) {
 			return this.user_id == Meteor.userId()
 		}
 	},

@@ -26,18 +26,21 @@ Meteor.publish('game', function(gameId) {
     minimapBgPath:1,
     minimapUpdatedAt:1,
     minimap:1,
-    lastIncomeUpdate:1
+    lastIncomeUpdate:1,
+    dominusAchieved:1
   };
 
-  if (this.userId) {
-    return Games.find({_id:gameId}, {fields:fields});
-  } else {
+  // public so logged out spectators can watch
+  if (!Match.test(gameId, String)) {
     return this.ready();
   }
+
+  return Games.find({_id:gameId}, {fields:fields});
 });
 
 var gameSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'game'
 }

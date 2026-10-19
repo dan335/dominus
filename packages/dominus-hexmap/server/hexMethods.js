@@ -43,6 +43,7 @@ if (Meteor.isServer) {
 
   var getResourcesGatheredAtHexRule = {
     userId: function() {return true;},
+    connectionId: function() {return true;},
     type: 'method',
     name: 'getResourcesGatheredAtHex'
   }

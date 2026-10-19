@@ -8,3 +8,60 @@ Future = Npm.require('fibers/future');
 // BrowserPolicy.content.allowOriginForAll("https://*.doubleclick.net")
 // BrowserPolicy.content.allowOriginForAll("https://engine.kadiro.io")
 // BrowserPolicy.content.allowEval("https://*.stripe.com")
+
+
+// addArmyPath used to accept any armyId, so a path could be added to someone
+// else's army. Remove paths whose owner or game doesn't match their army.
+// Safe to run on every start; does nothing once clean.
+removeForeignArmyPaths = function() {
+  let paths = Armypaths.find({}, {fields: {armyId:1, user_id:1, gameId:1}}).fetch();
+  if (!paths.length) {
+    return 0;
+  }
+
+  let armies = {};
+  let armyIds = _.uniq(_.pluck(paths, 'armyId'));
+  Armies.find({_id: {$in:armyIds}}, {fields: {user_id:1, gameId:1}}).forEach(function(army) {
+    armies[army._id] = army;
+  });
+
+  let badIds = [];
+  paths.forEach(function(path) {
+    let army = armies[path.armyId];
+    if (!path.user_id) {
+      badIds.push(path._id);
+    } else if (army && (army.user_id !== path.user_id || army.gameId !== path.gameId)) {
+      badIds.push(path._id);
+    }
+  });
+
+  if (badIds.length) {
+    Armypaths.remove({_id: {$in:badIds}});
+    console.log('removeForeignArmyPaths: removed ' + badIds.length + ' army paths that did not belong to their army');
+  }
+
+  return badIds.length;
+};
+
+Meteor.startup(function() {
+  if (process.env.DOMINUS_WORKER == 'true') {
+    removeForeignArmyPaths();
+  }
+});
+
+
+// Logged out visitors (spectators) all have userId null, so give them a
+// generous cap per IP address on top of each publication's own rate limit.
+// HTTP_FORWARDED_COUNT is set in the Dockerfile so clientAddress is the
+// visitor's real address.
+DDPRateLimiter.addRule({
+  userId: function(userId) {return !userId;},
+  clientAddress: function() {return true;},
+  type: 'subscription'
+}, 300, 10000);
+
+DDPRateLimiter.addRule({
+  userId: function(userId) {return !userId;},
+  clientAddress: function() {return true;},
+  type: 'method'
+}, 100, 10000);

@@ -15,9 +15,11 @@
 			</div>
 		</div>
 
-		<div class="panel panel-default panel-body">
-			{{> infoPanelMarkerButton}}
-		</div>
+		{{#unless isSpectating}}
+			<div class="panel panel-default panel-body">
+				{{> infoPanelMarkerButton}}
+			</div>
+		{{/unless}}
 
 	</div>
 

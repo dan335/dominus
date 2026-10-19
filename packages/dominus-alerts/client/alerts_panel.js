@@ -101,7 +101,8 @@ Template.alerts_panel.events({
 Template.alerts_panel.created = function() {
   var self = this
 
-  self.activeTab = new ReactiveVar('mine')
+  // spectators don't have alerts of their own
+  self.activeTab = new ReactiveVar(dInit.isSpectating() ? 'global' : 'mine')
 
   // this.autorun(function() {
   //   let gameId = Session.get('gameId');

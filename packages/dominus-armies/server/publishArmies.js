@@ -46,6 +46,7 @@ Meteor.publish('armiesAtHex', function(gameId, x, y) {
 
 var armiesAtHexSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'armiesAtHex'
 }

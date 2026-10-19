@@ -17,6 +17,7 @@ Meteor.publish('income_rankings', function(gameId, page) {
 
 var income_rankingsSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'income_rankings'
 }
@@ -42,6 +43,7 @@ Meteor.publish('ally_rankings', function(gameId, page) {
 
 var ally_rankingsSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'ally_rankings'
 }
@@ -68,6 +70,7 @@ Meteor.publish('losses_rankings', function(gameId, page) {
 
 var losses_rankingsSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'losses_rankings'
 }
@@ -93,6 +96,7 @@ Meteor.publish('dominus_rankings', function(gameId) {
 
 var dominus_rankingsSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'dominus_rankings'
 }
@@ -120,6 +124,7 @@ Meteor.publish('country_rankings', function(gameId, page) {
 
 var country_rankingsSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'country_rankings'
 }
@@ -150,6 +155,7 @@ Meteor.publish('village_rankings', function(gameId, page) {
 
 var village_rankingsSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'village_rankings'
 }

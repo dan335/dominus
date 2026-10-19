@@ -99,6 +99,19 @@ Template.landingGame.events({
     SimpleRouter.go('/game/' + game._id);
   },
 
+  // look at the game without joining it
+  'click .spectateGameButton': function(event, template) {
+    event.preventDefault();
+
+    let game = Template.currentData();
+    if (!game) {
+      console.error('no game found in spectateGameButton event');
+      return false;
+    }
+
+    SimpleRouter.go('/game/' + game._id);
+  },
+
   'click .joinGameButton': function(event, template) {
     event.preventDefault();
 

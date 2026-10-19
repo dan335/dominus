@@ -8,6 +8,7 @@ Meteor.publish('calcPlayer', function(playerId) {
 
 var calcPlayerSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'calcPlayer'
 }

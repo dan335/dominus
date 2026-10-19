@@ -26,12 +26,14 @@
 
         <div class="pad_group">
             <div class="btn-group btn-group-justified" role="group">
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-default btn-primary {{mineActive}}" id="mineButton">
-                        Mine
-                        <span class="badge">{{#if numUnreadAlerts}}{{numUnreadAlerts}}{{/if}}</span>
-                    </button>
-                </div>
+                {{#unless isSpectating}}
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-default btn-primary {{mineActive}}" id="mineButton">
+                            Mine
+                            <span class="badge">{{#if numUnreadAlerts}}{{numUnreadAlerts}}{{/if}}</span>
+                        </button>
+                    </div>
+                {{/unless}}
                 <div class="btn-group" role="group">
                     <button type="button" class="btn btn-default btn-primary {{globalActive}}" id="globalButton">Global</button>
                 </div>

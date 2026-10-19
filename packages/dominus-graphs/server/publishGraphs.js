@@ -16,8 +16,9 @@ DDPRateLimiter.addRule(my_dailystatsSubRule, 5, 5000);
 
 
 
+// public so logged out spectators can watch
 Meteor.publish('stats_gamestats', function(gameId) {
-	if(this.userId) {
+	if (Match.test(gameId, String)) {
 		return Gamestats.find({gameId:gameId}, {fields: {num_users:1, created_at:1, soldierWorth:1}})
 	} else {
 		this.ready();
@@ -26,6 +27,7 @@ Meteor.publish('stats_gamestats', function(gameId) {
 
 var stats_gamestatsSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'stats_gamestats'
 }

@@ -105,6 +105,10 @@ dHexmap.centerOnHex = function(x, y) {
   if (canvasSize && hexScale) {
     var grid = Hx.coordinatesToPos(x, y, _s.init.hexSize, _s.init.hexSquish)
 
+    // this hex is now the center, set it right away so a hexScale change
+    // (hexmap.js onRendered) re-centers here instead of on the previous view
+    Session.set('center_hex', {x:x, y:y});
+
     var x = canvasSize.width/2
     var y = canvasSize.height/2
 
@@ -113,6 +117,30 @@ dHexmap.centerOnHex = function(x, y) {
 
     dHexmap.moveHexesTo(x, y)
   }
+};
+
+// where to start the map for someone spectating, they don't have a castle
+// the dominus, then the richest king, then the middle of the map
+dHexmap.spectatorStartHex = function(gameId) {
+  let dominus = DominusPlayer.findOne({is_dominus:true}, {fields: {x:1, y:1}});
+  if (dominus && dFunc.isInt(dominus.x) && dFunc.isInt(dominus.y)) {
+    return {x:dominus.x, y:dominus.y};
+  }
+
+  let game = Games.findOne(gameId, {fields: {tree:1}});
+  if (game && game.tree) {
+    let kings = _.filter(game.tree, function(king) {
+      return dFunc.isInt(king.x) && dFunc.isInt(king.y);
+    });
+    if (kings.length) {
+      let richest = _.max(kings, function(king) {
+        return king.income || 0;
+      });
+      return {x:richest.x, y:richest.y};
+    }
+  }
+
+  return {x:0, y:0};
 };
 
 dHexmap.setHexScale = function(scale) {

@@ -28,8 +28,9 @@ _s.armies.types.forEach(function(type) {
 })
 
 
+// public so logged out spectators can watch
 Meteor.publish('rightPanelPlayers', function(playerId) {
-	if (this.userId) {
+	if (Match.test(playerId, String)) {
 		var sub = this
 		var fields = {
 			username:1,
@@ -44,7 +45,6 @@ Meteor.publish('rightPanelPlayers', function(playerId) {
 			is_king:1,
 			income:1,
 			losses_num:1,
-			possibleDupe:1,
 			male:1,
 			lastIncomeUpdate:1
 		}
@@ -58,6 +58,7 @@ Meteor.publish('rightPanelPlayers', function(playerId) {
 
 var rightPanelPlayersSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'rightPanelPlayers'
 }
@@ -66,7 +67,7 @@ DDPRateLimiter.addRule(rightPanelPlayersSubRule, 5, 5000);
 
 
 Meteor.publish('castleForHexInfo', function(id) {
-	if (this.userId) {
+	if (Match.test(id, String)) {
 		var sub = this
 		var cur = Castles.find(id, {fields:castle_fields});
 		Mongo.Collection._publishCursor(cur, sub, 'right_panel_castle')
@@ -78,6 +79,7 @@ Meteor.publish('castleForHexInfo', function(id) {
 
 var castleForHexInfoSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'castleForHexInfo'
 }
@@ -87,7 +89,7 @@ DDPRateLimiter.addRule(castleForHexInfoSubRule, 5, 5000);
 
 
 Meteor.publish('armyForHexInfo', function(id) {
-	if (this.userId) {
+	if (Match.test(id, String)) {
 		var sub = this
 		var cur = Armies.find(id, {fields:army_fields})
 		Mongo.Collection._publishCursor(cur, sub, 'right_panel_armies')
@@ -99,6 +101,7 @@ Meteor.publish('armyForHexInfo', function(id) {
 
 var armyForHexInfoSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'armyForHexInfo'
 }
@@ -107,7 +110,7 @@ DDPRateLimiter.addRule(armyForHexInfoSubRule, 5, 5000);
 
 
 Meteor.publish('villageForHexInfo', function(id) {
-	if (this.userId) {
+	if (Match.test(id, String)) {
 		var sub = this
 		var cur = Villages.find(id, {fields:village_fields})
 		Mongo.Collection._publishCursor(cur, sub, 'right_panel_villages')
@@ -119,6 +122,7 @@ Meteor.publish('villageForHexInfo', function(id) {
 
 var villageForHexInfoSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'villageForHexInfo'
 }
@@ -128,7 +132,7 @@ DDPRateLimiter.addRule(villageForHexInfoSubRule, 5, 5000);
 
 
 Meteor.publish('rightPanelTree', function(playerId) {
-	if (this.userId) {
+	if (Match.test(playerId, String)) {
 		let player = Players.findOne(playerId, {fields: {allies_above:1}});
 		if (player) {
 			var fields = {name:1, x:1, y:1, castle_id:1, lord:1, username:1}
@@ -141,6 +145,7 @@ Meteor.publish('rightPanelTree', function(playerId) {
 
 var rightPanelTreeSubRule = {
   userId: function() {return true;},
+  connectionId: function() {return true;},
   type: 'subscription',
   name: 'rightPanelTree'
 }

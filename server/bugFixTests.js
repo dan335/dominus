@@ -660,11 +660,15 @@ if (Meteor.isServer) {
             'only the tree fields are published');
         });
 
-        [[noAllies, 'bf_user'], ['bf_missing_' + Random.id(), 'bf_user'], [player, null]].forEach(function(c) {
+        [[noAllies, 'bf_user'], ['bf_missing_' + Random.id(), 'bf_user'], [{$ne:null}, null]].forEach(function(c) {
           let o = runPublication('rightPanelTree', c[1], [c[0]]);
           equal(o.ready, 1, 'ready once for ' + c[0] + ' as ' + c[1]);
           equal(allPublishedIds(o).length, 0, 'nothing published for ' + c[0] + ' as ' + c[1]);
         });
+
+        // public so logged out spectators can see the tree
+        let loggedOut = runPublication('rightPanelTree', null, [player]);
+        sameIds(publishedIds(loggedOut, 'right_panel_tree_players'), [l1, l2], 'logged out viewers get the lords too');
       } finally {
         t.cleanup(game._id);
       }
