@@ -22,6 +22,7 @@ DDPRateLimiter.addRule(oldResultsTitlesSubRule, 5, 5000);
 
 
 Meteor.publish('oldResultsDetails', function(resultId) {
+  check(resultId, Match.OneOf(String, null));
   var query = OldResults.find(resultId, {}, {disableOplog:true, pollingIntervalMs:1000*60*30})
   Mongo.Collection._publishCursor(query, this, 'oldresultsdetails')
   return this.ready()
