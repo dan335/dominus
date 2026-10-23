@@ -3,7 +3,7 @@
 //
 //   node report.js <results folder> [baseline summary.json]
 //
-// It fails on: a job that failed for good, an unhandled promise rejection, a
+// It fails on: a job that failed for good or threw, an unhandled promise rejection, a
 // web or worker restart, an invariant broken for three samples in a row (but
 // for the known bugs below), an internal server error or unanswered call from
 // the bots, memory that keeps growing, a monitor that stopped reporting, or a
@@ -69,13 +69,27 @@ const normalise = (line) => line
   .replace(/\d+(\.\d+)?/g, '<n>')
   .slice(0, 200);
 const exceptions = {};
+// A job handler that throws doesn't fail its Bull job today: the handlers are
+// wrapped in Meteor.bindEnvironment, which catches the error, logs it as
+// "Exception in callback of async function" and lets Bull mark the job
+// completed. So a logged exception whose stack runs through the queue's
+// handler wrapper (dominus-queue/queue.js) is a job that failed, named here by
+// the file that registered the handler.
+const jobExceptions = {};
 for (const role of ['web', 'worker']) {
-  for (const line of lines(role + '.log')) {
-    if (/^(Exception (in|while|from)|\w*Error\b|MongoServerError|Error:)/.test(line.trim()) && !/^SOAK_/.test(line)) {
-      const kind = role + ': ' + normalise(line.trim());
-      exceptions[kind] = (exceptions[kind] || 0) + 1;
+  const all = lines(role + '.log');
+  all.forEach((line, i) => {
+    if (!/^(Exception (in|while|from)|\w*Error\b|MongoServerError|Error:)/.test(line.trim()) || /^SOAK_/.test(line)) return;
+    const kind = role + ': ' + normalise(line.trim());
+    exceptions[kind] = (exceptions[kind] || 0) + 1;
+    const stack = [];
+    for (let j = i + 1; j < all.length && j < i + 40 && /^\s+at /.test(all[j]); j++) stack.push(all[j]);
+    if (stack.some((frame) => frame.includes('packages/dominus-queue/queue.js'))) {
+      const files = stack.map((frame) => /packages\/(dominus-[\w-]+\/server\/[\w.]+\.js)/.exec(frame)).filter(Boolean);
+      const job = (files.length ? files[files.length - 1][1] : 'unknown job') + ': ' + normalise(line.trim());
+      jobExceptions[job] = (jobExceptions[job] || 0) + 1;
     }
-  }
+  });
 }
 
 // --- restarts, bots, docker ---
@@ -107,6 +121,22 @@ for (const line of lines('docker-stats.csv').slice(1)) {
   const container = name.replace(/^.*-(web|worker|mongo|redis)$/, '$1');
   if (mb !== null) (dockerMemory[container] = dockerMemory[container] || []).push({t, mb});
 }
+
+// the baseline summary.json, when there is one
+let baselineCache;
+const baselineFile = () => {
+  if (baselineCache === undefined) {
+    baselineCache = null;
+    if (baselinePath) {
+      try {
+        baselineCache = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
+      } catch (e) {
+        baselineCache = {unreadable: String(e.message)};
+      }
+    }
+  }
+  return baselineCache;
+};
 
 // --- verdicts ---
 
@@ -167,6 +197,11 @@ for (const s of workerSamples) {
 const failedTotal = Object.values(failedForGood).reduce((a, b) => a + b, 0);
 check('No job failed for good', failedTotal ? 'fail' : 'pass',
   failedTotal ? Object.entries(failedForGood).map(([q, n]) => q + ' ' + n).join(', ') : 'none');
+const jobKinds = Object.keys(jobExceptions);
+const jobKindsOld = (baselineFile() || {}).jobExceptions || {};
+const jobKindsNew = jobKinds.filter((k) => !jobKindsOld[k]);
+check('No job threw (caught and logged by bindEnvironment)', jobKindsNew.length ? 'fail' : jobKinds.length ? 'warn' : 'pass',
+  jobKinds.length ? jobKinds.slice(0, 3).map((k) => jobExceptions[k] + '× ' + k).join('; ') + (jobKindsNew.length < jobKinds.length ? ' (' + (jobKinds.length - jobKindsNew.length) + ' kind(s) also in the baseline)' : '') : 'none');
 const attemptsTotal = Object.values(failedAttempts).reduce((a, b) => a + b, 0);
 check('No failed job attempts (retried or not)', attemptsTotal ? 'warn' : 'pass',
   attemptsTotal ? Object.entries(failedAttempts).map(([q, n]) => q + ' ' + n).join(', ') : 'none');
@@ -214,12 +249,14 @@ for (const role of ['web', 'worker']) {
   trend.heapGrowth = trend.heapLateMb / Math.max(1, trend.heapEarlyMb);
   memoryTrend[role] = trend;
 }
-const long = minutes >= 120;
+// growth only fails a run this long (MEMORY_MIN_MINUTES, 120): a short one is mostly warm-up
+const memoryMinutes = Number(process.env.MEMORY_MIN_MINUTES || 120);
+const long = minutes >= memoryMinutes;
 const grew = Object.entries(memoryTrend).filter(([, t]) => t.heapGrowth > 1.5 && t.heapLateMb - t.heapEarlyMb > 50);
 const growing = Object.entries(memoryTrend).filter(([, t]) => t.heapGrowth > 1.2 && t.heapLateMb - t.heapEarlyMb > 20);
 check('Memory is stable', !Object.keys(memoryTrend).length ? 'warn' : grew.length ? (long ? 'fail' : 'warn') : growing.length ? 'warn' : 'pass',
   Object.entries(memoryTrend).map(([r, t]) => r + ' heap ' + t.heapEarlyMb + ' → ' + t.heapLateMb + ' MB, rss ' + t.rssEarlyMb + ' → ' + t.rssLateMb + ' MB').join('; ') +
-    (long ? '' : ' (under 2 hours: growth only warns)'));
+    (long ? '' : ' (under ' + memoryMinutes + ' minutes: growth only warns)'));
 const slow = Object.entries(memoryTrend).filter(([, t]) => t.loopDelayP99MaxMs > 1000);
 check('The event loop keeps up', slow.length ? 'warn' : 'pass',
   Object.entries(memoryTrend).map(([r, t]) => r + ' worst p99 ' + t.loopDelayP99MaxMs + ' ms, worst ' + t.loopDelayMaxMs + ' ms').join('; '));
@@ -246,14 +283,8 @@ if (mode == 'soak') {
 }
 
 // exceptions, against the baseline when there is one
-let baseline = null;
-if (baselinePath) {
-  try {
-    baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
-  } catch (e) {
-    check('Baseline read', 'fail', String(e.message));
-  }
-}
+const baseline = baselineFile();
+if (baseline && baseline.unreadable) check('Baseline read', 'fail', baseline.unreadable);
 const kinds = Object.keys(exceptions);
 if (baseline) {
   const fresh = kinds.filter((k) => !(baseline.exceptions || {})[k]);
@@ -370,7 +401,7 @@ out.push('');
 
 fs.writeFileSync(path.join(dir, 'report.md'), out.join('\n'));
 fs.writeFileSync(path.join(dir, 'summary.json'), JSON.stringify({
-  mode, image: read('image.txt').trim(), failed, minutes, checks, exceptions, failedForGood, failedAttempts,
+  mode, image: read('image.txt').trim(), failed, minutes, checks, exceptions, jobExceptions, failedForGood, failedAttempts,
   persistentProblems: persistent, memoryTrend,
   bots: bots && {calls, okCalls, serverErrorCount: bots.serverErrorCount, games: bots.games}
 }, null, 2));

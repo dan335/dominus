@@ -197,6 +197,6 @@ if [ -n "$BASELINE" ]; then
     BASE=/out/baseline.json
 fi
 STATUS=0
-node_run -e MODE=$MODE "$NODE_IMAGE" node /soak/report.js /out $BASE || STATUS=$?
+node_run -e MODE=$MODE -e MEMORY_MIN_MINUTES "$NODE_IMAGE" node /soak/report.js /out $BASE || STATUS=$?
 log "Report: $OUT/report.md"
 exit $STATUS

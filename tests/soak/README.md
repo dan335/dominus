@@ -54,9 +54,10 @@ Keep the `summary.json` of a soak of master. The soak of each upgrade stage is t
 | No web or worker restarts | a container restarted (an uncaught exception kills the process) |
 | No unhandled promise rejections | any, in either process |
 | No job failed for good | any job in a Bull failed set. Failed attempts that a retry fixed only warn. |
+| No job threw | a job handler threw. Today that never reaches Bull: the handlers are wrapped in `Meteor.bindEnvironment`, which logs the error as "Exception in callback of async function" and returns, so Bull marks the job completed (and never retries it). The report finds these in the worker log by their stack, which runs through `dominus-queue/queue.js`. With a `BASELINE`, kinds the baseline had only warn. |
 | The invariants hold | an invariant is broken for 3 samples in a row (a passing moment while a job runs doesn't count). Known bugs are listed but don't fail. |
 | No internal server errors or unanswered calls | any method call answered with a 500 or not answered within 60 seconds. Refusals the game makes on purpose (not enough gold, too far) are counted but are fine. |
-| Memory is stable | the heap in the last tenth of the run is over 1.5 times what it was after the warm-up and 50 MB more. Under 2 hours this only warns. |
+| Memory is stable | the heap in the last tenth of the run is over 1.5 times what it was after the warm-up and 50 MB more. Under 2 hours (`MEMORY_MIN_MINUTES`) this only warns. |
 | The game was played | no game started, or fewer than 100 calls went through |
 | No new kinds of logged exceptions | with a `BASELINE`: an exception the baseline didn't have. Without one, exceptions only warn. |
 
