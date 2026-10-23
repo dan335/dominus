@@ -1,6 +1,6 @@
 // Regression tests for the server performance fixes (Oct 2026): job dedupe,
 // the midnight relationship rebuild, the new indexes and the gameId lookups.
-// They run as part of runGameCreationTests (server/gameCreationTests.js), so the
+// They run as part of runAllTests (server/lib/testRunner.js), so the
 // same rule applies: only against a local development database.
 
 if (Meteor.isServer) {
@@ -333,6 +333,8 @@ if (Meteor.isServer) {
         equal(Queues.addUniqueId(name, 'retryJob'), false, 'id still held after the retried failure');
 
         assert(waitFor(function() { return attempts >= 2; }, 10000), 'second attempt ran');
+        // the handler sets heldDuringRetry once Redis answers, a moment after it starts
+        assert(waitFor(function() { return heldDuringRetry !== null; }, 10000), 'second attempt read Redis');
         equal(heldDuringRetry, 1, 'id held while the retry ran');
         assert(waitFor(function() { return storedIds(name).length === 0; }, 10000), 'id released after success');
       } finally {
@@ -417,7 +419,7 @@ if (Meteor.isServer) {
       function callAs(userId, method) {
         var inv = {userId: userId, connection: {id: 'perfFixTests'}, isSimulation: false, unblock: function() {}, setUserId: function() {}};
         return DDP._CurrentInvocation.withValue(inv, function() {
-          return Meteor.server.method_handlers[method].apply(inv, []);
+          return dTest.settle(Meteor.server.method_handlers[method].apply(inv, []));
         });
       }
       try {
@@ -841,7 +843,7 @@ if (Meteor.isServer) {
     function callMethod(userId, method, args) {
       var inv = {userId: userId, connection: {id: 'perfFixTests'}, isSimulation: false, unblock: function() {}, setUserId: function() {}};
       return DDP._CurrentInvocation.withValue(inv, function() {
-        return Meteor.server.method_handlers[method].apply(inv, args);
+        return dTest.settle(Meteor.server.method_handlers[method].apply(inv, args));
       });
     }
 

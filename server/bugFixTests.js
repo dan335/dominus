@@ -1,5 +1,5 @@
 // Regression tests for the "bugs found along the way" fixes (Oct 2026).
-// They run as part of runGameCreationTests (server/gameCreationTests.js), so the
+// They run as part of runAllTests (server/lib/testRunner.js), so the
 // same rule applies: only against a local development database.
 
 if (Meteor.isServer) {
@@ -66,7 +66,7 @@ if (Meteor.isServer) {
     function callAs(userId, method, args, simulate) {
       var inv = {userId: userId, isSimulation: !!simulate, connection: null, unblock: function() {}, setUserId: function() {}};
       return DDP._CurrentInvocation.withValue(inv, function() {
-        return Meteor.server.method_handlers[method].apply(inv, args);
+        return dTest.settle(Meteor.server.method_handlers[method].apply(inv, args));
       });
     }
 
@@ -91,7 +91,7 @@ if (Meteor.isServer) {
         stop: function() {}
       };
       try {
-        var result = Meteor.server.publish_handlers[name].apply(sub, args || []);
+        var result = dTest.settle(Meteor.server.publish_handlers[name].apply(sub, args || []));
         if (result && typeof result._publishCursor === 'function') {
           // Meteor publishes a returned cursor and then marks the sub ready itself
           out.cursor = result;

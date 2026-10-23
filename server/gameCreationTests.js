@@ -1,5 +1,5 @@
 // Game Creation Tests
-// Run from meteor shell:   Meteor.call('runGameCreationTests')
+// Run from meteor shell:   Meteor.call('runAllTests')   (server/lib/testRunner.js)
 // These tests wipe whole collections (Games, Players, Armies, ...). Only run them
 // against a local development database. The method refuses client calls and
 // production builds.
@@ -77,53 +77,39 @@ if (Meteor.isServer) {
   }
 
 
-  Meteor.methods({
-    'runGameCreationTests': function() {
-      // Never reachable from a client: the tests remove every document in several collections.
-      if (this.connection) throw new Meteor.Error('not-allowed');
-      if (Meteor.isProduction) throw new Meteor.Error('not-allowed', 'never run the tests against production');
+  dTest.helpers = {
+    assert: _testAssert,
+    equal: _testEqual,
+    createTestGame: _createTestGame,
+    createTestUser: _createTestUser,
+    cleanup: _testCleanup,
+    cleanupUser: _testCleanupUser
+  };
 
-      let results = [];
-      let passed = 0;
-      let failed = 0;
-      let skipped = 0;
 
-      // a test can return 'skip' when it doesn't apply to this process
-      function run(name, fn) {
-        try {
-          if (fn() === 'skip') {
-            results.push({name: name, status: 'SKIP'});
-            skipped++;
-            return;
-          }
-          results.push({name: name, status: 'PASS'});
-          passed++;
-        } catch(e) {
-          results.push({name: name, status: 'FAIL', error: e.message});
-          failed++;
-        }
-      }
-
+  dTest.addSuite('game creation', function(run) {
 
       // --- Guard ---
 
-      run('runGameCreationTests refuses client calls and changes nothing', function() {
+      run('runAllTests and runGameCreationTests refuse client calls and change nothing', function() {
         let collections = [Games, Players, Armies, Castles, Alerts, GlobalAlerts, Dailystats];
         let counts = function() { return collections.map(function(c) { return c.find().count(); }).join(','); };
         let before = counts();
-        [null, 'someUserId'].forEach(function(userId) {
-          let inv = {userId: userId, isSimulation: false, connection: {id: 'fakeClient'}, unblock: function() {}};
-          let error = null;
-          try {
-            DDP._CurrentInvocation.withValue(inv, function() {
-              return Meteor.server.method_handlers['runGameCreationTests'].apply(inv, []);
-            });
-          } catch (e) {
-            error = e;
-          }
-          // logged out calls are refused by server/methodGate.js before the method runs
-          let expected = userId ? 'not-allowed' : 'not-authorized';
-          _testAssert(error && error.error === expected, 'client call throws ' + expected + ' (userId ' + userId + ')');
+        ['runAllTests', 'runGameCreationTests'].forEach(function(method) {
+          [null, 'someUserId'].forEach(function(userId) {
+            let inv = {userId: userId, isSimulation: false, connection: {id: 'fakeClient'}, unblock: function() {}};
+            let error = null;
+            try {
+              DDP._CurrentInvocation.withValue(inv, function() {
+                return dTest.settle(Meteor.server.method_handlers[method].apply(inv, []));
+              });
+            } catch (e) {
+              error = e;
+            }
+            // logged out calls are refused by server/methodGate.js before the method runs
+            let expected = userId ? 'not-allowed' : 'not-authorized';
+            _testAssert(error && error.error === expected, method + ' client call throws ' + expected + ' (userId ' + userId + ')');
+          });
         });
         _testEqual(counts(), before, 'no collection counts changed');
       });
@@ -636,7 +622,7 @@ if (Meteor.isServer) {
         function callAs(userId, method, args) {
           var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}};
           return DDP._CurrentInvocation.withValue(inv, function() {
-            return Meteor.server.method_handlers[method].apply(inv, args);
+            return dTest.settle(Meteor.server.method_handlers[method].apply(inv, args));
           });
         }
 
@@ -706,7 +692,7 @@ if (Meteor.isServer) {
         function callAs(userId, method, args) {
           var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}};
           return DDP._CurrentInvocation.withValue(inv, function() {
-            return Meteor.server.method_handlers[method].apply(inv, args);
+            return dTest.settle(Meteor.server.method_handlers[method].apply(inv, args));
           });
         }
 
@@ -743,7 +729,7 @@ if (Meteor.isServer) {
         function callAs(userId, method, args) {
           var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}};
           return DDP._CurrentInvocation.withValue(inv, function() {
-            return Meteor.server.method_handlers[method].apply(inv, args);
+            return dTest.settle(Meteor.server.method_handlers[method].apply(inv, args));
           });
         }
 
@@ -816,7 +802,7 @@ if (Meteor.isServer) {
         function callAs(userId, method, args) {
           var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}};
           return DDP._CurrentInvocation.withValue(inv, function() {
-            return Meteor.server.method_handlers[method].apply(inv, args);
+            return dTest.settle(Meteor.server.method_handlers[method].apply(inv, args));
           });
         }
 
@@ -869,83 +855,14 @@ if (Meteor.isServer) {
         _testCleanup(game._id);
       });
 
-      // --- Bugs found along the way (server/bugFixTests.js) ---
-
-      _bugFixTests(run, {
-        assert: _testAssert,
-        equal: _testEqual,
-        createTestGame: _createTestGame,
-        createTestUser: _createTestUser,
-        cleanup: _testCleanup,
-        cleanupUser: _testCleanupUser
-      });
-
-      // --- Server performance fixes (server/perfFixTests.js) ---
-
-      _perfFixTests(run, {
-        assert: _testAssert,
-        equal: _testEqual,
-        createTestGame: _createTestGame,
-        createTestUser: _createTestUser,
-        cleanup: _testCleanup,
-        cleanupUser: _testCleanupUser
-      });
-
-      // --- Job handlers are timed (server/jobTimingTests.js) ---
-
-      _jobTimingTests(run, {
-        assert: _testAssert,
-        equal: _testEqual,
-        createTestGame: _createTestGame,
-        createTestUser: _createTestUser,
-        cleanup: _testCleanup,
-        cleanupUser: _testCleanupUser
-      });
-
-      // --- Spectators can't change a game (server/spectatorTests.js) ---
-
-      _spectatorTests(run, {
-        assert: _testAssert,
-        equal: _testEqual,
-        createTestGame: _createTestGame,
-        createTestUser: _createTestUser,
-        cleanup: _testCleanup,
-        cleanupUser: _testCleanupUser
-      });
-
-      // --- Publications refuse missing arguments (server/publicationGateTests.js) ---
-
-      _publicationGateTests(run, {
-        assert: _testAssert,
-        equal: _testEqual,
-        createTestGame: _createTestGame,
-        createTestUser: _createTestUser,
-        cleanup: _testCleanup,
-        cleanupUser: _testCleanupUser
-      });
-
-      // --- Every argument is checked (server/argumentCheckTests.js) ---
-
-      _argumentCheckTests(run, {
-        assert: _testAssert,
-        equal: _testEqual,
-        createTestGame: _createTestGame,
-        createTestUser: _createTestUser,
-        cleanup: _testCleanup,
-        cleanupUser: _testCleanupUser
-      });
-
-      // --- Results ---
-      console.log('\n========================================');
-      console.log('  Game Creation Tests: ' + passed + ' passed, ' + failed + ' failed, ' + skipped + ' skipped');
-      console.log('========================================');
-      results.forEach(function(r) {
-        let icon = r.status === 'PASS' ? '+' : (r.status === 'SKIP' ? '-' : 'X');
-        console.log('  [' + icon + '] ' + r.name + (r.error ? ' -- ' + r.error : ''));
-      });
-      console.log('');
-
-      return {passed: passed, failed: failed, skipped: skipped, results: results};
-    }
   });
+
+  // The other suites, in the order they have always run. Looked up when the run
+  // starts, since their files load after this one.
+  dTest.addSuite('bugs found along the way (server/bugFixTests.js)', function(run, t) { return _bugFixTests(run, t); });
+  dTest.addSuite('server performance fixes (server/perfFixTests.js)', function(run, t) { return _perfFixTests(run, t); });
+  dTest.addSuite('job handlers are timed (server/jobTimingTests.js)', function(run, t) { return _jobTimingTests(run, t); });
+  dTest.addSuite('spectators can\'t change a game (server/spectatorTests.js)', function(run, t) { return _spectatorTests(run, t); });
+  dTest.addSuite('publications refuse missing arguments (server/publicationGateTests.js)', function(run, t) { return _publicationGateTests(run, t); });
+  dTest.addSuite('every argument is checked (server/argumentCheckTests.js)', function(run, t) { return _argumentCheckTests(run, t); });
 }

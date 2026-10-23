@@ -136,6 +136,7 @@ MethodPolicy = {
   resumeJobQueue: USER,
   clearUniqueIdsForJob: USER,
   runBullJob: USER,
+  runAllTests: USER,
   runGameCreationTests: USER,
 
   forumPinTopic: USER,
