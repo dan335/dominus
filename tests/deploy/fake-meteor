@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+H=$(git rev-parse HEAD)
+T=$(mktemp -d)
+mkdir -p $T/bundle/programs/server/npm
+echo '{"name":"stub","version":"1.0.0"}' > $T/bundle/programs/server/package.json
+echo '{"name":"stubnpm","version":"1.0.0"}' > $T/bundle/programs/server/npm/package.json
+cat > $T/bundle/main.js <<JS
+if ("${BROKEN:-}" === "1") throw new Error("broken build")
+require('http').createServer((q,r)=>r.end('<script>__meteor_runtime_config__ = JSON.parse(decodeURIComponent("%7B%22gitCommitHash%22%3A%22$H%22%7D"))</script>')).listen(process.env.PORT)
+JS
+mkdir -p .build
+tar -czf .build/dominus.tar.gz -C $T bundle
+echo "stub meteor built $H"

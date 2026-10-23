@@ -1,4 +1,5 @@
 Meteor.publish('my_dailystats', function(gameId) {
+	check(gameId, Match.OneOf(String, null));
 	if(this.userId) {
 		return Dailystats.find({gameId:gameId, user_id: this.userId})
 	} else {
@@ -18,6 +19,7 @@ DDPRateLimiter.addRule(my_dailystatsSubRule, 5, 5000);
 
 // public so logged out spectators can watch
 Meteor.publish('stats_gamestats', function(gameId) {
+	check(gameId, Match.OneOf(String, null));
 	if (Match.test(gameId, String)) {
 		return Gamestats.find({gameId:gameId}, {fields: {num_users:1, created_at:1, soldierWorth:1}})
 	} else {

@@ -1,5 +1,6 @@
 Meteor.methods({
   send_gold_to: function(gameId, playerId, amount) {
+    check(amount, Match.OneOf(String, Number));
     var self = this;
 
     check(gameId, String);

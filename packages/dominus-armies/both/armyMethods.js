@@ -2,6 +2,7 @@ Meteor.methods({
 
   hireArmy: function(gameId, army, building_id, building_type) {
     check(gameId, String);
+    check(army, Object);
     check(building_id, String);
     check(building_type, String);
 
@@ -194,6 +195,7 @@ Meteor.methods({
 
 
   splitArmy: function(gameId, armyId, newArmySoldiers) {
+    check(newArmySoldiers, Object);
     check(gameId, String);
     check(armyId, String);
     //this.unblock();
