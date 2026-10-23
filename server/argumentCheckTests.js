@@ -34,7 +34,7 @@ if (Meteor.isServer) {
       moveMarkerGroupUp: 1, onEmailVerified: 0, pauseJobQueue: 0, pauseMovement: 1,
       removeArmyPath: 1, removeGame: 1, removeMarker: 1, removeMarkerGroup: 1,
       renameChatroom: 3, rensendEmailVerification: 0, reportPlayer: 2, resetQueueStats: 0,
-      resumeJobQueue: 0, resumeMovement: 1, runBullJob: 2, runGameCreationTests: 0,
+      resumeJobQueue: 0, resumeMovement: 1, runAllTests: 1, runBullJob: 2, runGameCreationTests: 0,
       saveMarkerGroupInfo: 2, saveMarkerInfo: 3, sell_resource: 3, sendToMailingList: 1,
       send_gold_to: 3, setGender: 1, setHexScale: 2, setMarkerOrder: 5, set_unit_image: 4,
       showAlertMine: 2, show_allies: 1, show_armies: 1, show_castle: 1, show_coords: 1,
@@ -188,6 +188,9 @@ if (Meteor.isServer) {
       try {
         _.each(METHOD_PARAMS, function(count, name) {
           if (count === 0 || _.contains(EXTERNAL, name)) return;
+          // its one argument, a suite filter, is optional: called with none it
+          // would start a second run, which it refuses
+          if (name == 'runAllTests') return;
           var error = callMethod(name, [], user._id);
           assert(error, name + ' with no arguments is refused');
           // ValidatedMethods are checked by their schema, or by run() itself
