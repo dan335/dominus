@@ -149,7 +149,8 @@ if (Meteor.isServer) {
             check({pub: 'villagesOnScreen', as: as, args: [[countryId]], coll: 'villages', source: Villages, query: {countryId: countryId}, keys: mapVillage});
             check({pub: 'capitalsOnScreen', as: as, args: [[countryId]], coll: 'capitals', source: Capitals, query: {countryId: countryId}, keys: mapCapital});
           });
-          check({pub: 'castlesOnScreen', as: 0, args: [countryId], coll: 'castles', source: Castles, query: null});
+          // a single id instead of a list is refused by check()
+          check({pub: 'castlesOnScreen', as: 0, args: [countryId], error: 400});
         });
 
         test('armiesInCountry, castlesInCountry, villagesInCountry, capitalsInCountry: units in one country, logged in only', function() {
@@ -298,15 +299,17 @@ if (Meteor.isServer) {
           check({pub: 'myAlerts', as: 0, args: [pid(0), 10, 'nope'], error: 400});
           check({pub: 'unreadAlerts', as: 0, args: [pid(0), ['alert_villageDestroyed']], coll: 'unreadalerts', source: Alerts,
             query: {_id: f.alertUnread}, keys: []});
-          check({pub: 'unreadAlerts', as: 0, args: [pid(0)], coll: 'unreadalerts', source: Alerts,
+          // the browser sends null when the player has hidden nothing
+          check({pub: 'unreadAlerts', as: 0, args: [pid(0), null], coll: 'unreadalerts', source: Alerts,
             query: {_id: {$in: [f.alertUnread, f.alertHidden]}}, keys: []});
-          check({pub: 'unreadAlerts', as: 0, args: [5], error: 400});
+          check({pub: 'unreadAlerts', as: 0, args: [pid(0)], error: 400});
+          check({pub: 'unreadAlerts', as: 0, args: [5, null], error: 400});
         });
 
         test('myAlerts and unreadAlerts: any logged in user can read any player\'s alerts by id (known bug, security audit)', function() {
           check({pub: 'myAlerts', as: 2, args: [pid(0), 10, []], coll: 'alerts', source: Alerts,
             query: {_id: {$in: [f.alertUnread, f.alertRead, f.alertHidden]}}, keys: 'all'});
-          check({pub: 'unreadAlerts', as: 'out', args: [pid(0)], coll: 'unreadalerts', source: Alerts,
+          check({pub: 'unreadAlerts', as: 'out', args: [pid(0), null], coll: 'unreadalerts', source: Alerts,
             query: {_id: {$in: [f.alertUnread, f.alertHidden]}}, keys: []});
         });
 
