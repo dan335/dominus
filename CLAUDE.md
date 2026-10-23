@@ -27,12 +27,19 @@ meteor build .build --architecture os.linux.x86_64
 # Run tests (from a second terminal while the app is running)
 meteor shell
 # Then in the shell:
-Meteor.call('runGameCreationTests')
+Meteor.call('runAllTests')        # runGameCreationTests is the same thing
+
+# Or, without a running app: starts the app (and Redis in docker if needed),
+# runs the suites, and writes .test-results/server-tests.md
+tests/run-server-tests.sh
+RUNS=3 COVERAGE=1 tests/run-server-tests.sh   # repeat runs, plus c8 coverage
 ```
 
-Tests are defined in `server/gameCreationTests.js` and run as a Meteor method. Results print to the server console and return as an object to the shell.
+The runner is `server/lib/testRunner.js` (`dTest`). Each `server/*Tests.js` suite registers with `dTest.addSuite`. Results print to the server console and return as an object to the shell. The runner is async-aware: a test or method call that returns a promise is awaited and a rejection fails it, and any unhandled rejection or uncaught exception during the run fails the run. SyncedCron is paused while the suites run. Call method and publication handlers through `dTest.settle(...)` and check for errors with `dTest.throws(fn)`, so they keep working when the code under test becomes async.
 
 The tests remove every document in several collections (`Games.remove({})` etc.), so only run them against a local development database. The method refuses calls from clients and from production builds.
+
+The tinytest package tests (`Package.onTest`) don't currently build under `meteor test-packages`: client `.less` imports of `{dominus-init}/client/*.import.less` fail to resolve.
 
 ## Environment Variables
 

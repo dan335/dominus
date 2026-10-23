@@ -4,7 +4,7 @@
 // seeded game, and the game has to come out unchanged. A method that isn't in
 // server/methodPolicy.js, or isn't in the attack table below, fails here.
 //
-// They run as part of runGameCreationTests (server/gameCreationTests.js), so the
+// They run as part of runAllTests (server/lib/testRunner.js), so the
 // same rule applies: only against a local development database.
 
 if (Meteor.isServer) {
@@ -21,7 +21,7 @@ if (Meteor.isServer) {
       var inv = {userId: userId, isSimulation: false, connection: {id: 'spectatorTests', clientAddress: '127.0.0.1'},
         unblock: function() {}, setUserId: function() {}};
       return DDP._CurrentInvocation.withValue(inv, function() {
-        return Meteor.server.method_handlers[method].apply(inv, args);
+        return dTest.settle(Meteor.server.method_handlers[method].apply(inv, args));
       });
     }
 
@@ -29,19 +29,12 @@ if (Meteor.isServer) {
     function callAsServer(userId, method, args) {
       var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}, setUserId: function() {}};
       return DDP._CurrentInvocation.withValue(inv, function() {
-        return Meteor.server.method_handlers[method].apply(inv, args);
+        return dTest.settle(Meteor.server.method_handlers[method].apply(inv, args));
       });
     }
 
-    // returns the error thrown, or null
-    function throws(fn) {
-      try {
-        fn();
-        return null;
-      } catch (e) {
-        return e || new Error('threw ' + e);
-      }
-    }
+    // returns the error thrown or the promise rejection, or null
+    var throws = dTest.throws;
 
     // run a publication handler against a recording stub subscription
     function runPublication(name, userId, args) {
@@ -64,7 +57,7 @@ if (Meteor.isServer) {
         stop: function() {}
       };
       try {
-        var result = Meteor.server.publish_handlers[name].apply(sub, args || []);
+        var result = dTest.settle(Meteor.server.publish_handlers[name].apply(sub, args || []));
         var cursors = _.isArray(result) ? result : [result];
         cursors.forEach(function(cursor) {
           if (cursor && typeof cursor._publishCursor === 'function') {
@@ -204,6 +197,8 @@ if (Meteor.isServer) {
         Market.insert({gameId: w.G2, type: type, price: 1, quantity: 100000, updated_at: new Date()});
       });
 
+
+      waitForCounters(w);
       return w;
     }
 
@@ -364,6 +359,7 @@ if (Meteor.isServer) {
         resumeJobQueue: [[]],
         clearUniqueIdsForJob: [['runBattle']],
         runBullJob: [['runBattle', {gameId: G, x: 0, y: 0}]],
+        runAllTests: [[]],
         runGameCreationTests: [[]],
 
         // forum
@@ -375,6 +371,25 @@ if (Meteor.isServer) {
         forumNewTopic: [[]],
         forumNewPost: [['noSuchTopic', '']]
       };
+    }
+
+    // The worker keeps Games.numPlayers, numVillages and numCountries up to date
+    // with a 1s debounce (dominus-game/server/num*.js), so building the world
+    // changes the Games docs a second later. Wait until they stop changing, or
+    // that write gets blamed on whichever method is being called at the time.
+    function waitForCounters(w) {
+      var read = function() { return EJSON.stringify(Games.find({_id: {$in: [w.G, w.G2]}}, {sort: {_id: 1}}).fetch()); };
+      var last = read();
+      var stableSince = Date.now();
+      var deadline = Date.now() + 10000;
+      while (Date.now() - stableSince < 1500 && Date.now() < deadline) {
+        dTest.sleep(250);
+        var now = read();
+        if (now !== last) {
+          last = now;
+          stableSince = Date.now();
+        }
+      }
     }
 
     // ids that would show up in a job about game G
