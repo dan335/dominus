@@ -91,11 +91,12 @@ if (Meteor.isServer) {
   };
 
   // opts.players: how many players (default 3)
+  // opts.users: user docs to play as, instead of new test users
   // opts.game: extra fields for the Games doc
   // Returns {gameId, users, players, castles, player(i), castle(i), cleanup()}.
   dTest.buildGameWorld = function(opts) {
     opts = opts || {};
-    var count = opts.players || 3;
+    var count = opts.users ? opts.users.length : (opts.players || 3);
     var w = {users: [], players: [], castles: []};
 
     // isStarting, as the start job sets it, so that job never starts this game
@@ -104,7 +105,7 @@ if (Meteor.isServer) {
     w.gameId = game._id;
 
     for (var i = 0; i < count; i++) {
-      var user = dTest.helpers.createTestUser({username: 'world_' + Random.id(6)});
+      var user = opts.users ? opts.users[i] : dTest.helpers.createTestUser({username: 'world_' + Random.id(6)});
       w.users.push(user);
       Gamesignups.insert({gameId: w.gameId, userId: user._id, username: user.username, createdAt: new Date(), usedToken: false});
     }
