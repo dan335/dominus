@@ -10,14 +10,17 @@ if (Meteor.isServer) {
   // Runs job name's handler with data, the way Bull would hand it a job, and
   // returns what it returned. A handler is wrapped in Meteor.bindEnvironment,
   // which logs an exception instead of throwing it: runJob throws it instead,
-  // unless opts.allowError, when it is returned as {error}.
+  // unless opts.allowError, when it is returned as {error}. opts.job(job), when
+  // given, sees the job first; job.progressed lists what it passed to progress().
   dTest.runJob = function(name, data, opts) {
     opts = opts || {};
     var queue = Queues[name];
     if (!queue || !queue.handler) {
       throw new Error('FAIL: no handler for job ' + name + ' (handlers only exist on the worker)');
     }
-    var job = {id: 'test-' + Random.id(), data: _.extend({jobName: name}, data || {})};
+    var job = {id: 'test-' + Random.id(), data: _.extend({jobName: name}, data || {}), progressed: []};
+    job.progress = function(percent) { job.progressed.push(percent); };
+    if (opts.job) opts.job(job);
 
     var logged = [];
     var debug = Meteor._debug;
