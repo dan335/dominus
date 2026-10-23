@@ -1,0 +1,11 @@
+{
+  "name": "dominus-e2e",
+  "private": true,
+  "description": "Browser tests for Dominus (T7 of the Meteor upgrade plan). See README.md.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.0"
+  }
+}
