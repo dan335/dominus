@@ -65,6 +65,39 @@ if (Meteor.isServer) {
       }
     };
 
+    // Documents this client received, by collection name. A collection is set
+    // up the first time it is asked for; ask before subscribing so nothing is
+    // missed.
+    var collections = {};
+    client.collection = function(name) {
+      if (!collections[name]) {
+        collections[name] = new Mongo.Collection(name, {connection: connection});
+      }
+      return collections[name];
+    };
+
+    // docs of a collection, sorted by _id
+    client.docs = function(name) {
+      return client.collection(name).find({}, {sort: {_id: 1}}).fetch();
+    };
+
+    // Subscribes and waits until the subscription is ready or stopped.
+    // Returns {ready, error, stop()}; error is what the publication threw.
+    client.subscribe = function(name /* , args */) {
+      var args = _.toArray(arguments).slice(1);
+      var state = {ready: false, error: null, stopped: false};
+      var handle = connection.subscribe.apply(connection, [name].concat(args).concat([{
+        onReady: function() { state.ready = true; },
+        onStop: function(error) { state.stopped = true; state.error = error || null; }
+      }]));
+      if (!dTest.waitFor(function() { return state.ready || state.stopped; }, 10000)) {
+        handle.stop();
+        throw new Error('FAIL: subscription ' + name + ' was neither ready nor stopped after 10 seconds');
+      }
+      state.stop = function() { handle.stop(); };
+      return state;
+    };
+
     if (userId) {
       var stamped = Accounts._generateStampedLoginToken();
       Accounts._insertLoginToken(userId, stamped);
