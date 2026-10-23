@@ -1,5 +1,5 @@
 // Game code draws its random numbers from dRandom instead of Math.random(),
-// _.random() and _.shuffle(), so tests can seed them (T6 of the Meteor upgrade
+// _.random(), _.shuffle() and Random.id(), so tests can seed them (T6 of the Meteor upgrade
 // plan). Unseeded, each call is exactly the call it replaces.
 
 dRandom = {
@@ -36,6 +36,11 @@ dRandom = {
       copy[j] = temp;
     }
     return copy;
+  },
+
+  // like Random.id(): a document id
+  id: function() {
+    return this._generator ? this._generator.id() : Random.id();
   },
 
   // --- tests only ---

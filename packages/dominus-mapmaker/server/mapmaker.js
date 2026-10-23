@@ -79,7 +79,7 @@ Mapmaker = {
 			return false;
 		}
 
-		country._id = Random.id();
+		country._id = dRandom.id();
 		country = this.findBorders(country);
     this.saveCountry(country);
     this.findCountryNeighbors(gameId, country._id);

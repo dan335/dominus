@@ -150,6 +150,22 @@ if (Meteor.isServer) {
         equal(counting(Math, 'random', function() { dRandom.fraction(); }), 1, 'reset: Math.random again');
       });
 
+      run('dRandom.id: unseeded it is Random.id(), seeded the same seed gives the same ids', function() {
+        equal(counting(Random, 'id', function() { dRandom.id(); }), 1, 'unseeded: calls Random.id');
+        assert(/^[23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz]{17}$/.test(dRandom.id()), 'unseeded: a 17 character id');
+
+        dRandom.seed('ids');
+        var first;
+        equal(counting(Random, 'id', function() { first = sequence(5, function() { return dRandom.id(); }); }), 0, 'seeded: Random.id not used');
+        _.each(JSON.parse(first), function(id) {
+          assert(/^[23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz]{17}$/.test(id), 'seeded: a 17 character id');
+        });
+        equal(_.uniq(JSON.parse(first)).length, 5, 'seeded: all different');
+        dRandom.seed('ids');
+        equal(sequence(5, function() { return dRandom.id(); }), first, 'same seed, same ids');
+        dRandom.reset();
+      });
+
 
       // --- game code uses them ---
 
