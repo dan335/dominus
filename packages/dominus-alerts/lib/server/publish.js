@@ -1,5 +1,7 @@
 // public so logged out spectators can watch
 Meteor.publish('globalAlerts', function(gameId, numShow) {
+    check(gameId, Match.OneOf(String, null));
+    check(numShow, Match.Integer);
     numShow = Math.min(numShow, 150);
     if (Match.test(gameId, String) && Match.test(numShow, Match.Integer)) {
         return GlobalAlerts.find({gameId:gameId},{sort:{created_at:-1}, limit:numShow});
@@ -20,6 +22,7 @@ DDPRateLimiter.addRule(globalAlertsSubRule, 30, 5000);
 
 // public so logged out spectators can watch
 Meteor.publish('globalAlert', function(id) {
+    check(id, Match.OneOf(String, null));
     if (Match.test(id, String)) {
         return GlobalAlerts.find(id);
     } else {
@@ -40,8 +43,11 @@ DDPRateLimiter.addRule(globalAlertSubRule, 30, 5000);
 // temporarily disable oplog until this issue is fixed
 // https://github.com/meteor/meteor/issues/9087
 Meteor.publish('myAlerts', function(playerId, numShow, hideAlertTypes) {
+  check(playerId, Match.OneOf(String, null));
+  check(numShow, Match.Integer);
+  check(hideAlertTypes, Match.OneOf([String], null));
   if(this.userId) {
-    check(hideAlertTypes, Array);
+    hideAlertTypes = hideAlertTypes || [];
     numShow = Math.min(numShow, 150);
     var find = {playerIds: {$elemMatch: {playerId:playerId}}, type:{$nin:hideAlertTypes}};
     var options = {sort:{created_at:-1}, limit:numShow, disableOplog:true};
@@ -62,6 +68,7 @@ DDPRateLimiter.addRule(myAlertsSubRule, 30, 5000);
 
 // client only collection
 Meteor.publish('alertPlayer', function(playerId) {
+    check(playerId, Match.OneOf(String, null));
     var self = this
     var cur = Players.find(playerId, {fields: {userId:1, username:1, x:1, y:1, castle_id:1}})
     Mongo.Collection._publishCursor(cur, self, 'alertplayers')
@@ -80,6 +87,7 @@ DDPRateLimiter.addRule(alertPlayerSubRule, 30, 5000);
 
 
 Meteor.publish('alertArmy', function(army_id) {
+    check(army_id, Match.OneOf(String, null));
     var cur = Armies.find({_id:army_id}, {fields: {playerId:1, name:1, username:1, x:1, y:1, castle_id:1}})
     Mongo.Collection._publishCursor(cur, this, 'alertarmies')
     return this.ready();
@@ -97,6 +105,7 @@ DDPRateLimiter.addRule(alertArmySubRule, 30, 5000);
 
 
 Meteor.publish('alertVillage', function(village_id) {
+    check(village_id, Match.OneOf(String, null));
     var cur = Villages.find({_id:village_id}, {fields: {playerId:1, name:1, username:1, x:1, y:1, castle_id:1}})
     Mongo.Collection._publishCursor(cur, this, 'alertvillages')
     return this.ready();
@@ -114,6 +123,7 @@ DDPRateLimiter.addRule(alertVillageSubRule, 30, 5000);
 
 
 Meteor.publish('alertCastle', function(castle_id) {
+    check(castle_id, Match.OneOf(String, null));
     var cur = Castles.find({_id:castle_id}, {fields: {playerId:1, name:1, username:1, x:1, y:1, castle_id:1}})
     Mongo.Collection._publishCursor(cur, this, 'alertcastles')
     return this.ready();
@@ -132,6 +142,7 @@ DDPRateLimiter.addRule(alertCastleSubRule, 30, 5000);
 
 
 Meteor.publish('alertCapital', function(capital_id) {
+  check(capital_id, Match.OneOf(String, null));
   var cur = Capitals.find({_id:capital_id}, {fields:{playerId:1, x:1, y:1}});
   Mongo.Collection._publishCursor(cur, this, 'alertcapitals');
   return this.ready();
@@ -149,6 +160,7 @@ DDPRateLimiter.addRule(alertCapitalSubRule, 30, 5000);
 
 
 Meteor.publish('alertChatroom', function(room_id) {
+    check(room_id, Match.OneOf(String, null));
     var self = this
     var cur = Rooms.find(room_id, {fields: {name:1}})
     Mongo.Collection._publishCursor(cur, self, 'alertchatrooms')
@@ -167,6 +179,8 @@ DDPRateLimiter.addRule(alertChatroomSubRule, 30, 5000);
 
 
 Meteor.publish('battleAlertTitles', function(gameId, numShow) {
+    check(gameId, Match.OneOf(String, null));
+    check(numShow, Match.Integer);
     var self = this
     var fields = {
         createdAt:1,
@@ -200,6 +214,7 @@ DDPRateLimiter.addRule(battleAlertTitlesSubRule, 30, 5000);
 // https://github.com/meteor/meteor/issues/9087
 Meteor.publish('unreadAlerts', function(playerId, hideAlertsMine) {
   check(playerId, String);
+  check(hideAlertsMine, Match.OneOf([String], null));
   var self = this;
   if (!hideAlertsMine) {
     hideAlertsMine = [];
