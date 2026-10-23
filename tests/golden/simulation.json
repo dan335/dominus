@@ -1,0 +1,3196 @@
+{
+ "about": "What the game simulation (server/simulationTests.js) left behind after each step. Recorded from the code before the Meteor upgrade; see that file before recording it again.",
+ "seed": "dominus golden master",
+ "startAt": "2026-01-05T09:00:00.000Z",
+ "steps": [
+  {
+   "step": "four players sign up and the game starts",
+   "time": "2026-01-05T09:02:00.000Z",
+   "facts": {
+    "alerts": 0,
+    "battles": [],
+    "game": {
+     "closeDate": null,
+     "dominusAchieved": false,
+     "endDate": null,
+     "hasClosed": false,
+     "hasEnded": false,
+     "hasStarted": true,
+     "lastDominus": null,
+     "taxesCollected": 0
+    },
+    "globalAlerts": 1,
+    "markets": [
+     {
+      "price": 10,
+      "type": "clay"
+     },
+     {
+      "price": 10,
+      "type": "glass"
+     },
+     {
+      "price": 10,
+      "type": "grain"
+     },
+     {
+      "price": 10,
+      "type": "lumber"
+     },
+     {
+      "price": 10,
+      "type": "ore"
+     },
+     {
+      "price": 10,
+      "type": "wool"
+     }
+    ],
+    "players": {
+     "sim_alice": {
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12,
+       "x": -6,
+       "y": 1
+      },
+      "income": 1230,
+      "is_dominus": false,
+      "is_king": true,
+      "king": null,
+      "lord": null,
+      "resources": {
+       "clay": 520,
+       "glass": 520,
+       "gold": 40,
+       "grain": 520,
+       "lumber": 520,
+       "ore": 520,
+       "wool": 520
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_bob": {
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12,
+       "x": -8,
+       "y": 9
+      },
+      "income": 1230,
+      "is_dominus": false,
+      "is_king": true,
+      "king": null,
+      "lord": null,
+      "resources": {
+       "clay": 520,
+       "glass": 520,
+       "gold": 40,
+       "grain": 520,
+       "lumber": 520,
+       "ore": 520,
+       "wool": 520
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_carol": {
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12,
+       "x": 7,
+       "y": -4
+      },
+      "income": 1230,
+      "is_dominus": false,
+      "is_king": true,
+      "king": null,
+      "lord": null,
+      "resources": {
+       "clay": 520,
+       "glass": 520,
+       "gold": 40,
+       "grain": 520,
+       "lumber": 520,
+       "ore": 520,
+       "wool": 520
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_dave": {
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12,
+       "x": 2,
+       "y": 4
+      },
+      "income": 1230,
+      "is_dominus": false,
+      "is_king": true,
+      "king": null,
+      "lord": null,
+      "resources": {
+       "clay": 520,
+       "glass": 520,
+       "gold": 40,
+       "grain": 520,
+       "lumber": 520,
+       "ore": 520,
+       "wool": 520
+      },
+      "vassals": [],
+      "villages": []
+     }
+    },
+    "reports": 0
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {
+     "bakeCountry": 1,
+     "createCountryMask": 1,
+     "sendGameStartedEmail": 4
+    },
+    "ran": {
+     "checkForGameClose": 2,
+     "checkForGameEnd": 2,
+     "checkForGameStart": 2,
+     "collectCapitalIncome": 6,
+     "collectCastleIncome": 6,
+     "collectVillageIncome": 6,
+     "generateTree": 1,
+     "initDailystatsForNewUser": 4,
+     "moveArmiesJob": 6,
+     "setupEveryoneChatroom": 1,
+     "villageConstructionJob": 1
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 4,
+     "hash": "94a3bad34dad77fc"
+    },
+    "castles": {
+     "count": 4,
+     "hash": "de49cf6e3947ad70"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 1,
+     "hash": "5e357cfb5f8886e6"
+    },
+    "hexes": {
+     "count": 300,
+     "hash": "c4640ba4f2961f07"
+    },
+    "countries": {
+     "count": 1,
+     "hash": "c0ed11ed3f639966"
+    },
+    "rooms": {
+     "count": 1,
+     "hash": "b28fecc065b1d5f8"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "globalalerts": {
+     "count": 1,
+     "hash": "0247556600155ce5"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "0a9f1f211adb08a1"
+    },
+    "markethistory": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "battles2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 4,
+     "hash": "6501d5f84d3fc8de"
+    },
+    "gamestats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "games": {
+     "count": 1,
+     "hash": "11f8c5e9877e6c83"
+    },
+    "rounds": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 4,
+     "hash": "e6d18dd98489a60b"
+    }
+   }
+  },
+  {
+   "step": "everyone trades at the market and hires soldiers",
+   "time": "2026-01-05T09:03:00.000Z",
+   "facts": {
+    "alerts": 0,
+    "battles": [],
+    "game": {
+     "closeDate": null,
+     "dominusAchieved": false,
+     "endDate": null,
+     "hasClosed": false,
+     "hasEnded": false,
+     "hasStarted": true,
+     "lastDominus": null,
+     "taxesCollected": 140.010651
+    },
+    "globalAlerts": 1,
+    "markets": [
+     {
+      "price": 10,
+      "type": "clay"
+     },
+     {
+      "price": 10,
+      "type": "glass"
+     },
+     {
+      "price": 9.985011282,
+      "type": "grain"
+     },
+     {
+      "price": 9.990005023,
+      "type": "lumber"
+     },
+     {
+      "price": 10.00250031,
+      "type": "ore"
+     },
+     {
+      "price": 10.00100005,
+      "type": "wool"
+     }
+    ],
+    "players": {
+     "sim_alice": {
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 32,
+       "footmen": 62,
+       "pikemen": 12,
+       "x": -6,
+       "y": 1
+      },
+      "income": 1229.570333,
+      "is_dominus": false,
+      "is_king": true,
+      "king": null,
+      "lord": null,
+      "resources": {
+       "clay": 2540,
+       "glass": 1040,
+       "gold": 1469.926494,
+       "grain": 3560,
+       "lumber": 2540,
+       "ore": 2590,
+       "wool": 1540
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_bob": {
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 22,
+       "x": -8,
+       "y": 9
+      },
+      "income": 1229.570333,
+      "is_dominus": false,
+      "is_king": true,
+      "king": null,
+      "lord": null,
+      "resources": {
+       "clay": 1540,
+       "glass": 1040,
+       "gold": 5067.758613,
+       "grain": 5020,
+       "lumber": 2540,
+       "ore": 8540,
+       "wool": 4540
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_carol": {
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 27,
+       "footmen": 52,
+       "pikemen": 12,
+       "x": 7,
+       "y": -4
+      },
+      "income": 1229.570333,
+      "is_dominus": false,
+      "is_king": true,
+      "king": null,
+      "lord": null,
+      "resources": {
+       "clay": 2540,
+       "glass": 1040,
+       "gold": 1829.9886,
+       "grain": 3890,
+       "lumber": 2540,
+       "ore": 3540,
+       "wool": 2060
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_dave": {
+      "armies": [],
+      "castle": {
+       "archers": 22,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12,
+       "x": 2,
+       "y": 4
+      },
+      "income": 1229.570333,
+      "is_dominus": false,
+      "is_king": true,
+      "king": null,
+      "lord": null,
+      "resources": {
+       "clay": 2540,
+       "glass": 1040,
+       "gold": 4069.005328,
+       "grain": 5320,
+       "lumber": 1340,
+       "ore": 8540,
+       "wool": 4540
+      },
+      "vassals": [],
+      "villages": []
+     }
+    },
+    "reports": 0
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {
+     "checkForGameClose": 1,
+     "checkForGameEnd": 1,
+     "checkForGameStart": 1,
+     "collectCapitalIncome": 3,
+     "collectCastleIncome": 3,
+     "collectVillageIncome": 3,
+     "moveArmiesJob": 3,
+     "record_market_history": 4,
+     "villageConstructionJob": 1
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 4,
+     "hash": "775072c782b21836"
+    },
+    "castles": {
+     "count": 4,
+     "hash": "4054dc6484c09849"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 1,
+     "hash": "a2b2833705e20142"
+    },
+    "hexes": {
+     "count": 300,
+     "hash": "c4640ba4f2961f07"
+    },
+    "countries": {
+     "count": 1,
+     "hash": "c0ed11ed3f639966"
+    },
+    "rooms": {
+     "count": 1,
+     "hash": "b28fecc065b1d5f8"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "globalalerts": {
+     "count": 1,
+     "hash": "0247556600155ce5"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "7e871e5d2f54f7ec"
+    },
+    "markethistory": {
+     "count": 1,
+     "hash": "7aa6374f1c581ed1"
+    },
+    "battles2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 4,
+     "hash": "6501d5f84d3fc8de"
+    },
+    "gamestats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "games": {
+     "count": 1,
+     "hash": "204e402adf20ae5c"
+    },
+    "rounds": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 4,
+     "hash": "e6d18dd98489a60b"
+    }
+   }
+  },
+  {
+   "step": "alice marches on bob and carol on dave",
+   "time": "2026-01-05T09:13:00.000Z",
+   "facts": {
+    "alerts": 0,
+    "battles": [],
+    "game": {
+     "closeDate": null,
+     "dominusAchieved": false,
+     "endDate": null,
+     "hasClosed": false,
+     "hasEnded": false,
+     "hasStarted": true,
+     "lastDominus": null,
+     "taxesCollected": 140.010651
+    },
+    "globalAlerts": 1,
+    "markets": [
+     {
+      "price": 10,
+      "type": "clay"
+     },
+     {
+      "price": 10,
+      "type": "glass"
+     },
+     {
+      "price": 9.985011282,
+      "type": "grain"
+     },
+     {
+      "price": 9.990005023,
+      "type": "lumber"
+     },
+     {
+      "price": 10.00250031,
+      "type": "ore"
+     },
+     {
+      "price": 10.00100005,
+      "type": "wool"
+     }
+    ],
+    "players": {
+     "sim_alice": {
+      "armies": [
+       {
+        "archers": 0,
+        "catapults": 0,
+        "cavalry": 25,
+        "footmen": 50,
+        "pikemen": 0,
+        "x": -6,
+        "y": 2
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 7,
+       "footmen": 12,
+       "pikemen": 12,
+       "x": -6,
+       "y": 1
+      },
+      "income": 1229.570333,
+      "is_dominus": false,
+      "is_king": true,
+      "king": null,
+      "lord": null,
+      "resources": {
+       "clay": 2740,
+       "glass": 1240,
+       "gold": 1769.926494,
+       "grain": 3760,
+       "lumber": 2740,
+       "ore": 2790,
+       "wool": 1740
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_bob": {
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 22,
+       "x": -8,
+       "y": 9
+      },
+      "income": 1229.570333,
+      "is_dominus": false,
+      "is_king": true,
+      "king": null,
+      "lord": null,
+      "resources": {
+       "clay": 1740,
+       "glass": 1240,
+       "gold": 5367.758613,
+       "grain": 5220,
+       "lumber": 2740,
+       "ore": 8740,
+       "wool": 4740
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_carol": {
+      "armies": [
+       {
+        "archers": 0,
+        "catapults": 0,
+        "cavalry": 25,
+        "footmen": 50,
+        "pikemen": 0,
+        "x": 6,
+        "y": -3
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12,
+       "x": 7,
+       "y": -4
+      },
+      "income": 1229.570333,
+      "is_dominus": false,
+      "is_king": true,
+      "king": null,
+      "lord": null,
+      "resources": {
+       "clay": 2740,
+       "glass": 1240,
+       "gold": 2129.9886,
+       "grain": 4090,
+       "lumber": 2740,
+       "ore": 3740,
+       "wool": 2260
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_dave": {
+      "armies": [],
+      "castle": {
+       "archers": 22,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12,
+       "x": 2,
+       "y": 4
+      },
+      "income": 1229.570333,
+      "is_dominus": false,
+      "is_king": true,
+      "king": null,
+      "lord": null,
+      "resources": {
+       "clay": 2740,
+       "glass": 1240,
+       "gold": 4369.005328,
+       "grain": 5520,
+       "lumber": 1540,
+       "ore": 8740,
+       "wool": 4740
+      },
+      "vassals": [],
+      "villages": []
+     }
+    },
+    "reports": 0
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {
+     "checkForGameClose": 10,
+     "checkForGameEnd": 10,
+     "checkForGameStart": 10,
+     "collectCapitalIncome": 30,
+     "collectCastleIncome": 30,
+     "collectVillageIncome": 30,
+     "enterNewHexCheck": 2,
+     "expirePastMoves": 2,
+     "findCountriesInPath": 2,
+     "gamestats_job": 1,
+     "moveArmiesJob": 30,
+     "pathToHex": 2,
+     "updateArmyMoveTotals": 2,
+     "updateIncomeRank": 1,
+     "updateMoveSpeed": 2,
+     "updatePathTime": 2,
+     "updateVassalRank": 1,
+     "villageConstructionJob": 10
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 4,
+     "hash": "4ee8c30bca20724e"
+    },
+    "castles": {
+     "count": 4,
+     "hash": "8b4da0005a4bfcc6"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 2,
+     "hash": "b5a54368c7aa44b5"
+    },
+    "armypaths2": {
+     "count": 2,
+     "hash": "89b28b662716553f"
+    },
+    "capitals": {
+     "count": 1,
+     "hash": "ee616fa54de106f2"
+    },
+    "hexes": {
+     "count": 300,
+     "hash": "c4640ba4f2961f07"
+    },
+    "countries": {
+     "count": 1,
+     "hash": "c0ed11ed3f639966"
+    },
+    "rooms": {
+     "count": 1,
+     "hash": "b28fecc065b1d5f8"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "globalalerts": {
+     "count": 1,
+     "hash": "0247556600155ce5"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "7e871e5d2f54f7ec"
+    },
+    "markethistory": {
+     "count": 1,
+     "hash": "7aa6374f1c581ed1"
+    },
+    "battles2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 4,
+     "hash": "8620bf2afb7e7256"
+    },
+    "gamestats": {
+     "count": 1,
+     "hash": "d51f291f973c92a9"
+    },
+    "games": {
+     "count": 1,
+     "hash": "204e402adf20ae5c"
+    },
+    "rounds": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 4,
+     "hash": "e6d18dd98489a60b"
+    }
+   }
+  },
+  {
+   "step": "carol takes dave's castle",
+   "time": "2026-01-05T09:54:40.000Z",
+   "facts": {
+    "alerts": 14,
+    "battles": [
+     {
+      "isOver": true,
+      "roundNumber": 4,
+      "x": -8,
+      "y": 9
+     },
+     {
+      "isOver": true,
+      "roundNumber": 4,
+      "x": 2,
+      "y": 4
+     }
+    ],
+    "game": {
+     "closeDate": null,
+     "dominusAchieved": false,
+     "endDate": null,
+     "hasClosed": false,
+     "hasEnded": false,
+     "hasStarted": true,
+     "lastDominus": null,
+     "taxesCollected": 0
+    },
+    "globalAlerts": 1,
+    "markets": [
+     {
+      "price": 10.00009723,
+      "type": "clay"
+     },
+     {
+      "price": 10.00009723,
+      "type": "glass"
+     },
+     {
+      "price": 9.985108511,
+      "type": "grain"
+     },
+     {
+      "price": 9.990102253,
+      "type": "lumber"
+     },
+     {
+      "price": 10.00259754,
+      "type": "ore"
+     },
+     {
+      "price": 10.00109728,
+      "type": "wool"
+     }
+    ],
+    "players": {
+     "sim_alice": {
+      "armies": [
+       {
+        "archers": 0,
+        "catapults": 0,
+        "cavalry": 9,
+        "footmen": 37,
+        "pikemen": 0,
+        "x": -8,
+        "y": 9
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 7,
+       "footmen": 12,
+       "pikemen": 12,
+       "x": -6,
+       "y": 1
+      },
+      "income": 1229.582001,
+      "is_dominus": false,
+      "is_king": true,
+      "king": "sim_alice",
+      "lord": null,
+      "resources": {
+       "clay": 3560,
+       "glass": 2060,
+       "gold": 2999.926494,
+       "grain": 4580,
+       "lumber": 3560,
+       "ore": 3610,
+       "wool": 2560
+      },
+      "vassals": [
+       "sim_bob"
+      ],
+      "villages": []
+     },
+     "sim_bob": {
+      "armies": [],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 0,
+       "pikemen": 0,
+       "x": -8,
+       "y": 9
+      },
+      "income": 1229.582001,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_alice",
+      "lord": "sim_alice",
+      "resources": {
+       "clay": 2560,
+       "glass": 2060,
+       "gold": 6597.758613,
+       "grain": 6040,
+       "lumber": 3560,
+       "ore": 9560,
+       "wool": 5560
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_carol": {
+      "armies": [
+       {
+        "archers": 0,
+        "catapults": 0,
+        "cavalry": 12,
+        "footmen": 34,
+        "pikemen": 0,
+        "x": 2,
+        "y": 4
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12,
+       "x": 7,
+       "y": -4
+      },
+      "income": 1229.582001,
+      "is_dominus": false,
+      "is_king": true,
+      "king": "sim_carol",
+      "lord": null,
+      "resources": {
+       "clay": 3560,
+       "glass": 2060,
+       "gold": 3359.9886,
+       "grain": 4910,
+       "lumber": 3560,
+       "ore": 4560,
+       "wool": 3080
+      },
+      "vassals": [
+       "sim_dave"
+      ],
+      "villages": []
+     },
+     "sim_dave": {
+      "armies": [],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 0,
+       "pikemen": 0,
+       "x": 2,
+       "y": 4
+      },
+      "income": 1229.582001,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_carol",
+      "lord": "sim_carol",
+      "resources": {
+       "clay": 3560,
+       "glass": 2060,
+       "gold": 5599.005328,
+       "grain": 6340,
+       "lumber": 2360,
+       "ore": 9560,
+       "wool": 5560
+      },
+      "vassals": [],
+      "villages": []
+     }
+    },
+    "reports": 0
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {
+     "checkForDominus": 1,
+     "checkForGameClose": 41,
+     "checkForGameEnd": 41,
+     "checkForGameStart": 41,
+     "cleanupAllKingChatrooms": 1,
+     "collectCapitalIncome": 125,
+     "collectCastleIncome": 125,
+     "collectVillageIncome": 125,
+     "destroyKingChatroom": 2,
+     "expirePastMoves": 8,
+     "gamestats_job": 4,
+     "generateTree": 2,
+     "moveArmiesJob": 125,
+     "record_market_history": 1,
+     "removeStuckBattles": 1,
+     "runBattle": 8,
+     "spendTaxes": 1,
+     "updateIncomeRank": 4,
+     "updateIncomeStats": 1,
+     "updateKingChatroom": 2,
+     "updateMoveSpeed": 6,
+     "updateVassalAllyCountMultiple": 2,
+     "updateVassalRank": 4,
+     "update_losses_worth": 16,
+     "villageConstructionJob": 41
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 4,
+     "hash": "e33ed73268cb6355"
+    },
+    "castles": {
+     "count": 4,
+     "hash": "f4f88bde7557d43f"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 2,
+     "hash": "7dcc1c744acdeee9"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 1,
+     "hash": "8e2fb719acf88c81"
+    },
+    "hexes": {
+     "count": 300,
+     "hash": "c4640ba4f2961f07"
+    },
+    "countries": {
+     "count": 1,
+     "hash": "c0ed11ed3f639966"
+    },
+    "rooms": {
+     "count": 3,
+     "hash": "3a7cd8f6380666e5"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 14,
+     "hash": "353cfe9eace63ee2"
+    },
+    "globalalerts": {
+     "count": 1,
+     "hash": "0247556600155ce5"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "5c26a8d3bac0a14f"
+    },
+    "markethistory": {
+     "count": 1,
+     "hash": "7aa6374f1c581ed1"
+    },
+    "battles2": {
+     "count": 2,
+     "hash": "bb74b7944a22322a"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 4,
+     "hash": "27392ea8d580ed54"
+    },
+    "gamestats": {
+     "count": 5,
+     "hash": "47e46f47b49f47ad"
+    },
+    "games": {
+     "count": 1,
+     "hash": "1dbd6ee7219b9524"
+    },
+    "rounds": {
+     "count": 8,
+     "hash": "3afe25d3117b6a04"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 4,
+     "hash": "e6d18dd98489a60b"
+    }
+   }
+  },
+  {
+   "step": "alice takes bob's castle",
+   "time": "2026-01-05T10:00:00.000Z",
+   "facts": {
+    "alerts": 14,
+    "battles": [
+     {
+      "isOver": true,
+      "roundNumber": 4,
+      "x": -8,
+      "y": 9
+     },
+     {
+      "isOver": true,
+      "roundNumber": 4,
+      "x": 2,
+      "y": 4
+     }
+    ],
+    "game": {
+     "closeDate": null,
+     "dominusAchieved": false,
+     "endDate": null,
+     "hasClosed": false,
+     "hasEnded": false,
+     "hasStarted": true,
+     "lastDominus": null,
+     "taxesCollected": 0
+    },
+    "globalAlerts": 1,
+    "markets": [
+     {
+      "price": 10.00009723,
+      "type": "clay"
+     },
+     {
+      "price": 10.00009723,
+      "type": "glass"
+     },
+     {
+      "price": 9.985108511,
+      "type": "grain"
+     },
+     {
+      "price": 9.990102253,
+      "type": "lumber"
+     },
+     {
+      "price": 10.00259754,
+      "type": "ore"
+     },
+     {
+      "price": 10.00109728,
+      "type": "wool"
+     }
+    ],
+    "players": {
+     "sim_alice": {
+      "armies": [
+       {
+        "archers": 0,
+        "catapults": 0,
+        "cavalry": 9,
+        "footmen": 37,
+        "pikemen": 0,
+        "x": -8,
+        "y": 9
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 7,
+       "footmen": 12,
+       "pikemen": 12,
+       "x": -6,
+       "y": 1
+      },
+      "income": 1229.582001,
+      "is_dominus": false,
+      "is_king": true,
+      "king": "sim_alice",
+      "lord": null,
+      "resources": {
+       "clay": 3680,
+       "glass": 2180,
+       "gold": 3179.926494,
+       "grain": 4700,
+       "lumber": 3680,
+       "ore": 3730,
+       "wool": 2680
+      },
+      "vassals": [
+       "sim_bob"
+      ],
+      "villages": []
+     },
+     "sim_bob": {
+      "armies": [],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 0,
+       "pikemen": 0,
+       "x": -8,
+       "y": 9
+      },
+      "income": 1229.582001,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_alice",
+      "lord": "sim_alice",
+      "resources": {
+       "clay": 2680,
+       "glass": 2180,
+       "gold": 6777.758613,
+       "grain": 6160,
+       "lumber": 3680,
+       "ore": 9680,
+       "wool": 5680
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_carol": {
+      "armies": [
+       {
+        "archers": 0,
+        "catapults": 0,
+        "cavalry": 12,
+        "footmen": 34,
+        "pikemen": 0,
+        "x": 2,
+        "y": 4
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12,
+       "x": 7,
+       "y": -4
+      },
+      "income": 1229.582001,
+      "is_dominus": false,
+      "is_king": true,
+      "king": "sim_carol",
+      "lord": null,
+      "resources": {
+       "clay": 3680,
+       "glass": 2180,
+       "gold": 3539.9886,
+       "grain": 5030,
+       "lumber": 3680,
+       "ore": 4680,
+       "wool": 3200
+      },
+      "vassals": [
+       "sim_dave"
+      ],
+      "villages": []
+     },
+     "sim_dave": {
+      "armies": [],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 0,
+       "pikemen": 0,
+       "x": 2,
+       "y": 4
+      },
+      "income": 1229.582001,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_carol",
+      "lord": "sim_carol",
+      "resources": {
+       "clay": 3680,
+       "glass": 2180,
+       "gold": 5779.005328,
+       "grain": 6460,
+       "lumber": 2480,
+       "ore": 9680,
+       "wool": 5680
+      },
+      "vassals": [],
+      "villages": []
+     }
+    },
+    "reports": 0
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {
+     "checkForGameClose": 6,
+     "checkForGameEnd": 6,
+     "checkForGameStart": 6,
+     "collectCapitalIncome": 16,
+     "collectCastleIncome": 16,
+     "collectVillageIncome": 16,
+     "enemies_together_check": 1,
+     "enemy_on_building_check": 1,
+     "expirePastMoves": 2,
+     "gamestats_job": 1,
+     "generateTree": 1,
+     "moveArmiesJob": 16,
+     "record_market_history": 1,
+     "removeStuckBattles": 1,
+     "spendTaxes": 1,
+     "updateIncomeRank": 1,
+     "updateIncomeStats": 1,
+     "updateMoveSpeed": 2,
+     "updateVassalRank": 1,
+     "villageConstructionJob": 6
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 4,
+     "hash": "00099ab0bfd0046c"
+    },
+    "castles": {
+     "count": 4,
+     "hash": "f4f88bde7557d43f"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 2,
+     "hash": "c642f4273252d009"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 1,
+     "hash": "e0f09d78bc4fe612"
+    },
+    "hexes": {
+     "count": 300,
+     "hash": "c4640ba4f2961f07"
+    },
+    "countries": {
+     "count": 1,
+     "hash": "c0ed11ed3f639966"
+    },
+    "rooms": {
+     "count": 3,
+     "hash": "3a7cd8f6380666e5"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 14,
+     "hash": "353cfe9eace63ee2"
+    },
+    "globalalerts": {
+     "count": 1,
+     "hash": "0247556600155ce5"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "5c26a8d3bac0a14f"
+    },
+    "markethistory": {
+     "count": 2,
+     "hash": "2cc9ce052711a286"
+    },
+    "battles2": {
+     "count": 2,
+     "hash": "bb74b7944a22322a"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 4,
+     "hash": "06d5f3a11c772543"
+    },
+    "gamestats": {
+     "count": 6,
+     "hash": "55014d15f419ee94"
+    },
+    "games": {
+     "count": 1,
+     "hash": "1dbd6ee7219b9524"
+    },
+    "rounds": {
+     "count": 8,
+     "hash": "3afe25d3117b6a04"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 4,
+     "hash": "e6d18dd98489a60b"
+    }
+   }
+  },
+  {
+   "step": "alice sends her vassal gold, and bob builds a village and upgrades it",
+   "time": "2026-01-05T10:37:00.000Z",
+   "facts": {
+    "alerts": 16,
+    "battles": [
+     {
+      "isOver": true,
+      "roundNumber": 4,
+      "x": -8,
+      "y": 9
+     },
+     {
+      "isOver": true,
+      "roundNumber": 4,
+      "x": 2,
+      "y": 4
+     }
+    ],
+    "game": {
+     "closeDate": null,
+     "dominusAchieved": false,
+     "endDate": null,
+     "hasClosed": false,
+     "hasEnded": false,
+     "hasStarted": true,
+     "lastDominus": null,
+     "taxesCollected": 0
+    },
+    "globalAlerts": 2,
+    "markets": [
+     {
+      "price": 10.0001389,
+      "type": "clay"
+     },
+     {
+      "price": 10.0001389,
+      "type": "glass"
+     },
+     {
+      "price": 9.985150178,
+      "type": "grain"
+     },
+     {
+      "price": 9.99014392,
+      "type": "lumber"
+     },
+     {
+      "price": 10.0026392,
+      "type": "ore"
+     },
+     {
+      "price": 10.00113894,
+      "type": "wool"
+     }
+    ],
+    "players": {
+     "sim_alice": {
+      "armies": [
+       {
+        "archers": 0,
+        "catapults": 0,
+        "cavalry": 9,
+        "footmen": 37,
+        "pikemen": 0,
+        "x": -8,
+        "y": 9
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 7,
+       "footmen": 12,
+       "pikemen": 12,
+       "x": -6,
+       "y": 1
+      },
+      "income": 1373.4451,
+      "is_dominus": false,
+      "is_king": true,
+      "king": "sim_alice",
+      "lord": null,
+      "resources": {
+       "clay": 4520.8,
+       "glass": 2920,
+       "gold": 3989.926494,
+       "grain": 5641.6,
+       "lumber": 4520.8,
+       "ore": 4470,
+       "wool": 3420
+      },
+      "vassals": [
+       "sim_bob"
+      ],
+      "villages": []
+     },
+     "sim_bob": {
+      "armies": [],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 2,
+       "pikemen": 0,
+       "x": -8,
+       "y": 9
+      },
+      "income": 3627.221991,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_alice",
+      "lord": "sim_alice",
+      "resources": {
+       "clay": 4940,
+       "glass": 2700,
+       "gold": 8127.758613,
+       "grain": 10028,
+       "lumber": 5940,
+       "ore": 9600,
+       "wool": 6200
+      },
+      "vassals": [],
+      "villages": [
+       {
+        "level": 2,
+        "under_construction": false,
+        "x": -9,
+        "y": 10
+       }
+      ]
+     },
+     "sim_carol": {
+      "armies": [
+       {
+        "archers": 0,
+        "catapults": 0,
+        "cavalry": 12,
+        "footmen": 34,
+        "pikemen": 0,
+        "x": 2,
+        "y": 4
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12,
+       "x": 7,
+       "y": -4
+      },
+      "income": 1229.587001,
+      "is_dominus": false,
+      "is_king": true,
+      "king": "sim_carol",
+      "lord": null,
+      "resources": {
+       "clay": 4420,
+       "glass": 2920,
+       "gold": 4649.9886,
+       "grain": 5770,
+       "lumber": 4420,
+       "ore": 5420,
+       "wool": 3940
+      },
+      "vassals": [
+       "sim_dave"
+      ],
+      "villages": []
+     },
+     "sim_dave": {
+      "armies": [],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 0,
+       "pikemen": 0,
+       "x": 2,
+       "y": 4
+      },
+      "income": 1229.587001,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_carol",
+      "lord": "sim_carol",
+      "resources": {
+       "clay": 4420,
+       "glass": 2920,
+       "gold": 6889.005328,
+       "grain": 7200,
+       "lumber": 3220,
+       "ore": 10420,
+       "wool": 6420
+      },
+      "vassals": [],
+      "villages": []
+     }
+    },
+    "reports": 0
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {
+     "checkForGameClose": 37,
+     "checkForGameEnd": 37,
+     "checkForGameStart": 37,
+     "collectCapitalIncome": 51,
+     "collectCastleIncome": 51,
+     "collectVillageIncome": 51,
+     "enterNewHexCheck": 1,
+     "expirePastMoves": 7,
+     "findCountriesInPath": 1,
+     "gamestats_job": 3,
+     "generateTree": 1,
+     "moveArmiesJob": 51,
+     "pathToHex": 1,
+     "record_market_history": 1,
+     "removeStuckBattles": 1,
+     "spendTaxes": 1,
+     "updateArmyMoveTotals": 1,
+     "updateIncomeRank": 3,
+     "updateIncomeStats": 1,
+     "updateMoveSpeed": 1,
+     "updatePathTime": 1,
+     "updateVassalRank": 3,
+     "villageConstructionJob": 37
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 4,
+     "hash": "e0b61ff250bfc0d1"
+    },
+    "castles": {
+     "count": 4,
+     "hash": "c57015c5c8cbcb6a"
+    },
+    "villages": {
+     "count": 1,
+     "hash": "8007568761acdc3d"
+    },
+    "armies": {
+     "count": 2,
+     "hash": "6df125c4e2d4253c"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 1,
+     "hash": "39836195f711b703"
+    },
+    "hexes": {
+     "count": 300,
+     "hash": "d79351940771f393"
+    },
+    "countries": {
+     "count": 1,
+     "hash": "cd2af87756f195db"
+    },
+    "rooms": {
+     "count": 3,
+     "hash": "3a7cd8f6380666e5"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 16,
+     "hash": "895c5061c511defb"
+    },
+    "globalalerts": {
+     "count": 2,
+     "hash": "aefb98dc6cdb50be"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "f0ac0322e7e4b476"
+    },
+    "markethistory": {
+     "count": 2,
+     "hash": "2cc9ce052711a286"
+    },
+    "battles2": {
+     "count": 2,
+     "hash": "bb74b7944a22322a"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 4,
+     "hash": "15b121947cbe3435"
+    },
+    "gamestats": {
+     "count": 9,
+     "hash": "9c861c3b0b8e1373"
+    },
+    "games": {
+     "count": 1,
+     "hash": "379acf39f3a03963"
+    },
+    "rounds": {
+     "count": 8,
+     "hash": "3afe25d3117b6a04"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 4,
+     "hash": "e6d18dd98489a60b"
+    }
+   }
+  },
+  {
+   "step": "carol splits her army and sends half home, alice's first army goes home",
+   "time": "2026-01-05T11:27:00.000Z",
+   "facts": {
+    "alerts": 18,
+    "battles": [
+     {
+      "isOver": true,
+      "roundNumber": 4,
+      "x": -8,
+      "y": 9
+     },
+     {
+      "isOver": true,
+      "roundNumber": 4,
+      "x": 2,
+      "y": 4
+     }
+    ],
+    "game": {
+     "closeDate": null,
+     "dominusAchieved": false,
+     "endDate": null,
+     "hasClosed": false,
+     "hasEnded": false,
+     "hasStarted": true,
+     "lastDominus": null,
+     "taxesCollected": 0
+    },
+    "globalAlerts": 2,
+    "markets": [
+     {
+      "price": 10.0001389,
+      "type": "clay"
+     },
+     {
+      "price": 10.0001389,
+      "type": "glass"
+     },
+     {
+      "price": 9.985150178,
+      "type": "grain"
+     },
+     {
+      "price": 9.99014392,
+      "type": "lumber"
+     },
+     {
+      "price": 10.0026392,
+      "type": "ore"
+     },
+     {
+      "price": 10.00113894,
+      "type": "wool"
+     }
+    ],
+    "players": {
+     "sim_alice": {
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 16,
+       "footmen": 49,
+       "pikemen": 12,
+       "x": -6,
+       "y": 1
+      },
+      "income": 1373.4451,
+      "is_dominus": false,
+      "is_king": true,
+      "king": "sim_alice",
+      "lord": null,
+      "resources": {
+       "clay": 5700.8,
+       "glass": 3920,
+       "gold": 5489.926494,
+       "grain": 7001.6,
+       "lumber": 5700.8,
+       "ore": 5470,
+       "wool": 4420
+      },
+      "vassals": [
+       "sim_bob"
+      ],
+      "villages": []
+     },
+     "sim_bob": {
+      "armies": [],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 2,
+       "pikemen": 0,
+       "x": -8,
+       "y": 9
+      },
+      "income": 3627.221991,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_alice",
+      "lord": "sim_alice",
+      "resources": {
+       "clay": 8940,
+       "glass": 3700,
+       "gold": 9627.758613,
+       "grain": 17028,
+       "lumber": 9940,
+       "ore": 10600,
+       "wool": 7200
+      },
+      "vassals": [],
+      "villages": [
+       {
+        "level": 2,
+        "under_construction": false,
+        "x": -9,
+        "y": 10
+       }
+      ]
+     },
+     "sim_carol": {
+      "armies": [
+       {
+        "archers": 0,
+        "catapults": 0,
+        "cavalry": 2,
+        "footmen": 10,
+        "pikemen": 0,
+        "x": 2,
+        "y": 4
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 12,
+       "footmen": 26,
+       "pikemen": 12,
+       "x": 7,
+       "y": -4
+      },
+      "income": 1229.587001,
+      "is_dominus": false,
+      "is_king": true,
+      "king": "sim_carol",
+      "lord": null,
+      "resources": {
+       "clay": 5420,
+       "glass": 3920,
+       "gold": 6149.9886,
+       "grain": 6770,
+       "lumber": 5420,
+       "ore": 6420,
+       "wool": 4940
+      },
+      "vassals": [
+       "sim_dave"
+      ],
+      "villages": []
+     },
+     "sim_dave": {
+      "armies": [],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 0,
+       "pikemen": 0,
+       "x": 2,
+       "y": 4
+      },
+      "income": 1229.587001,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_carol",
+      "lord": "sim_carol",
+      "resources": {
+       "clay": 5420,
+       "glass": 3920,
+       "gold": 8389.005328,
+       "grain": 8200,
+       "lumber": 4220,
+       "ore": 11420,
+       "wool": 7420
+      },
+      "vassals": [],
+      "villages": []
+     }
+    },
+    "reports": 0
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {
+     "checkForGameClose": 50,
+     "checkForGameEnd": 50,
+     "checkForGameStart": 50,
+     "collectCapitalIncome": 150,
+     "collectCastleIncome": 150,
+     "collectVillageIncome": 150,
+     "enterNewHexCheck": 1,
+     "expirePastMoves": 10,
+     "findCountriesInPath": 2,
+     "gamestats_job": 5,
+     "generateTree": 1,
+     "moveArmiesJob": 150,
+     "pathToHex": 2,
+     "record_market_history": 1,
+     "removeStuckBattles": 1,
+     "spendTaxes": 1,
+     "updateArmyMoveTotals": 2,
+     "updateIncomeRank": 5,
+     "updateIncomeStats": 1,
+     "updateMoveSpeed": 2,
+     "updateVassalRank": 5,
+     "villageConstructionJob": 50
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 4,
+     "hash": "6a4268bc09cbf125"
+    },
+    "castles": {
+     "count": 4,
+     "hash": "f6d456daa4bcfe5c"
+    },
+    "villages": {
+     "count": 1,
+     "hash": "7062e3f1a985ccb4"
+    },
+    "armies": {
+     "count": 1,
+     "hash": "cad518039da7bb2e"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 1,
+     "hash": "ca5cf0c702a55e43"
+    },
+    "hexes": {
+     "count": 300,
+     "hash": "d79351940771f393"
+    },
+    "countries": {
+     "count": 1,
+     "hash": "cd2af87756f195db"
+    },
+    "rooms": {
+     "count": 3,
+     "hash": "3a7cd8f6380666e5"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 18,
+     "hash": "6b819a4cee4aba28"
+    },
+    "globalalerts": {
+     "count": 2,
+     "hash": "aefb98dc6cdb50be"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "f0ac0322e7e4b476"
+    },
+    "markethistory": {
+     "count": 3,
+     "hash": "d33087cb1d29b312"
+    },
+    "battles2": {
+     "count": 2,
+     "hash": "bb74b7944a22322a"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 4,
+     "hash": "4b8f3d2bbb8fd195"
+    },
+    "gamestats": {
+     "count": 14,
+     "hash": "3891c5fe091df25b"
+    },
+    "games": {
+     "count": 1,
+     "hash": "565f1baab32ae07f"
+    },
+    "rounds": {
+     "count": 8,
+     "hash": "3afe25d3117b6a04"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 4,
+     "hash": "e6d18dd98489a60b"
+    }
+   }
+  },
+  {
+   "step": "alice takes carol's castle and becomes dominus",
+   "time": "2026-01-05T13:00:20.000Z",
+   "facts": {
+    "alerts": 25,
+    "battles": [
+     {
+      "isOver": true,
+      "roundNumber": 4,
+      "x": -8,
+      "y": 9
+     },
+     {
+      "isOver": true,
+      "roundNumber": 4,
+      "x": 2,
+      "y": 4
+     },
+     {
+      "isOver": true,
+      "roundNumber": 4,
+      "x": 7,
+      "y": -4
+     }
+    ],
+    "game": {
+     "closeDate": null,
+     "dominusAchieved": true,
+     "endDate": {
+      "$date": "2026-01-07T12:50:20.000Z"
+     },
+     "hasClosed": false,
+     "hasEnded": false,
+     "hasStarted": true,
+     "lastDominus": "sim_alice",
+     "taxesCollected": 0
+    },
+    "globalAlerts": 3,
+    "markets": [
+     {
+      "price": 10.0001389,
+      "type": "clay"
+     },
+     {
+      "price": 10.0001389,
+      "type": "glass"
+     },
+     {
+      "price": 9.985150178,
+      "type": "grain"
+     },
+     {
+      "price": 9.99014392,
+      "type": "lumber"
+     },
+     {
+      "price": 10.0026392,
+      "type": "ore"
+     },
+     {
+      "price": 10.00113894,
+      "type": "wool"
+     }
+    ],
+    "players": {
+     "sim_alice": {
+      "armies": [
+       {
+        "archers": 0,
+        "catapults": 0,
+        "cavalry": 21,
+        "footmen": 66,
+        "pikemen": 0,
+        "x": 7,
+        "y": -4
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 0,
+       "pikemen": 12,
+       "x": -6,
+       "y": 1
+      },
+      "income": 1373.4451,
+      "is_dominus": true,
+      "is_king": true,
+      "king": "sim_alice",
+      "lord": null,
+      "resources": {
+       "clay": 7895.6,
+       "glass": 5780,
+       "gold": 8279.926494,
+       "grain": 8211.2,
+       "lumber": 7895.6,
+       "ore": 3330,
+       "wool": 4280
+      },
+      "vassals": [
+       "sim_bob",
+       "sim_carol"
+      ],
+      "villages": []
+     },
+     "sim_bob": {
+      "armies": [],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 2,
+       "pikemen": 0,
+       "x": -8,
+       "y": 9
+      },
+      "income": 3627.221991,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_alice",
+      "lord": "sim_alice",
+      "resources": {
+       "clay": 16380,
+       "glass": 5560,
+       "gold": 12417.75861,
+       "grain": 30048,
+       "lumber": 17380,
+       "ore": 12460,
+       "wool": 9060
+      },
+      "vassals": [],
+      "villages": [
+       {
+        "level": 2,
+        "under_construction": false,
+        "x": -9,
+        "y": 10
+       }
+      ]
+     },
+     "sim_carol": {
+      "armies": [
+       {
+        "archers": 0,
+        "catapults": 0,
+        "cavalry": 2,
+        "footmen": 10,
+        "pikemen": 0,
+        "x": 2,
+        "y": 4
+       }
+      ],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 0,
+       "pikemen": 0,
+       "x": 7,
+       "y": -4
+      },
+      "income": 1229.587001,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_alice",
+      "lord": "sim_alice",
+      "resources": {
+       "clay": 7280,
+       "glass": 5780,
+       "gold": 8939.9886,
+       "grain": 8630,
+       "lumber": 7280,
+       "ore": 8280,
+       "wool": 6800
+      },
+      "vassals": [
+       "sim_dave"
+      ],
+      "villages": []
+     },
+     "sim_dave": {
+      "armies": [],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 0,
+       "pikemen": 0,
+       "x": 2,
+       "y": 4
+      },
+      "income": 1229.587001,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_alice",
+      "lord": "sim_carol",
+      "resources": {
+       "clay": 7280,
+       "glass": 5780,
+       "gold": 11179.00533,
+       "grain": 10060,
+       "lumber": 6080,
+       "ore": 13280,
+       "wool": 9280
+      },
+      "vassals": [],
+      "villages": []
+     }
+    },
+    "reports": 0
+   },
+   "invariantProblems": [
+    "num_allies_above counts the list: sim_dave has 1, the list has 2"
+   ],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {
+     "checkForDominus": 1,
+     "checkForGameClose": 93,
+     "checkForGameEnd": 93,
+     "checkForGameStart": 93,
+     "cleanupAllKingChatrooms": 1,
+     "collectCapitalIncome": 280,
+     "collectCastleIncome": 280,
+     "collectVillageIncome": 280,
+     "destroyKingChatroom": 1,
+     "enemies_together_check": 1,
+     "enemy_on_building_check": 1,
+     "enterNewHexCheck": 1,
+     "expirePastMoves": 19,
+     "findCountriesInPath": 1,
+     "gamestats_job": 10,
+     "generateTree": 5,
+     "moveArmiesJob": 280,
+     "pathToHex": 1,
+     "record_market_history": 4,
+     "removeStuckBattles": 4,
+     "runBattle": 4,
+     "spendTaxes": 4,
+     "updateArmyMoveTotals": 1,
+     "updateIncomeRank": 10,
+     "updateIncomeStats": 4,
+     "updateKingChatroom": 2,
+     "updateMoveSpeed": 5,
+     "updatePathTime": 1,
+     "updateVassalAllyCountMultiple": 1,
+     "updateVassalRank": 10,
+     "update_losses_worth": 8,
+     "villageConstructionJob": 93
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 4,
+     "hash": "592b25d12784b864"
+    },
+    "castles": {
+     "count": 4,
+     "hash": "96d591a7d3e21456"
+    },
+    "villages": {
+     "count": 1,
+     "hash": "9483a497f08bc11b"
+    },
+    "armies": {
+     "count": 2,
+     "hash": "22d11fa51517e32a"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 1,
+     "hash": "d70972fb7e8084c1"
+    },
+    "hexes": {
+     "count": 300,
+     "hash": "d79351940771f393"
+    },
+    "countries": {
+     "count": 1,
+     "hash": "cd2af87756f195db"
+    },
+    "rooms": {
+     "count": 2,
+     "hash": "fd568e4facdabbe4"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 25,
+     "hash": "b5db9a8065a1e119"
+    },
+    "globalalerts": {
+     "count": 3,
+     "hash": "e5fb98285f20cf7f"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "f0ac0322e7e4b476"
+    },
+    "markethistory": {
+     "count": 5,
+     "hash": "02f8a7f176b3812e"
+    },
+    "battles2": {
+     "count": 3,
+     "hash": "4144705e13d2c7fc"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 8,
+     "hash": "250aaecb4b357980"
+    },
+    "gamestats": {
+     "count": 24,
+     "hash": "2882225dfb326e7f"
+    },
+    "games": {
+     "count": 2,
+     "hash": "74cd3b6544fc3319"
+    },
+    "rounds": {
+     "count": 12,
+     "hash": "e7194b536b0ed217"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 4,
+     "hash": "e6d18dd98489a60b"
+    }
+   }
+  },
+  {
+   "step": "the game ends two days later",
+   "time": "2026-01-07T12:50:20.000Z",
+   "facts": {
+    "alerts": 25,
+    "battles": [
+     {
+      "isOver": true,
+      "roundNumber": 4,
+      "x": -8,
+      "y": 9
+     },
+     {
+      "isOver": true,
+      "roundNumber": 4,
+      "x": 2,
+      "y": 4
+     },
+     {
+      "isOver": true,
+      "roundNumber": 4,
+      "x": 7,
+      "y": -4
+     }
+    ],
+    "game": {
+     "closeDate": {
+      "$date": "2026-01-10T12:50:20.000Z"
+     },
+     "dominusAchieved": true,
+     "endDate": {
+      "$date": "2026-01-07T12:50:20.000Z"
+     },
+     "hasClosed": false,
+     "hasEnded": true,
+     "hasStarted": true,
+     "lastDominus": "sim_alice",
+     "taxesCollected": 0,
+     "winner": "sim_alice"
+    },
+    "globalAlerts": 4,
+    "markets": [
+     {
+      "price": 10.0001389,
+      "type": "clay"
+     },
+     {
+      "price": 10.0001389,
+      "type": "glass"
+     },
+     {
+      "price": 9.985150178,
+      "type": "grain"
+     },
+     {
+      "price": 9.99014392,
+      "type": "lumber"
+     },
+     {
+      "price": 10.0026392,
+      "type": "ore"
+     },
+     {
+      "price": 10.00113894,
+      "type": "wool"
+     }
+    ],
+    "players": {
+     "sim_alice": {
+      "armies": [
+       {
+        "archers": 0,
+        "catapults": 0,
+        "cavalry": 21,
+        "footmen": 66,
+        "pikemen": 0,
+        "x": 7,
+        "y": -4
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 0,
+       "pikemen": 12,
+       "x": -6,
+       "y": 1
+      },
+      "income": 1373.4451,
+      "is_dominus": true,
+      "is_king": true,
+      "king": "sim_alice",
+      "lord": null,
+      "resources": {
+       "clay": 14668.8,
+       "glass": 11520,
+       "gold": 16889.92649,
+       "grain": 16017.6,
+       "lumber": 14668.8,
+       "ore": 9070,
+       "wool": 10020
+      },
+      "vassals": [
+       "sim_bob",
+       "sim_carol"
+      ],
+      "villages": [],
+      "wonGame": true
+     },
+     "sim_bob": {
+      "armies": [],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 2,
+       "pikemen": 0,
+       "x": -8,
+       "y": 9
+      },
+      "income": 3627.221991,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_alice",
+      "lord": "sim_alice",
+      "resources": {
+       "clay": 39340,
+       "glass": 11300,
+       "gold": 21027.75861,
+       "grain": 70228,
+       "lumber": 40340,
+       "ore": 18200,
+       "wool": 14800
+      },
+      "vassals": [],
+      "villages": [
+       {
+        "level": 2,
+        "under_construction": false,
+        "x": -9,
+        "y": 10
+       }
+      ],
+      "wonGame": false
+     },
+     "sim_carol": {
+      "armies": [
+       {
+        "archers": 0,
+        "catapults": 0,
+        "cavalry": 2,
+        "footmen": 10,
+        "pikemen": 0,
+        "x": 2,
+        "y": 4
+       }
+      ],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 0,
+       "pikemen": 0,
+       "x": 7,
+       "y": -4
+      },
+      "income": 1229.587001,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_alice",
+      "lord": "sim_alice",
+      "resources": {
+       "clay": 13020,
+       "glass": 11520,
+       "gold": 17549.9886,
+       "grain": 14370,
+       "lumber": 13020,
+       "ore": 14020,
+       "wool": 12540
+      },
+      "vassals": [
+       "sim_dave"
+      ],
+      "villages": [],
+      "wonGame": false
+     },
+     "sim_dave": {
+      "armies": [],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 0,
+       "pikemen": 0,
+       "x": 2,
+       "y": 4
+      },
+      "income": 1229.587001,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_alice",
+      "lord": "sim_carol",
+      "resources": {
+       "clay": 13020,
+       "glass": 11520,
+       "gold": 19789.00533,
+       "grain": 15800,
+       "lumber": 11820,
+       "ore": 19020,
+       "wool": 15020
+      },
+      "vassals": [],
+      "villages": [],
+      "wonGame": false
+     }
+    },
+    "reports": 0
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {
+     "resetQueueStats": 2
+    },
+    "ran": {
+     "checkForGameClose": 287,
+     "checkForGameEnd": 287,
+     "checkForGameStart": 287,
+     "cleanupAllKingChatrooms": 2,
+     "collectCapitalIncome": 287,
+     "collectCastleIncome": 287,
+     "collectVillageIncome": 287,
+     "dailystatsNumVassalsEveryone": 2,
+     "expirePastMoves": 287,
+     "gamestats_job": 286,
+     "generateTree": 95,
+     "moveArmiesJob": 287,
+     "record_market_history": 95,
+     "removeStuckBattles": 95,
+     "spendTaxes": 95,
+     "updateAllKingsAllies": 2,
+     "updateIncomeRank": 286,
+     "updateIncomeStats": 95,
+     "updateOverallPlayerRankings": 1,
+     "updateVassalAllyCountMultiple": 2,
+     "updateVassalRank": 286,
+     "villageConstructionJob": 287
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 4,
+     "hash": "3896266e7b8a1a50"
+    },
+    "castles": {
+     "count": 4,
+     "hash": "96d591a7d3e21456"
+    },
+    "villages": {
+     "count": 1,
+     "hash": "85a08a2b12971301"
+    },
+    "armies": {
+     "count": 2,
+     "hash": "35e64ef557d86a92"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 1,
+     "hash": "bc9312aa4d4ddc2b"
+    },
+    "hexes": {
+     "count": 300,
+     "hash": "d79351940771f393"
+    },
+    "countries": {
+     "count": 1,
+     "hash": "cd2af87756f195db"
+    },
+    "rooms": {
+     "count": 2,
+     "hash": "fd568e4facdabbe4"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 25,
+     "hash": "b5db9a8065a1e119"
+    },
+    "globalalerts": {
+     "count": 4,
+     "hash": "cfdfe5319688d00a"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "f0ac0322e7e4b476"
+    },
+    "markethistory": {
+     "count": 52,
+     "hash": "44d691bfac29d0b2"
+    },
+    "battles2": {
+     "count": 3,
+     "hash": "4144705e13d2c7fc"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 40,
+     "hash": "303bc0b363f9fd52"
+    },
+    "gamestats": {
+     "count": 310,
+     "hash": "253e2f479815b406"
+    },
+    "games": {
+     "count": 2,
+     "hash": "3dfa0f6fb8fbfe4a"
+    },
+    "rounds": {
+     "count": 12,
+     "hash": "e7194b536b0ed217"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 4,
+     "hash": "e368a928814e65fb"
+    }
+   }
+  },
+  {
+   "step": "the game closes three days after that",
+   "time": "2026-01-10T12:50:20.000Z",
+   "facts": {
+    "alerts": 0,
+    "battles": [],
+    "game": {
+     "closeDate": {
+      "$date": "2026-01-10T12:50:20.000Z"
+     },
+     "endDate": {
+      "$date": "2026-01-07T12:50:20.000Z"
+     },
+     "hasClosed": true,
+     "hasEnded": true,
+     "hasStarted": true,
+     "lastDominus": null,
+     "winner": "sim_alice"
+    },
+    "globalAlerts": 0,
+    "markets": [],
+    "players": {
+     "sim_alice": {
+      "armies": [],
+      "income": 1373.4451,
+      "is_dominus": true,
+      "is_king": true,
+      "king": "sim_alice",
+      "lord": null,
+      "resources": {
+       "clay": 14668.8,
+       "glass": 11520,
+       "gold": 16889.92649,
+       "grain": 16017.6,
+       "lumber": 14668.8,
+       "ore": 9070,
+       "wool": 10020
+      },
+      "vassals": [
+       "sim_bob",
+       "sim_carol"
+      ],
+      "villages": [],
+      "wonGame": true
+     },
+     "sim_bob": {
+      "armies": [],
+      "income": 3627.221991,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_alice",
+      "lord": "sim_alice",
+      "resources": {
+       "clay": 39340,
+       "glass": 11300,
+       "gold": 21027.75861,
+       "grain": 70228,
+       "lumber": 40340,
+       "ore": 18200,
+       "wool": 14800
+      },
+      "vassals": [],
+      "villages": [],
+      "wonGame": false
+     },
+     "sim_carol": {
+      "armies": [],
+      "income": 1229.587001,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_alice",
+      "lord": "sim_alice",
+      "resources": {
+       "clay": 13020,
+       "glass": 11520,
+       "gold": 17549.9886,
+       "grain": 14370,
+       "lumber": 13020,
+       "ore": 14020,
+       "wool": 12540
+      },
+      "vassals": [
+       "sim_dave"
+      ],
+      "villages": [],
+      "wonGame": false
+     },
+     "sim_dave": {
+      "armies": [],
+      "income": 1229.587001,
+      "is_dominus": false,
+      "is_king": false,
+      "king": "sim_alice",
+      "lord": "sim_carol",
+      "resources": {
+       "clay": 13020,
+       "glass": 11520,
+       "gold": 19789.00533,
+       "grain": 15800,
+       "lumber": 11820,
+       "ore": 19020,
+       "wool": 15020
+      },
+      "vassals": [],
+      "villages": [],
+      "wonGame": false
+     }
+    },
+    "reports": 0
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {
+     "resetQueueStats": 3
+    },
+    "ran": {
+     "checkForGameClose": 144,
+     "checkForGameEnd": 144,
+     "checkForGameStart": 144,
+     "cleanupAllKingChatrooms": 2,
+     "collectCapitalIncome": 144,
+     "collectCastleIncome": 144,
+     "collectVillageIncome": 144,
+     "dailystatsNumVassalsEveryone": 2,
+     "expirePastMoves": 144,
+     "gamestats_job": 97,
+     "generateTree": 98,
+     "moveArmiesJob": 144,
+     "record_market_history": 97,
+     "removeStuckBattles": 97,
+     "setupEveryoneChatroom": 1,
+     "spendTaxes": 97,
+     "updateAllKingsAllies": 3,
+     "updateIncomeRank": 97,
+     "updateIncomeStats": 97,
+     "updateVassalRank": 97,
+     "villageConstructionJob": 96
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 4,
+     "hash": "cecfe27319b2ec95"
+    },
+    "castles": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 1,
+     "hash": "bc9312aa4d4ddc2b"
+    },
+    "hexes": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "countries": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "rooms": {
+     "count": 1,
+     "hash": "353082a7154f6913"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "globalalerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "d5049f5ff755bb09"
+    },
+    "markethistory": {
+     "count": 49,
+     "hash": "57a4a5d8518b0528"
+    },
+    "battles2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamestats": {
+     "count": 97,
+     "hash": "0ea37cff17a63af6"
+    },
+    "games": {
+     "count": 2,
+     "hash": "8fefc6680f459484"
+    },
+    "rounds": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 4,
+     "hash": "e368a928814e65fb"
+    }
+   }
+  }
+ ]
+}

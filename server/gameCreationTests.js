@@ -60,6 +60,19 @@ if (Meteor.isServer) {
     return user;
   }
 
+  // one 100 hex country, with the map settings put back afterwards: they are
+  // read by every later suite (the game simulation's map depends on them)
+  function _addTestCountry(gameId) {
+    let sizes = _.pick(_s.mapmaker, 'minHexesInCountry', 'maxHexesInCountry');
+    try {
+      _s.mapmaker.minHexesInCountry = 100;
+      _s.mapmaker.maxHexesInCountry = 100;
+      Mapmaker.addCountry(gameId, true);
+    } finally {
+      _.extend(_s.mapmaker, sizes);
+    }
+  }
+
   function _testCleanup(gameId) {
     Games.remove(gameId);
     Players.remove({gameId: gameId});
@@ -136,9 +149,7 @@ if (Meteor.isServer) {
         let user = _createTestUser();
         Gamesignups.insert({gameId: game._id, userId: user._id, username: user.username, createdAt: new Date(), usedToken: false});
         Mapmaker.eraseMap(game._id);
-        _s.mapmaker.minHexesInCountry = 100;
-        _s.mapmaker.maxHexesInCountry = 100;
-        Mapmaker.addCountry(game._id, true);
+        _addTestCountry(game._id);
 
         dManager.startGame(game, true);
 
@@ -168,9 +179,7 @@ if (Meteor.isServer) {
         let game = _createTestGame({hasStarted: true});
         let user = _createTestUser();
         Mapmaker.eraseMap(game._id);
-        _s.mapmaker.minHexesInCountry = 100;
-        _s.mapmaker.maxHexesInCountry = 100;
-        Mapmaker.addCountry(game._id, true);
+        _addTestCountry(game._id);
 
         let playerId = dCastles.createPlayer(game._id, user._id, user.username, false);
         _testAssert(!!playerId, 'playerId returned');
@@ -190,9 +199,7 @@ if (Meteor.isServer) {
         let game = _createTestGame({hasStarted: true, isCrazyFast: true});
         let user = _createTestUser();
         Mapmaker.eraseMap(game._id);
-        _s.mapmaker.minHexesInCountry = 100;
-        _s.mapmaker.maxHexesInCountry = 100;
-        Mapmaker.addCountry(game._id, true);
+        _addTestCountry(game._id);
 
         let playerId = dCastles.createPlayer(game._id, user._id, user.username, false);
         _testAssert(!!playerId, 'playerId returned');
@@ -212,9 +219,7 @@ if (Meteor.isServer) {
         let game = _createTestGame({hasStarted: true});
         let user = _createTestUser();
         Mapmaker.eraseMap(game._id);
-        _s.mapmaker.minHexesInCountry = 100;
-        _s.mapmaker.maxHexesInCountry = 100;
-        Mapmaker.addCountry(game._id, true);
+        _addTestCountry(game._id);
 
         let id1 = dCastles.createPlayer(game._id, user._id, user.username, false);
         _testAssert(!!id1, 'first succeeds');
@@ -238,9 +243,7 @@ if (Meteor.isServer) {
         let game = _createTestGame({hasStarted: true});
         let user = _createTestUser();
         Mapmaker.eraseMap(game._id);
-        _s.mapmaker.minHexesInCountry = 100;
-        _s.mapmaker.maxHexesInCountry = 100;
-        Mapmaker.addCountry(game._id, true);
+        _addTestCountry(game._id);
 
         let playerId = dCastles.createPlayer(game._id, user._id, user.username, false);
         let p = Players.findOne(playerId);
