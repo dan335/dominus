@@ -98,7 +98,9 @@ if (Meteor.isServer) {
     var count = opts.players || 3;
     var w = {users: [], players: [], castles: []};
 
-    var game = dTest.helpers.createTestGame(_.extend({name: 'World ' + Random.id(4)}, opts.game || {}));
+    // isStarting, as the start job sets it, so that job never starts this game
+    // a second time (it can run when the world is built outside runAllTests)
+    var game = dTest.helpers.createTestGame(_.extend({name: 'World ' + Random.id(4), isStarting: true}, opts.game || {}));
     w.gameId = game._id;
 
     for (var i = 0; i < count; i++) {
@@ -111,13 +113,23 @@ if (Meteor.isServer) {
     var sizes = _.pick(_s.mapmaker, 'minHexesInCountry', 'maxHexesInCountry');
     try {
       Mapmaker.eraseMap(w.gameId);
-      _s.mapmaker.minHexesInCountry = 100;
-      _s.mapmaker.maxHexesInCountry = 100;
+      _s.mapmaker.minHexesInCountry = 200;
+      _s.mapmaker.maxHexesInCountry = 200;
       Mapmaker.addCountry(w.gameId, true);
       dManager.startGame(Games.findOne(w.gameId), true);
     } finally {
       _.extend(_s.mapmaker, sizes);
     }
+
+    // Placing a castle is random and now and then finds no room even after
+    // the game adds a country (about 1 build in 15 with 100 hex countries).
+    // Try again the way a late joiner would be added.
+    w.users.forEach(function(user) {
+      for (var tries = 0; tries < 3 && !Players.findOne({gameId: w.gameId, userId: user._id}); tries++) {
+        console.log('buildGameWorld: placing ' + user.username + ' again');
+        dCastles.createPlayer(w.gameId, user._id, user.username, false);
+      }
+    });
 
     w.users.forEach(function(user) {
       var player = Players.findOne({gameId: w.gameId, userId: user._id});
