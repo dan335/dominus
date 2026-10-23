@@ -1,0 +1,321 @@
+// Method contracts: names, player settings, alerts, markers, reports and
+// leaving a game (Oct 2026).
+//
+// Same approach as server/armyContractTests.js: each method is called over a
+// real DDP connection as a player in a real started game, and the tests pin
+// down what a successful call changes and that a refused call changes
+// nothing. A test named "known bug" describes a bug in today's code.
+//
+// They run as part of runAllTests (server/lib/testRunner.js), so the
+// same rule applies: only against a local development database.
+
+if (Meteor.isServer) {
+
+  Meteor.startup(function() {
+    dTest.addSuite('method contracts: names, settings, alerts and markers (server/playerContractTests.js)', function(run, t) {
+      var assert = t.assert;
+      var equal = t.equal;
+      var expectError = dTest.expectError;
+
+      var w = dTest.buildGameWorld({players: 3});
+      var clients = w.users.map(function(user) { return dTest.ddp.connect(user._id); });
+      var usernames = w.players.map(function(p) { return p.username; });
+
+      function markersOf(i) {
+        return Markers.find({user_id: w.users[i]._id}, {sort: {order: 1}}).fetch();
+      }
+
+      function groupsOf(i) {
+        return MarkerGroups.find({user_id: w.users[i]._id}, {sort: {order: 1}}).fetch();
+      }
+
+      function insertAlert(type, playerIdxs) {
+        return Alerts.insert({gameId: w.gameId, created_at: new Date(), type: type, vars: {},
+          playerIds: playerIdxs.map(function(i) { return {playerId: w.players[i]._id, read: false}; })});
+      }
+
+      function readFlag(alertId, i) {
+        return _.findWhere(Alerts.findOne(alertId).playerIds, {playerId: w.players[i]._id}).read;
+      }
+
+      var test = dTest.contractTest(run, function() {
+        w.removeArmies();
+        w.users.forEach(function(user) {
+          Markers.remove({user_id: user._id});
+          MarkerGroups.remove({user_id: user._id});
+        });
+        Alerts.remove({gameId: w.gameId});
+        GlobalAlerts.remove({gameId: w.gameId});
+        // put names back, through the DB, so later tests see the originals
+        w.players.forEach(function(p, i) {
+          Players.update(p._id, {$set: {username: usernames[i]}});
+          Castles.update({playerId: p._id}, {$set: {username: usernames[i]}});
+        });
+      });
+
+
+      try {
+
+        // --- change_username ---
+
+        test('change_username: renames the player everywhere their name is copied', function() {
+          var army = w.makeArmy(0, {footmen: 1});
+          var name = 'Renamed ' + Random.id(4).replace(/[^a-zA-Z0-9]/g, 'x');
+          clients[0].call('change_username', w.players[0]._id, name + '!!');
+          equal(w.player(0).username, name, 'player renamed, characters other than letters, digits, _ and spaces dropped');
+          equal(w.castle(0).username, name, 'castle');
+          equal(Armies.findOne(army._id).username, name, 'army');
+          var alert = GlobalAlerts.findOne({gameId: w.gameId, type: 'ga_nameChange'});
+          assert(alert, 'a global alert is made');
+        });
+
+        test('change_username: bad names, taken names and someone else\'s player are refused', function() {
+          var before = dTest.snapshot(w.gameId);
+          var rename = function(i, name) {
+            return function() { return clients[0].call('change_username', w.players[i]._id, name); };
+          };
+          expectError(rename(0, 'ab'), 'New username must be at least 3 characters long.', null, 'too short');
+          expectError(rename(0, '$$ab$$'), 'New username must be at least 3 characters long.', null, 'too short once cleaned');
+          expectError(rename(0, 'a'.repeat(26)), 'New username is too long.', null, 'too long');
+          expectError(rename(0, 'Danimal'), 'You are not Danimal.', null, 'Danimal');
+          expectError(rename(0, usernames[0]), 'You\'re already named ' + usernames[0], null, 'same name');
+          dTest.ddp.resetRateLimits();
+          expectError(rename(0, usernames[1].toUpperCase()), 'A player exists with this username, try another.', null, 'taken, any case');
+          expectError(rename(1, 'Someone Else'), 'No player found.', null, 'someone else\'s player');
+          dTest.assertUnchanged(w.gameId, before, 'a refused rename changed the game');
+        });
+
+
+        // --- edit_name ---
+
+        test('edit_name: renames your own castle, village or army', function() {
+          var army = w.makeArmy(0, {footmen: 1});
+          clients[0].call('edit_name', 'castle', w.castles[0]._id, 'Keep  of   Tests', w.players[0]._id);
+          equal(w.castle(0).name, 'Keep of Tests', 'castle renamed, spaces collapsed');
+          clients[0].call('edit_name', 'army', army._id, 'The Testers', w.players[0]._id);
+          equal(Armies.findOne(army._id).name, 'The Testers', 'army renamed');
+        });
+
+        test('edit_name: names too long or empty are refused, and someone else\'s unit is left alone', function() {
+          var before = dTest.snapshot(w.gameId);
+          expectError(function() { return clients[0].call('edit_name', 'castle', w.castles[0]._id, 'x'.repeat(31), w.players[0]._id); },
+            'Name must be less than 30 characters.', null, 'too long');
+          expectError(function() { return clients[0].call('edit_name', 'castle', w.castles[0]._id, '', w.players[0]._id); },
+            'Name is too short.', null, 'empty');
+          equal(clients[0].call('edit_name', 'castle', w.castles[1]._id, 'Mine Now', w.players[0]._id), undefined, 'someone else\'s castle: no error');
+          dTest.assertUnchanged(w.gameId, before, 'a refused rename changed the game');
+        });
+
+        test('edit_name: naming someone else\'s player fails with an internal error (known bug: no player check)', function() {
+          var before = dTest.snapshot(w.gameId);
+          expectError(function() { return clients[0].call('edit_name', 'castle', w.castles[1]._id, 'Mine Now', w.players[1]._id); },
+            500, null, 'someone else\'s player');
+          dTest.assertUnchanged(w.gameId, before, 'a failed rename changed the game');
+        });
+
+
+        // --- reportPlayer ---
+
+        test('reportPlayer: always fails on the server, since it reads Session (known bug)', function() {
+          var before = dTest.snapshot(w.gameId, [Players, Reports, GlobalAlerts]);
+          expectError(function() { return clients[0].call('reportPlayer', w.players[1]._id, 'is a test of reports'); },
+            500, null, 'a valid report');
+          equal(Reports.find({reportedPlayerId: w.players[1]._id}).count(), 0, 'no report saved');
+          dTest.assertUnchanged(w.gameId, before, 'a failed report changed the game', [Players, Reports, GlobalAlerts]);
+        });
+
+
+        // --- player settings ---
+
+        test('setHexScale: sets your hex scale, kept between the min and max', function() {
+          clients[0].call('setHexScale', w.players[0]._id, 0.7);
+          equal(w.player(0).hex_scale, 0.7, 'in range');
+          clients[0].call('setHexScale', w.players[0]._id, 5);
+          equal(w.player(0).hex_scale, _s.init.hexScaleMax, 'clamped to max');
+          clients[0].call('setHexScale', w.players[0]._id, '0.1');
+          equal(w.player(0).hex_scale, _s.init.hexScaleMin, 'a numeric string, clamped to min');
+          var theirs = w.player(1).hex_scale;
+          clients[0].call('setHexScale', w.players[1]._id, 0.8);
+          equal(w.player(1).hex_scale, theirs, 'someone else\'s scale is left alone');
+          expectError(function() { return clients[0].call('setHexScale', w.players[0]._id, 'big'); }, 400, null, 'not a number');
+        });
+
+        test('show and hide settings: each sets its flag on your own player only', function() {
+          // [method suffix, Players field, argument: 'game' or 'player']
+          var flags = [
+            ['castle', 'lp_show_castle', 'game'], ['villages', 'lp_show_villages', 'game'], ['armies', 'lp_show_armies', 'game'],
+            ['lords', 'lp_show_lords', 'game'], ['allies', 'lp_show_allies', 'game'],
+            ['coords', 'sp_show_coords', 'player'], ['minimap', 'sp_show_minimap', 'player']
+          ];
+          flags.forEach(function(flag) {
+            var arg = flag[2] == 'game' ? w.gameId : w.players[0]._id;
+            clients[0].call('hide_' + flag[0], arg);
+            equal(w.player(0)[flag[1]], false, 'hide_' + flag[0]);
+            clients[0].call('show_' + flag[0], arg);
+            equal(w.player(0)[flag[1]], true, 'show_' + flag[0]);
+          });
+          clients[0].call('hide_welcome_screen', w.gameId);
+          equal(w.player(0).show_welcome_screen, false, 'hide_welcome_screen');
+
+          // the ones that take a player id only change the caller's own player
+          Players.update(w.players[1]._id, {$set: {sp_show_coords: true, sp_show_minimap: true}});
+          clients[0].call('hide_coords', w.players[1]._id);
+          clients[0].call('hide_minimap', w.players[1]._id);
+          equal(w.player(1).sp_show_coords, true, 'someone else\'s coords setting is left alone');
+          equal(w.player(1).sp_show_minimap, true, 'someone else\'s minimap setting is left alone');
+        });
+
+
+        // --- alerts ---
+
+        test('hideAlertMine and showAlertMine: hide and show one alert type for you', function() {
+          clients[0].call('hideAlertMine', w.players[0]._id, 'alert_receivedArmy');
+          clients[0].call('hideAlertMine', w.players[0]._id, 'alert_receivedArmy');
+          equal(JSON.stringify(w.player(0).hideAlertsMine), JSON.stringify(['alert_receivedArmy']), 'hidden once');
+          clients[0].call('showAlertMine', w.players[0]._id, 'alert_receivedArmy');
+          equal(JSON.stringify(w.player(0).hideAlertsMine), '[]', 'shown again');
+          var before = dTest.snapshot(w.gameId);
+          expectError(function() { return clients[0].call('hideAlertMine', w.players[0]._id, 'alert_madeUp'); }, 'Alert type not found.', null, 'unknown type');
+          clients[0].call('hideAlertMine', w.players[1]._id, 'alert_receivedArmy');
+          dTest.assertUnchanged(w.gameId, before, 'a refused or someone else\'s hide changed the game');
+        });
+
+        test('markAlertAsRead and markAllAlertsAsRead: mark your own copy read', function() {
+          var shared = insertAlert('alert_receivedArmy', [0, 1]);
+          var mine = insertAlert('alert_battleStart', [0]);
+          var theirs = insertAlert('alert_battleStart', [1]);
+          clients[0].call('markAlertAsRead', w.gameId, shared);
+          equal(readFlag(shared, 0), true, 'your copy is read');
+          equal(readFlag(shared, 1), false, 'the other player\'s copy is not');
+          clients[0].call('markAlertAsRead', w.gameId, theirs);
+          equal(readFlag(theirs, 1), false, 'someone else\'s alert is left alone');
+          clients[0].call('markAllAlertsAsRead', w.players[0]._id);
+          equal(readFlag(mine, 0), true, 'all of yours are read');
+          equal(readFlag(shared, 1), false, 'others still unread');
+          expectError(function() { return clients[0].call('markAllAlertsAsRead', w.players[1]._id); }, 'No player found.', null, 'someone else\'s player');
+          equal(readFlag(theirs, 1), false, 'still unread');
+        });
+
+
+        // --- markers ---
+
+        test('addMarker and addMarkerCoords: mark a unit or a hex, up to the non-pro limit', function() {
+          equal(clients[0].call('addMarker', w.gameId, 'castle', w.castles[1]._id), undefined, 'returns nothing (the new id is not returned)');
+          var hex = w.freeHex();
+          clients[0].call('addMarkerCoords', w.gameId, 'hex', hex.x, hex.y);
+          var markers = markersOf(0);
+          equal(markers.length, 2, 'two markers');
+          equal(markers[0].name, usernames[1] + '\'s castle', 'castle marker name');
+          equal(markers[0].unitType + ',' + markers[0].unitId, 'castle,' + w.castles[1]._id, 'castle marker unit');
+          equal(markers[1].name, 'hex ' + hex.x + ',' + hex.y, 'hex marker name');
+          equal(_.pluck(markers, 'order').join(','), '0,1', 'order');
+          equal(markers[0].groupId, 0, 'default group');
+
+          var max = _s.markers.maxMarkersNonPro;
+          equal(max, 2, 'non-pro marker limit');
+          var before = dTest.snapshot(w.gameId, [Markers]);
+          expectError(function() { return clients[0].call('addMarker', w.gameId, 'castle', w.castles[2]._id); },
+            'Only ' + max + ' markers allowed.', null, 'over the limit');
+          dTest.assertUnchanged(w.gameId, before, 'a refused marker changed the game', [Markers]);
+        });
+
+        test('addMarker: a duplicate or a unit that doesn\'t exist is refused; pro players get more', function() {
+          clients[0].call('addMarker', w.gameId, 'castle', w.castles[1]._id);
+          var before = dTest.snapshot(w.gameId, [Markers]);
+          expectError(function() { return clients[0].call('addMarker', w.gameId, 'castle', w.castles[1]._id); },
+            'You already have a marker here.', null, 'duplicate');
+          expectError(function() { return clients[0].call('addMarker', w.gameId, 'army', 'nope'); }, 'no unit found', null, 'no such army');
+          expectError(function() { return clients[0].call('addMarkerCoords', w.gameId, 'hex', 5000, 5000); }, 'no unit found', null, 'no such hex');
+          dTest.assertUnchanged(w.gameId, before, 'a refused marker changed the game', [Markers]);
+
+          Players.update(w.players[0]._id, {$set: {pro: true}});
+          try {
+            clients[0].call('addMarker', w.gameId, 'castle', w.castles[2]._id);
+            clients[0].call('addMarker', w.gameId, 'castle', w.castles[0]._id);
+            equal(markersOf(0).length, 3, 'a pro player can go past the non-pro limit');
+          } finally {
+            Players.update(w.players[0]._id, {$set: {pro: false}});
+          }
+        });
+
+        test('marker editing: rename, reorder and remove only your own markers', function() {
+          clients[0].call('addMarker', w.gameId, 'castle', w.castles[1]._id);
+          clients[0].call('addMarker', w.gameId, 'castle', w.castles[2]._id);
+          var m = markersOf(0);
+          clients[0].call('saveMarkerInfo', m[0]._id, 'Their <b>Keep', 'Watch out!');
+          var doc = Markers.findOne(m[0]._id);
+          equal(doc.name + '|' + doc.description, 'Their bKeep|Watch out', 'name and description cleaned');
+          expectError(function() { return clients[0].call('saveMarkerInfo', m[0]._id, '!!!', ''); }, 'Name too short.', null, 'empty name');
+          expectError(function() { return clients[0].call('saveMarkerInfo', m[0]._id, 'x'.repeat(36), ''); }, 'Name too long.', null, 'long name');
+
+          clients[0].call('setMarkerOrder', m[1]._id, 0, 0, 1, 0);
+          equal(_.pluck(markersOf(0), '_id').join(','), [m[1]._id, m[0]._id].join(','), 'reordered');
+
+          // someone else can't touch them
+          clients[1].call('saveMarkerInfo', m[0]._id, 'Hacked', '');
+          clients[1].call('removeMarker', m[0]._id);
+          equal(Markers.findOne(m[0]._id).name, 'Their bKeep', 'someone else\'s rename is ignored');
+
+          clients[0].call('removeMarker', m[0]._id);
+          equal(Markers.find(m[0]._id).count(), 0, 'removed');
+        });
+
+        test('marker groups: add, rename, reorder and remove, up to the non-pro limit', function() {
+          clients[0].call('addMarkerGroup', w.gameId, 'First <Group>');
+          clients[0].call('addMarkerGroup', w.gameId, 'Second');
+          var g = groupsOf(0);
+          equal(_.pluck(g, 'name').join('|'), 'First Group|Second', 'names cleaned, in order');
+          equal(_.pluck(g, 'order').join(','), '0,1', 'order');
+          equal(_s.markers.maxGroupsNonPro, 2, 'non-pro group limit');
+          expectError(function() { return clients[0].call('addMarkerGroup', w.gameId, 'Third'); }, 'Too many groups.  Limited to 2', null, 'over the limit');
+          expectError(function() { return clients[0].call('addMarkerGroup', w.gameId, '***'); }, 'Name too short.', null, 'empty name');
+
+          clients[0].call('saveMarkerGroupInfo', g[1]._id, 'Renamed!');
+          equal(MarkerGroups.findOne(g[1]._id).name, 'Renamed', 'renamed');
+
+          clients[0].call('moveMarkerGroupUp', g[1]._id);
+          equal(_.pluck(groupsOf(0), '_id').join(','), [g[1]._id, g[0]._id].join(','), 'moved up');
+          equal(_.pluck(groupsOf(0), 'order').join(','), '0,1', 'orders renumbered');
+          clients[0].call('moveMarkerGroupDown', g[1]._id);
+          equal(_.pluck(groupsOf(0), '_id').join(','), [g[0]._id, g[1]._id].join(','), 'moved down');
+
+          // removing a group removes the markers in it
+          clients[0].call('addMarker', w.gameId, 'castle', w.castles[1]._id);
+          var marker = markersOf(0)[0];
+          clients[0].call('setMarkerOrder', marker._id, 0, g[1]._id, 0, 0);
+          equal(Markers.findOne(marker._id).groupId, g[1]._id, 'marker moved into the group');
+          clients[1].call('removeMarkerGroup', g[1]._id);
+          equal(MarkerGroups.find(g[1]._id).count(), 1, 'someone else can\'t remove it');
+          clients[0].call('removeMarkerGroup', g[1]._id);
+          equal(MarkerGroups.find(g[1]._id).count(), 0, 'group removed');
+          equal(Markers.find(marker._id).count(), 0, 'its markers removed');
+          equal(groupsOf(0)[0].order, 0, 'remaining group renumbered');
+        });
+
+
+        // --- deleteGameAccount (last: it removes player 2) ---
+
+        test('deleteGameAccount: you leave the game, with your castle and armies', function() {
+          var army = w.makeArmy(2, {footmen: 1});
+          var castleXY = {x: w.castle(2).x, y: w.castle(2).y};
+          equal(clients[2].call('deleteGameAccount', w.gameId), undefined, 'returns nothing');
+          // the job is added without waiting, so wait for its effect, then for what it queued
+          assert(dTest.waitFor(function() { return !Players.findOne(w.players[2]._id); }, 30000), 'player removed');
+          dTest.waitForJobs(30000);
+          equal(Castles.find(w.castles[2]._id).count(), 0, 'castle removed');
+          equal(Armies.find(army._id).count(), 0, 'army removed');
+          equal(Hexes.findOne({gameId: w.gameId, x: castleXY.x, y: castleXY.y}).hasBuilding, false, 'castle hex is free');
+          assert(GlobalAlerts.findOne({gameId: w.gameId, type: 'ga_accountDeleted'}), 'a global alert is made');
+          assert(Meteor.users.findOne(w.users[2]._id), 'the user account stays');
+          expectError(function() { return clients[2].call('deleteGameAccount', w.gameId); }, 'not-authorized', null, 'no longer a player');
+        });
+
+      } finally {
+        clients.forEach(function(client) { client.close(); });
+        dTest.waitForJobs();
+        w.cleanup();
+        dTest.ddp.resetRateLimits();
+      }
+    });
+  });
+}

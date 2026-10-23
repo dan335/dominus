@@ -28,45 +28,13 @@ if (Meteor.isServer) {
 
       // --- Helpers ---
 
-      // the error a call threw, checked against error.error (and the
-      // ValidationError detail type, when given)
-      function expectError(fn, code, detailType, message) {
-        var e = dTest.throws(fn);
-        assert(e, message + ': expected error ' + code + ', but the call succeeded');
-        equal(e.error, code, message + ': error code (reason: ' + e.reason + ')');
-        if (detailType) {
-          var types = _.pluck(e.details || [], 'type');
-          assert(_.contains(types, detailType), message + ': expected detail "' + detailType + '", got ' + JSON.stringify(types));
-        }
-        return e;
-      }
-
-      // runs before every test: full rate limit allowance, no jobs in flight
-      function settle() {
-        dTest.waitForJobs();
-        dTest.ddp.resetRateLimits();
-      }
-
-      function setResources(i, values) {
-        var set = {};
-        _s.market.types_plus_gold.forEach(function(type) { set[type] = 0; });
-        Players.update(w.players[i]._id, {$set: _.extend(set, values)});
-      }
-
-      function setCastleSoldiers(i, soldiers) {
-        var set = {};
-        _s.armies.types.forEach(function(type) { set[type] = soldiers[type] || 0; });
-        Castles.update(w.castles[i]._id, {$set: set});
-      }
+      var expectError = dTest.expectError;
+      var soldierCounts = dTest.soldierCounts;
+      var setResources = w.setResources;
+      var setCastleSoldiers = w.setCastleSoldiers;
 
       function soldiersOf(doc) {
         return _.pick(doc, _s.armies.types);
-      }
-
-      function soldierCounts(values) {
-        var out = {};
-        _s.armies.types.forEach(function(type) { out[type] = values[type] || 0; });
-        return out;
       }
 
       // hireArmy as player i: the client always sends every soldier type
@@ -74,28 +42,12 @@ if (Meteor.isServer) {
         return clients[i].call('hireArmy', w.gameId, soldierCounts(soldiers), buildingId || w.castles[i]._id, buildingType || 'castle');
       }
 
-      // a hex in the game with no building on it, that armies can stand on
       function freeHex(world, skip) {
-        world = world || w;
-        var taken = {};
-        Castles.find({gameId: world.gameId}).forEach(function(c) { taken[c.x + '_' + c.y] = true; });
-        Villages.find({gameId: world.gameId}).forEach(function(v) { taken[v.x + '_' + v.y] = true; });
-        (skip || []).forEach(function(h) { taken[h.x + '_' + h.y] = true; });
-        var hex = _.find(Hexes.find({gameId: world.gameId}, {sort: {x: 1, y: 1}}).fetch(), function(h) {
-          return !taken[h.x + '_' + h.y] && Mapmaker.coordsToCountryId(world.gameId, h.x, h.y);
-        });
-        if (!hex) throw new Error('FAIL: no free hex in the test world');
-        return {x: hex.x, y: hex.y};
+        return (world || w).freeHex(skip);
       }
 
-      // an army for player i (default: at their castle), after its jobs ran
       function makeArmy(i, soldiers, at, world) {
-        world = world || w;
-        at = at || {x: world.castle(i).x, y: world.castle(i).y};
-        var army = dArmies.create(world.players[i]._id, soldiers || {footmen: 3}, at.x, at.y);
-        if (!army) throw new Error('FAIL: could not create a test army');
-        dTest.waitForJobs();
-        return Armies.findOne(army._id);
+        return (world || w).makeArmy(i, soldiers, at);
       }
 
       // path docs for an army, inserted directly the way addArmyPath makes them
@@ -113,21 +65,7 @@ if (Meteor.isServer) {
         return Armypaths.find({armyId: armyId}, {sort: {index: 1}}).fetch();
       }
 
-      function removeArmies() {
-        Armies.find({gameId: w.gameId}).forEach(function(a) { dArmies.destroyArmy(a._id); });
-      }
-
-      var test = function(name, fn) {
-        run(name, function() {
-          settle();
-          try {
-            return fn();
-          } finally {
-            dTest.waitForJobs();
-            removeArmies();
-          }
-        });
-      };
+      var test = dTest.contractTest(run, function() { w.removeArmies(); });
 
 
       try {
