@@ -427,6 +427,38 @@ if (Meteor.isServer) {
         equal(_.flatten(_.pluck(played, 'invariantProblems')).join('; '), '', 'and the invariants can\'t see it');
       });
 
+      run('simulation: a planted change to a battle modifier shows up against the golden master', function() {
+        var golden = JSON.parse(fs.readFileSync(goldenPath(), 'utf8'));
+        var steps = 4;
+        var multiplier = _s.battles.unitBonusMultiplier;
+        var played;
+        try {
+          // after the simulation's check that the settings are as the app started
+          played = JSON.parse(JSON.stringify(dTest.playSimulation({steps: steps, before: function() {
+            _s.battles.unitBonusMultiplier = multiplier - 0.01;
+          }})));
+        } finally {
+          _s.battles.unitBonusMultiplier = multiplier;
+        }
+        var changes = dTest.compareSimulation(golden.steps.slice(0, steps), played);
+        assert(changes.length, 'the golden master noticed');
+        assert(/^step 4 \(carol takes dave's castle\)/.test(changes[0]), 'from the first battles: ' + changes[0]);
+        assert(/rounds/.test(changes[0]), 'in the battle rounds: ' + changes[0]);
+      });
+
+      run('simulation: a skipped relationship update breaks an invariant', function() {
+        var played = dTest.playSimulation({steps: 4, before: function() {
+          // the job that recounts vassals after a castle is taken is lost
+          var add = Queues.add;
+          Queues.add = function(name) {
+            if (name != 'updateVassalAllyCountMultiple') return add.apply(this, arguments);
+          };
+        }});
+        var problems = played[3].invariantProblems;
+        assert(_.contains(problems, 'num_vassals counts the list: sim_carol has 0, the list has 1'), 'carol\'s vassal is not counted: ' + problems.join('; '));
+        assert(_.contains(problems, 'num_allies_above counts the list: sim_dave has 0, the list has 1'), 'nor dave\'s lord: ' + problems.join('; '));
+      });
+
       run('simulation: a planted bug that breaks an invariant is caught', function() {
         var played;
         var buildingAdded = Mapmaker.buildingAdded;
