@@ -1,5 +1,6 @@
 Meteor.methods({
   forumPinTopic: function(topicId) {
+    check(topicId, String);
     var self = this;
     self.unblock();
     var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
@@ -15,6 +16,7 @@ Meteor.methods({
   },
 
   forumUnpinTopic: function(topicId) {
+    check(topicId, String);
     var self = this;
     self.unblock();
     var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
@@ -30,6 +32,7 @@ Meteor.methods({
   },
 
   forumDeleteTopic: function(topicId) {
+    check(topicId, String);
     var self = this;
     self.unblock();
     var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
@@ -46,6 +49,7 @@ Meteor.methods({
 
 
   forumLockTopic: function(topicId) {
+    check(topicId, String);
     var self = this;
     self.unblock();
     var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
@@ -61,6 +65,7 @@ Meteor.methods({
   },
 
   forumUnlockTopic: function(topicId) {
+    check(topicId, String);
     var self = this;
     self.unblock();
     var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
@@ -76,6 +81,9 @@ Meteor.methods({
   },
 
   forumNewTopic: function(title, categoryId, text) {
+    check(title, String);
+    check(categoryId, Match.OneOf(String, Number));
+    check(text, String);
     var self = this;
     self.unblock();
 
@@ -160,6 +168,8 @@ Meteor.methods({
 
 
   forumNewPost: function(topicId, text) {
+    check(topicId, String);
+    check(text, String);
     var self = this;
     self.unblock();
 
@@ -219,6 +229,7 @@ Meteor.methods({
 
   // this is kind of slow, could remove db find if needed
   addPostView: function(topicId) {
+    check(topicId, String);
     Forumtopics.update(topicId, {$inc: {numViews:1}});
   },
 
