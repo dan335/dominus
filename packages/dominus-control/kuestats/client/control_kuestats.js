@@ -51,9 +51,25 @@ Template.control_kuestats.helpers({
       return this.totalDuration / this.timesRun
   },
 
-  // the time the work really took (Queues.timeWork), not Bull's
-  workAverage: function() {
-      return this.workTotalDuration / this.workTimesRun
+  // JobWorkStats summed over every day, one row per job type, slowest first
+  jobworkstats: function() {
+    var today = new Date().toISOString().slice(0, 10);
+    var rows = {};
+    JobWorkStats.find({}, {sort: {day:1}}).forEach(function(doc) {
+      var row = rows[doc.type] = rows[doc.type] || {type:doc.type, days:0, count:0, total:0, max:0, maxToday:0, last:0};
+      row.days++;
+      row.count += doc.count;
+      row.total += doc.total;
+      row.max = Math.max(row.max, doc.max);
+      row.last = doc.last;
+      if (doc.day == today) {
+        row.maxToday = doc.max;
+      }
+    });
+    return _.sortBy(_.map(rows, function(row) {
+      row.avgDuration = row.count ? row.total / row.count : 0;
+      return row;
+    }), function(row) { return -row.max; });
   },
 });
 
@@ -132,4 +148,5 @@ Template.control_kuestats.events({
 
 Template.control_kuestats.onCreated(function() {
   this.subscribe('kuestats');
+  this.subscribe('jobworkstats');
 })

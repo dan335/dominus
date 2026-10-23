@@ -63,6 +63,19 @@ if (Meteor.isServer) {
       delete Queues.workTimes[name];
     });
 
+    run('job timing: called from inside a fiber, the handler has finished when it returns', function() {
+      var name = type();
+      var finished = false;
+      var wrapped = Queues.timeWork(name, Meteor.bindEnvironment(function(job) {
+        Meteor._sleepForMs(200);
+        finished = true;
+      }));
+      wrapped({data: {}});
+      assert(finished, 'the work is done');
+      assert(Queues.workTimes[name] && Queues.workTimes[name].max >= 200, 'and timed');
+      delete Queues.workTimes[name];
+    });
+
     run('job timing: a plain handler\'s promise reaches Bull unchanged and is timed until it settles', function() {
       var name = type();
       var resolve;
@@ -118,30 +131,55 @@ if (Meteor.isServer) {
       delete Queues.workTimes.jobTimingTestQueue;
     });
 
-    run('job timing: the totals are added to KueStats and cleared from memory', function() {
+    run('job timing: the totals are added to JobWorkStats per day and cleared from memory', function() {
       var name = type();
+      var workDay = Queues.workDay;
       try {
+        Queues.workDay = function() { return '2026-01-01'; };
         Queues.recordWork(name, 100);
         Queues.recordWork(name, 300);
         Queues.flushWorkTimes();
         assert(!Queues.workTimes[name], 'cleared from memory');
-        var stats = KueStats.findOne({type: name});
-        assert(stats, 'a KueStats doc');
-        equal(stats.workTimesRun, 2, 'count');
-        equal(stats.workTotalDuration, 400, 'total');
-        equal(stats.workMaxDuration, 300, 'max');
-        equal(stats.workLastDuration, 300, 'last');
+        var stats = JobWorkStats.findOne({type: name, day: '2026-01-01'});
+        assert(stats, 'a doc for the job and day');
+        equal(stats.count, 2, 'count');
+        equal(stats.total, 400, 'total');
+        equal(stats.max, 300, 'max');
+        equal(stats.last, 300, 'last');
 
-        // a second flush adds to it, keeping the highest max
+        // a second flush on the same day adds to it, keeping the highest max
         Queues.recordWork(name, 50);
         Queues.flushWorkTimes();
-        stats = KueStats.findOne({type: name});
-        equal(stats.workTimesRun, 3, 'count adds up');
-        equal(stats.workTotalDuration, 450, 'total adds up');
-        equal(stats.workMaxDuration, 300, 'max kept');
-        equal(stats.workLastDuration, 50, 'last replaced');
+        stats = JobWorkStats.findOne({type: name, day: '2026-01-01'});
+        equal(stats.count, 3, 'count adds up');
+        equal(stats.total, 450, 'total adds up');
+        equal(stats.max, 300, 'max kept');
+        equal(stats.last, 50, 'last replaced');
+
+        // the next day gets its own doc
+        Queues.workDay = function() { return '2026-01-02'; };
+        Queues.recordWork(name, 70);
+        Queues.flushWorkTimes();
+        equal(JobWorkStats.find({type: name}).count(), 2, 'one doc per day');
+        equal(JobWorkStats.findOne({type: name, day: '2026-01-02'}).max, 70, 'with that day\'s numbers');
+
+        equal(workDay().length, 10, 'the real day is YYYY-MM-DD');
       } finally {
-        KueStats.remove({type: name});
+        Queues.workDay = workDay;
+        JobWorkStats.remove({type: name});
+      }
+    });
+
+    run('job timing: the midnight stats reset leaves JobWorkStats alone', function() {
+      if (!isWorker) return 'skip';
+      var name = type();
+      try {
+        JobWorkStats.insert({type: name, day: '2026-01-01', count: 1, total: 5, max: 5, last: 5});
+        Queues.resetQueueStats.handler({data: {jobName: 'resetQueueStats'}});
+        assert(waitFor(function() { return KueStats.find().count() === 0; }, 5000), 'KueStats is cleared');
+        equal(JobWorkStats.find({type: name}).count(), 1, 'JobWorkStats is kept');
+      } finally {
+        JobWorkStats.remove({type: name});
       }
     });
   };

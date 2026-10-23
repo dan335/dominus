@@ -58,8 +58,9 @@ Queues.trackJob = function(type, duration) {
 // until it returns, or until the promise it returns settles. Bull still gets
 // what it got before: the handler's return value if it returned without
 // waiting, otherwise undefined.
-// The totals are kept in memory and added to KueStats (work* fields) once a
-// minute, to set real timeouts and lock durations before the Meteor upgrade.
+// The totals are kept in memory and added to JobWorkStats, one doc per job
+// type and UTC day, once a minute, to set real timeouts and lock durations
+// before the Meteor upgrade.
 const Fiber = Npm.require('fibers');
 
 Queues.workTimes = {};
@@ -75,15 +76,20 @@ Queues.recordWork = function(type, duration) {
   t.last = duration;
 };
 
+Queues.workDay = function() {
+  return new Date().toISOString().slice(0, 10);
+};
+
 Queues.flushWorkTimes = function() {
   let times = Queues.workTimes;
+  let day = Queues.workDay();
   Queues.workTimes = {};
   _.each(times, function(t, type) {
-    KueStats.upsert({type:type}, {
-      $setOnInsert: {type:type},
-      $set: {workLastDuration:t.last, workLastDate:new Date()},
-      $inc: {workTimesRun:t.count, workTotalDuration:t.total},
-      $max: {workMaxDuration:t.max}
+    JobWorkStats.upsert({type:type, day:day}, {
+      $setOnInsert: {type:type, day:day},
+      $set: {last:t.last, updatedAt:new Date()},
+      $inc: {count:t.count, total:t.total},
+      $max: {max:t.max}
     });
   });
 };
@@ -95,14 +101,21 @@ Queues.timeWork = function(type, handler) {
       Queues.recordWork(type, Date.now() - start);
     };
     let result;
-    Fiber(function() {
+    const run = function() {
       result = handler(job);
       if (result && typeof result.then === 'function') {
         result.then(done, done);
       } else {
         done();
       }
-    }).run();
+    };
+    // called from server code that is already in a fiber (a test), it runs
+    // there and has finished when it returns
+    if (Fiber.current) {
+      run();
+    } else {
+      Fiber(run).run();
+    }
     return result;
   };
 };
