@@ -15,7 +15,10 @@ if (Meteor.isServer) {
   // Waits until no Bull job is waiting or running, so jobs a test started
   // (enterNewHexCheck after an army is created, and so on) don't land in the
   // middle of the next check. Delayed jobs (retries) don't count.
+  // Queues.add doesn't wait for Redis, so a job added a moment ago may not be
+  // counted yet: a test that needs a job's result should waitFor the result.
   dTest.waitForJobs = function(ms) {
+    dTest.sleep(50);
     var busy = function() {
       return _.filter(Queues.queueNames, function(name) {
         var counts = dTest.settle(Queues[name].getJobCounts());
@@ -47,6 +50,44 @@ if (Meteor.isServer) {
       var changed = _.filter(_.keys(b), function(name) { return !_.isEqual(a[name], b[name]); });
       throw new Error('FAIL: ' + message + ' (changed: ' + changed.join(', ') + ')');
     }
+  };
+
+  // the error a call threw, checked against error.error (and the
+  // ValidationError detail type, when given)
+  dTest.expectError = function(fn, code, detailType, message) {
+    var e = dTest.throws(fn);
+    dTest.helpers.assert(e, message + ': expected error ' + code + ', but the call succeeded');
+    dTest.helpers.equal(e.error, code, message + ': error code (reason: ' + e.reason + ')');
+    if (detailType) {
+      var types = _.pluck(e.details || [], 'type');
+      dTest.helpers.assert(_.contains(types, detailType), message + ': expected detail "' + detailType + '", got ' + JSON.stringify(types));
+    }
+    return e;
+  };
+
+  // every soldier type, 0 unless given
+  dTest.soldierCounts = function(values) {
+    var out = {};
+    _s.armies.types.forEach(function(type) { out[type] = values[type] || 0; });
+    return out;
+  };
+
+  // A test(name, fn) for contract suites: each test starts with a full rate
+  // limit allowance and no jobs in flight, and after(), when given, cleans up
+  // once the test's jobs have finished.
+  dTest.contractTest = function(run, after) {
+    return function(name, fn) {
+      run(name, function() {
+        dTest.waitForJobs();
+        dTest.ddp.resetRateLimits();
+        try {
+          return dTest.settle(fn());
+        } finally {
+          dTest.waitForJobs();
+          if (after) after();
+        }
+      });
+    };
   };
 
   // opts.players: how many players (default 3)
@@ -88,6 +129,44 @@ if (Meteor.isServer) {
     // fresh copies, since methods change them
     w.player = function(i) { return Players.findOne(w.players[i]._id); };
     w.castle = function(i) { return Castles.findOne(w.castles[i]._id); };
+
+    // sets every resource and gold; the ones not given to 0
+    w.setResources = function(i, values) {
+      var set = {};
+      _s.market.types_plus_gold.forEach(function(type) { set[type] = 0; });
+      Players.update(w.players[i]._id, {$set: _.extend(set, values)});
+    };
+
+    w.setCastleSoldiers = function(i, soldiers) {
+      Castles.update(w.castles[i]._id, {$set: dTest.soldierCounts(soldiers)});
+    };
+
+    // a hex in the game with no building on it, that armies can stand on;
+    // filter(hex) narrows it further
+    w.freeHex = function(skip, filter) {
+      var taken = {};
+      Castles.find({gameId: w.gameId}).forEach(function(c) { taken[c.x + '_' + c.y] = true; });
+      Villages.find({gameId: w.gameId}).forEach(function(v) { taken[v.x + '_' + v.y] = true; });
+      (skip || []).forEach(function(h) { taken[h.x + '_' + h.y] = true; });
+      var hex = _.find(Hexes.find({gameId: w.gameId}, {sort: {x: 1, y: 1}}).fetch(), function(h) {
+        return !taken[h.x + '_' + h.y] && !h.hasBuilding && (!filter || filter(h)) && Mapmaker.coordsToCountryId(w.gameId, h.x, h.y);
+      });
+      if (!hex) throw new Error('FAIL: no free hex in the test world');
+      return {x: hex.x, y: hex.y};
+    };
+
+    // an army for player i (default: at their castle), after its jobs ran
+    w.makeArmy = function(i, soldiers, at) {
+      at = at || {x: w.castle(i).x, y: w.castle(i).y};
+      var army = dArmies.create(w.players[i]._id, soldiers || {footmen: 3}, at.x, at.y);
+      if (!army) throw new Error('FAIL: could not create a test army');
+      dTest.waitForJobs();
+      return Armies.findOne(army._id);
+    };
+
+    w.removeArmies = function() {
+      Armies.find({gameId: w.gameId}).forEach(function(a) { dArmies.destroyArmy(a._id); });
+    };
 
     w.cleanup = function() {
       dTest.gameCollections().forEach(function(collection) {
