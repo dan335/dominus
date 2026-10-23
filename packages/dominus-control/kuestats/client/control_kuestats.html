@@ -27,6 +27,9 @@
         <td>avg duration</td>
         <td>total duration</td>
         <td>last date</td>
+        <td>work runs</td>
+        <td>work avg</td>
+        <td>work max</td>
       </tr>
     </thead>
     <tbody>
@@ -38,6 +41,9 @@
           <td>{{humanizeDuration average}}</td>
           <td>{{humanizeDuration totalDuration}}</td>
           <td>{{lastRunCalendar lastDate}}</td>
+          <td>{{round workTimesRun}}</td>
+          <td>{{humanizeDuration workAverage}}</td>
+          <td>{{humanizeDuration workMaxDuration}}</td>
         </tr>
       {{/each}}
     </tbody>

@@ -891,6 +891,17 @@ if (Meteor.isServer) {
         cleanupUser: _testCleanupUser
       });
 
+      // --- Job handlers are timed (server/jobTimingTests.js) ---
+
+      _jobTimingTests(run, {
+        assert: _testAssert,
+        equal: _testEqual,
+        createTestGame: _createTestGame,
+        createTestUser: _createTestUser,
+        cleanup: _testCleanup,
+        cleanupUser: _testCleanupUser
+      });
+
       // --- Spectators can't change a game (server/spectatorTests.js) ---
 
       _spectatorTests(run, {

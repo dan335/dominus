@@ -50,6 +50,11 @@ Template.control_kuestats.helpers({
   average: function() {
       return this.totalDuration / this.timesRun
   },
+
+  // the time the work really took (Queues.timeWork), not Bull's
+  workAverage: function() {
+      return this.workTotalDuration / this.workTimesRun
+  },
 });
 
 
