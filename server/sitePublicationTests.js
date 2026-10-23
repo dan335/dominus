@@ -149,7 +149,7 @@ if (Meteor.isServer) {
             check({pub: 'landingGame', as: as, args: [f.open], coll: 'games', source: Games, query: {_id: f.open}, keys: keys});
           });
           check({pub: 'landingGame', as: null, args: [f.ended], coll: 'games', source: Games, query: {_id: f.ended}, keys: keys});
-          check({pub: 'landingGame', as: null, args: [], coll: 'games', source: Games, query: null});
+          check({pub: 'landingGame', as: null, args: [], error: 400});
           check({pub: 'landingGame', as: null, args: ['nope'], coll: 'games', source: Games, query: null});
         });
 
@@ -167,7 +167,7 @@ if (Meteor.isServer) {
           // the whole game document, under its own client collection
           check({pub: 'landingResult', as: null, args: [f.ended], coll: 'gameresult', source: Games, query: {_id: f.ended}, keys: 'all'});
           check({pub: 'landingResult', as: null, args: [f.open], coll: 'gameresult', source: Games, query: {_id: f.open}, keys: 'all'});
-          check({pub: 'landingResult', as: null, args: [], coll: 'gameresult', source: Games, query: null});
+          check({pub: 'landingResult', as: null, args: [], error: 400});
         });
 
         test('oldResultsTitles and oldResultsDetails: results from the old code base, for anyone', function() {
@@ -214,27 +214,23 @@ if (Meteor.isServer) {
           ]});
         });
 
-        test('userProfile: with no user id, Mongo and Meteor disagree on the players query (known bug, wedges the oplog driver)', function() {
-          // userId is undefined, so the players query is {userId: undefined, gameIsOver: true}.
-          // Mongo drops the undefined and matches every finished player; Meteor's
-          // matcher treats it as "userId is missing" and matches none. Subscribed
-          // over DDP with oplog on, the oplog driver throws "The Mongo server and
-          // the Meteor query disagree" in a defer and never becomes ready, and from
-          // then on every method that writes to Players waits forever on its write
-          // fence, until the server restarts. So the subscription is not made
-          // here: the handler is called directly and the disagreement checked.
-          var stops = [];
+        test('userProfile: a missing user id is refused before any query, since Mongo and Meteor disagree on it (was a known bug that wedged the oplog driver)', function() {
+          // With userId undefined the players query would be {userId: undefined,
+          // gameIsOver: true}. Mongo drops the undefined and matches every finished
+          // player; Meteor's matcher treats it as "userId is missing" and matches
+          // none. Subscribed over DDP with oplog on, the oplog driver threw "The
+          // Mongo server and the Meteor query disagree" and never became ready, and
+          // every method writing to Players then waited forever on its write fence.
+          // The publication gate and check() now refuse it first.
+          check({pub: 'userProfile', as: null, args: [], error: 400});
           var sub = {userId: null, connection: null, added: function() {}, changed: function() {}, removed: function() {},
-            ready: function() {}, error: function() {}, onStop: function(fn) { stops.push(fn); }};
-          var cursors;
-          try {
-            cursors = Meteor.server.publish_handlers.userProfile.call(sub);
-          } finally {
-            stops.forEach(function(fn) { fn(); });
-          }
-          var playersCursor = _.find(cursors, function(c) { return c._getCollectionName() == 'players'; });
+            ready: function() {}, error: function() {}, onStop: function() {}};
+          var error = dTest.throws(function() { return Meteor.server.publish_handlers.userProfile.call(sub); });
+          assert(error && (error.errorType == 'Match.Error' || error.error == 400), 'called with no id, the handler throws (got ' + error + ')');
+
+          // the disagreement the checks guard against
           var finished = Players.findOne(f.playerOver);
-          assert(Players.find(playersCursor._cursorDescription.selector).count() >= 1, 'Mongo matches the finished players');
+          assert(Players.find({userId: undefined, gameIsOver: true}).count() >= 1, 'Mongo matches the finished players');
           // a local collection runs the same matcher as the oplog driver
           var local = new Mongo.Collection(null);
           local.insert(finished);
@@ -250,7 +246,7 @@ if (Meteor.isServer) {
         test('userImageForProfile and userImages: avatar file names only, for anyone', function() {
           check({pub: 'userImageForProfile', as: null, args: [f.ranked], coll: 'users', source: Meteor.users, query: {_id: f.ranked},
             keys: ['avatarFilename']});
-          check({pub: 'userImageForProfile', as: null, args: [], coll: 'users', source: Meteor.users, query: null});
+          check({pub: 'userImageForProfile', as: null, args: [], error: 400});
           check({pub: 'userImages', as: null, args: [[f.ranked, f.plain, 'nope']], coll: 'users', source: Meteor.users,
             query: {_id: {$in: [f.ranked, f.plain]}}, keys: ['avatarFilename']});
           check({pub: 'userImages', as: null, args: [[]], coll: 'users', source: Meteor.users, query: null});
