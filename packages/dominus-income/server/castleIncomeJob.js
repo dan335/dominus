@@ -20,7 +20,7 @@ dIncome.collectCastleIncome = function() {
 	Games.find({hasStarted:true, hasEnded:false}, {fields: {_id:1}}).forEach(function(game) {
 
 		const interval = _gs.castles(game._id, 'incomeInterval');
-		const cutoff = moment().subtract(interval, 'ms').toDate();
+		const cutoff = moment(dClock.now()).subtract(interval, 'ms').toDate();
 
 		// base castle income
 		let incomeFromCastle = _gs.castles(game._id, 'income');
@@ -60,7 +60,9 @@ dIncome.collectCastleIncome = function() {
 				playerSet['vassalIncome.'+type] = player.incomeFromVassals[type];
 			});
 
-			//playerSet.lastIncomeUpdate = new Date();
+			// the game clock, not Mongo's $currentDate, so the time matches the
+			// cutoff above, which is worked out on this server
+			playerSet.lastIncomeUpdate = dClock.now();
 
 			// total income worth
 			let totalIncome = {};
@@ -79,8 +81,7 @@ dIncome.collectCastleIncome = function() {
 			// update player
 			bulkPlayers.find({_id:player._id}).updateOne({
 				$inc:playerInc,
-				$set:playerSet,
-				$currentDate: {lastIncomeUpdate:true}
+				$set:playerSet
 			});
 			// Players.update(player._id, {
 			// 	$inc:playerInc,

@@ -15,10 +15,10 @@ var checkForGameClose = function() {
   //     update: {$set:{hasClosed:true, closeDate:new Date()}}
   // });
 
-  let game = Games.findOne({hasClosed:false, hasEnded:true, closeDate: {$lte: new Date()}});
+  let game = Games.findOne({hasClosed:false, hasEnded:true, closeDate: {$lte: dClock.now()}});
 
   if (game) {
-    Games.update(game._id, {$set:{hasClosed:true, closeDate:new Date()}});
+    Games.update(game._id, {$set:{hasClosed:true, closeDate:dClock.now()}});
     cleanupPlayers(game._id);
     cleanupGame(game._id);
     closeGame(game._id);

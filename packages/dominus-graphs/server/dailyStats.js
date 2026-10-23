@@ -59,12 +59,12 @@ dGraphs.update_losses_worth = function(playerId) {
 			$setOnInsert: {
 				gameId:player.gameId,
 				playerId:playerId,
-				created_at: new Date(),
+				created_at: dClock.now(),
 				user_id:player.userId
 			}, $set: {
 				losses_worth:worth.total,
 				losses_num:num,
-				updated_at:new Date()
+				updated_at:dClock.now()
 			}
 		})
 		Players.update(playerId, {$set: {losses_worth:worth.total, losses_num:num}})
@@ -127,7 +127,7 @@ dGraphs.updateIncomeStats = function(player) {
 			gameId:player.gameId,
 			playerId:player._id,
 			user_id:player.userId,
-			created_at: new Date()
+			created_at: dClock.now()
 		},
 		$set: {
       totalIncome:totalIncome,
@@ -135,7 +135,7 @@ dGraphs.updateIncomeStats = function(player) {
       castleIncome:castleIncome,
       villageIncome:villageIncome,
       vassalIncome:vassalIncome,
-			updated_at:new Date()
+			updated_at:dClock.now()
 		}
 	})
 }
@@ -174,8 +174,8 @@ dGraphs.updateIncomeRank = function(gameId) {
 			playerId: player._id,
 			created_at: {$gte: _gs.statsBegin(gameId), $lt: _gs.statsEnd(gameId)}
 		}, {
-			$setOnInsert: {gameId:gameId, playerId:player._id, user_id:player.userId, created_at: new Date()},
-			$set: {incomeRank:rank, updated_at:new Date()}
+			$setOnInsert: {gameId:gameId, playerId:player._id, user_id:player.userId, created_at: dClock.now()},
+			$set: {incomeRank:rank, updated_at:dClock.now()}
 		});
 
 		prevIncome = player.income;
@@ -218,8 +218,8 @@ dGraphs.updateVassalRank = function(gameId) {
 			playerId: player._id,
 			created_at: {$gte: _gs.statsBegin(gameId), $lt: _gs.statsEnd(gameId)}
 		}, {
-			$setOnInsert: {gameId:gameId, playerId:player._id, user_id:player.userId, created_at: new Date()},
-			$set: {vassalRank:rank, updated_at:new Date()}
+			$setOnInsert: {gameId:gameId, playerId:player._id, user_id:player.userId, created_at: dClock.now()},
+			$set: {vassalRank:rank, updated_at:dClock.now()}
 		});
 
 		prevNumVassals = player.num_allies_below;
@@ -252,8 +252,8 @@ dGraphs.init_dailystats_for_new_user = function(gameId, userId, playerId) {
 		user_id: userId,
 		playerId: playerId,
 		gameId: gameId,
-		created_at: new Date(),
-		updated_at: new Date(),
+		created_at: dClock.now(),
+		updated_at: dClock.now(),
 		inc: {
 			gold:0,
 			grain:0,

@@ -18,7 +18,7 @@ var collectVillageIncome = function() {
 	Games.find({hasStarted:true, hasEnded:false}, {fields: {_id:1}}).forEach(function(game) {
 
 		const interval = _gs.villages(game._id, 'incomeInterval');
-		const cutoff = moment().subtract(interval, 'ms').toDate();
+		const cutoff = moment(dClock.now()).subtract(interval, 'ms').toDate();
 		const villageFields = {playerId:1, x:1, y:1, level:1};
 		Villages.find({gameId:game._id, under_construction:false, lastIncomeUpdate: {$lte:cutoff}}, {fields:villageFields}).forEach(function(village) {
 
@@ -77,7 +77,7 @@ var collectVillageIncome = function() {
 					setVillage['income.'+type] = villageIncome[type];
 				})
 				setVillage['income.worth'] = villageIncome.worth;
-				setVillage.lastIncomeUpdate = new Date();
+				setVillage.lastIncomeUpdate = dClock.now();
 
 				bulkVillages.find({_id:village._id}).updateOne({$set:setVillage});
 			}

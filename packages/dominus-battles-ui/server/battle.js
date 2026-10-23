@@ -55,7 +55,7 @@ BattleJob.prototype.runBattle = function() {
 
     // make sure it's past time to do battle
     let interval = _gs.battles(self.gameId, 'battleInterval');
-    var cutoff = moment().subtract(interval, 'ms').toDate();
+    var cutoff = moment(dClock.now()).subtract(interval, 'ms').toDate();
     var battleDate = moment(new Date(self.battleData.updatedAt));
     if (battleDate.isAfter(cutoff)) {
 
@@ -75,8 +75,8 @@ BattleJob.prototype.runBattle = function() {
       x:self.x,
       y:self.y,
       isRunning:true,
-      createdAt:new Date(),
-      updatedAt:new Date(),
+      createdAt:dClock.now(),
+      updatedAt:dClock.now(),
       roundNumber:1,
       isOver:false,
       loses:[],
@@ -374,7 +374,7 @@ BattleJob.prototype.saveRound = function() {
   roundData.armies = armies;
   roundData.battle_id = self.battleData._id;
   roundData.roundNumber = self.battleData.roundNumber;
-  roundData.createdAt = new Date();
+  roundData.createdAt = dClock.now();
   roundData.gameId = self.gameId;
   roundData = _.omit(roundData, _.functions(roundData));
 
@@ -450,7 +450,7 @@ BattleJob.prototype.saveBattle = function() {
     self.battleData.loses.push(data);
   })
 
-  self.battleData.updatedAt = new Date();
+  self.battleData.updatedAt = dClock.now();
   self.battleData.isOver = self.currentRound.battleIsOver;
   self.battleData.isRunning = false;
 

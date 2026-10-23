@@ -129,7 +129,7 @@ var new_dominus_event = function(gameId, dominusPlayer) {
 	// set game end date
 	if (dominusPlayer._id != lastDominusPlayerId) {
 		let time = _gs.init(gameId, 'time_til_game_end_when_new_dominus');
-		set.endDate = moment(new Date()).add(time, 'ms').toDate();
+		set.endDate = moment(dClock.now()).add(time, 'ms').toDate();
 	}
 
   set.lastDominusPlayerId = dominusPlayer._id;

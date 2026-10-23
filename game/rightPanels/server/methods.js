@@ -11,7 +11,7 @@ Meteor.methods({
         date = new Date(user.presence.updatedAt);
       }
 
-      var numDays = moment().diff(date, 'days');
+      var numDays = moment(dClock.now()).diff(date, 'days');
       return Math.floor(numDays);
     }
     return null;

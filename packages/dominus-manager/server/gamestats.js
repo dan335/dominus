@@ -11,7 +11,7 @@ if (process.env.DOMINUS_WORKER == 'true') {
 
 gamestatsJob = function(gameId) {
 	let stat = {
-		created_at: new Date(),
+		created_at: dClock.now(),
 		gameId: gameId
 	};
 

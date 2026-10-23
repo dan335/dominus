@@ -53,7 +53,7 @@ dArmies.moveArmiesJob = function(done) {
 
   Armypaths.find({index:0, paused:false, speed:{$ne:null}, hexes:{$ne:null, $exists:true}}).forEach(function(path) {
 
-    if (moment(new Date(path.last_move_at)).add(path.speed, 'minutes') < moment()) {
+    if (moment(new Date(path.last_move_at)).add(path.speed, 'minutes') < moment(dClock.now())) {
       if (path.hexes) {
         if (path.hexes.length > 0) {
 
@@ -120,11 +120,11 @@ dArmies.moveArmiesJob = function(done) {
           Armies.update(path.armyId, {$set: {
             x:hex.x,
             y:hex.y,
-            last_move_at:new Date(),
+            last_move_at:dClock.now(),
             countryId: hex.countryId
           }, $inc: {moveDistance:-1}});
 
-          Armypaths.update({armyId:path.armyId}, {$set:{last_move_at:new Date()}}, {multi:true});
+          Armypaths.update({armyId:path.armyId}, {$set:{last_move_at:dClock.now()}}, {multi:true});
           //bulkPaths.find({armyId:path.armyId}).update({$set:{last_move_at:new Date()}});
 
           // markers

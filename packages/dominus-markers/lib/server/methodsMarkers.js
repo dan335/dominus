@@ -33,8 +33,8 @@ Meteor.methods({
       description: "",
       unitType: null,
       unitId: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: dClock.now(),
+      updatedAt: dClock.now(),
       user_id: this.userId,
       order: numCurrent,
       groupId:0,   // 0 is always default group
@@ -91,8 +91,8 @@ Meteor.methods({
       description: "",
       unitType: null,
       unitId: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: dClock.now(),
+      updatedAt: dClock.now(),
       user_id: this.userId,
       order: numCurrent,
       groupId:0,   // 0 is always default group

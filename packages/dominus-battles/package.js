@@ -10,7 +10,8 @@ Package.onUse(function(api) {
   //api.versionsFrom('1.2');
   api.use([
     'mongo',
-    'momentjs:moment@2.18.1'
+    'momentjs:moment@2.18.1',
+    'dominus-clock'
   ]);
   api.addFiles([
     'calculator/armies.js',

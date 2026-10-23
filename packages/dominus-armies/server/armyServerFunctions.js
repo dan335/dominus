@@ -18,7 +18,7 @@ dArmies.create = function(playerId, soldiers, x, y, last_move_at) {
   check(last_move_at, Match.OneOf(Date, undefined));
 
   // set last_move_at to now if not set
-  last_move_at = typeof last_move_at !== 'undefined' ? last_move_at : new Date();
+  last_move_at = typeof last_move_at !== 'undefined' ? last_move_at : dClock.now();
 
   var fields = {male:1, gameId:1, playerId:1, userId:1, username:1, x:1, y:1, allies_above:1, allies_below:1, castle_id:1, is_dominus:1};
   var player = Players.findOne(playerId, {fields:fields});
@@ -35,9 +35,9 @@ dArmies.create = function(playerId, soldiers, x, y, last_move_at) {
     name: self.createName(),
     x: x,
     y: y,
-    created_at: new Date(),
+    created_at: dClock.now(),
     last_move_at: last_move_at,
-    pastMoves: [{x:x, y:y, moveDate:new Date()}],
+    pastMoves: [{x:x, y:y, moveDate:dClock.now()}],
     user_id: player.userId,
     username: player.username,
     castle_x: player.x,
@@ -252,7 +252,7 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
   // update army with move
   if (!hasMerged){
     var pastMoves = army.pastMoves || []
-    pastMoves.unshift({x:army.x, y:army.y, moveDate:new Date()});
+    pastMoves.unshift({x:army.x, y:army.y, moveDate:dClock.now()});
     pastMoves = pastMoves.slice(0, _s.armies.pastMovesToShow);
     Armies.update(army._id, {$set: {pastMoves:pastMoves}});
   }

@@ -57,7 +57,7 @@ Meteor.methods({
 
     // can't signup after game has started
     let startAt = moment(new Date(game.startAt));
-    if (moment().isAfter(startAt)) {
+    if (moment(dClock.now()).isAfter(startAt)) {
       throw new Meteor.Error('gameAlreadyStarted', 'Game has already started, cannot signup.');
     }
 
@@ -83,7 +83,7 @@ Meteor.methods({
       gameId: gameId,
       userId: self.userId,
       username: username,
-      createdAt: new Date(),
+      createdAt: dClock.now(),
       usedToken: usedToken
     });
   },
@@ -111,7 +111,7 @@ Meteor.methods({
 
     // can't cancel signup after game has started
     let startAt = moment(new Date(game.startAt));
-    if (moment().isAfter(startAt)) {
+    if (moment(dClock.now()).isAfter(startAt)) {
       throw new Meteor.Error('gameAlreadyStarted', 'Game has already started, cannot cancel signup.');
     }
 

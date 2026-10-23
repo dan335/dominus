@@ -9,7 +9,7 @@ dCapitals.createCapital = function(gameId, countryId) {
 
   var query = {countryId:countryId, isBorder:false, hasBuilding:false, nearbyBuildings:false};
   var numHexes = Hexes.find(query).count();
-  var randNum = Math.floor(Math.random() * numHexes);
+  var randNum = Math.floor(dRandom.fraction() * numHexes);
   var hex =  Hexes.findOne(query, {skip:randNum, limit:1});
 
   if (!hex) {
@@ -28,7 +28,7 @@ dCapitals.createCapital = function(gameId, countryId) {
     playerId:null,
     name: dCapitals.createName(),
     income: {},
-    lastIncomeUpdate: new Date()
+    lastIncomeUpdate: dClock.now()
   };
 
   _s.armies.types.forEach(function(type) {
@@ -48,7 +48,7 @@ dCapitals.createCapital = function(gameId, countryId) {
 
 
 dCapitals.createName = function() {
-  return _s.capitals.names.part1[_.random(_s.capitals.names.part1.length-1)] + _s.capitals.names.part2[_.random(_s.capitals.names.part2.length-1)];
+  return _s.capitals.names.part1[dRandom.random(_s.capitals.names.part1.length-1)] + _s.capitals.names.part2[dRandom.random(_s.capitals.names.part2.length-1)];
 }
 
 

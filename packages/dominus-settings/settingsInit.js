@@ -81,9 +81,9 @@ _s.init = {
 _s.init.gamestatsInterval = 3;
 
 _s.init.gamestatsBegin = function() {
-  var currentHour = moment().hour();
+  var currentHour = moment(dClock.now()).hour();
   var beginHour = currentHour - (currentHour % _s.init.gamestatsInterval);
-  return moment().startOf('day').add(beginHour, 'hours').toDate();
+  return moment(dClock.now()).startOf('day').add(beginHour, 'hours').toDate();
 };
 _s.init.gamestatsEnd = function() {
   var begin = moment(statsBegin());

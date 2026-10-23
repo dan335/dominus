@@ -10,8 +10,11 @@ Package.onUse(function(api) {
   //api.versionsFrom('1.2');
   api.use([
     'ecmascript',
-    'mongo'
+    'mongo',
+    'dominus-clock'
   ]);
+  // every package that uses the collections gets the game clock too
+  api.imply('dominus-clock');
   api.addFiles('collections.js');
   api.addFiles('indexes.js', 'server');
   api.export([

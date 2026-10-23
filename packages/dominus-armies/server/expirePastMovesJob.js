@@ -9,7 +9,7 @@ if (process.env.DOMINUS_WORKER == 'true') {
 
 
 dArmies.expirePastMoves = function() {
-  var cutoff = moment(new Date()).subtract(_s.armies.pastMovesMsLimit, 'ms').toDate();
+  var cutoff = moment(dClock.now()).subtract(_s.armies.pastMovesMsLimit, 'ms').toDate();
   var find = {"pastMoves.moveDate": {$lt:cutoff}};
   var options = {fields:{pastMoves:1}};
   Armies.find(find, options).forEach(function(army) {

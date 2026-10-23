@@ -34,7 +34,7 @@ dVillages.destroyVillage = function(villageId) {
   });
 
   if (hasSoldiers) {
-    var army = dArmies.create(village.playerId, soldiers, village.x, village.y, new Date());
+    var army = dArmies.create(village.playerId, soldiers, village.x, village.y, dClock.now());
     if (!army) {
       return false;
     }
