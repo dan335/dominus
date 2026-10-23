@@ -595,6 +595,14 @@ if (Meteor.isServer) {
         callAsClient(uid, 'edit_name', ['castle', w.castle, 'New Name', w.P]);
         equal(Castles.findOne(w.castle).name, 'New Name', 'owner can rename a castle');
 
+        // the castle panel sends the gameId as the 4th argument
+        Meteor.users.update(uid, {$set: {purchases: {castles: ['castle_01', 'castle_02_keep']}}});
+        callAsClient(uid, 'set_unit_image', [w.castle, 'castles', 'castle_02_keep', w.G]);
+        equal(Castles.findOne(w.castle).image, 'castle_02_keep', 'owner can change their castle image');
+        var imageError = throws(function() { callAsClient(uid, 'set_unit_image', [w.castle, 'castles', 'castle_01', w.P]); });
+        assert(imageError && imageError.error === 'not-authorized', 'a playerId in the gameId slot is refused');
+        equal(Castles.findOne(w.castle).image, 'castle_02_keep', 'image unchanged after the refused call');
+
         callAsClient(uid, 'markAlertAsRead', [w.G, w.alert]);
         assert(Alerts.findOne(w.alert).playerIds[0].read, 'player can mark their alert read');
 
