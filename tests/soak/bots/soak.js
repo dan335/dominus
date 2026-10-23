@@ -386,7 +386,9 @@ class Bot {
     const castle = this.castle(me);
     const armies = this.myArmies(me);
     const idle = armies.filter((a) => !this.isMoving(a));
-    const villages = ddp.find('left_panel_villages', (v) => v.playerId == me._id);
+    // the minimap's copy has no level or under_construction; the map's has
+    const villages = ddp.find('left_panel_villages', (v) => v.playerId == me._id)
+      .map((v) => Object.assign({}, v, ddp.collection('villages').get(v._id)));
 
     const actions = [
       [3, 'buy', async () => {
