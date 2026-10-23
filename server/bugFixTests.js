@@ -876,5 +876,18 @@ if (Meteor.isServer) {
         Armypaths.remove({user_id: userId});
       }
     });
+
+
+    // Meteor 2.16 brings underscore@1.6.1, whose _.where is _.find. The
+    // spectators' left menu used it and broke; it uses _.filter now.
+    // underscore@1.6.4 (Meteor 3) fixes it, and this test then fails on purpose.
+    run('known bug: _.where returns only the first match in underscore ' + _.VERSION, function() {
+      let panels = [{name: 'a', spectator: true}, {name: 'b'}, {name: 'c', spectator: true}];
+      let found = _.where(panels, {spectator: true});
+      assert(!Array.isArray(found), '_.where gives no array');
+      equal(found && found.name, 'a', 'just the first match');
+      equal(_.pluck(_.filter(panels, function(p) { return p.spectator; }), 'name').join(), 'a,c', '_.filter finds both');
+      equal(_.findWhere(panels, {spectator: true}).name, 'a', '_.findWhere is unaffected');
+    });
   };
 }
