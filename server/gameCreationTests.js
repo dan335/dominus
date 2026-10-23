@@ -861,5 +861,8 @@ if (Meteor.isServer) {
   // starts, since their files load after this one.
   dTest.addSuite('bugs found along the way (server/bugFixTests.js)', function(run, t) { return _bugFixTests(run, t); });
   dTest.addSuite('server performance fixes (server/perfFixTests.js)', function(run, t) { return _perfFixTests(run, t); });
+  dTest.addSuite('job handlers are timed (server/jobTimingTests.js)', function(run, t) { return _jobTimingTests(run, t); });
   dTest.addSuite('spectators can\'t change a game (server/spectatorTests.js)', function(run, t) { return _spectatorTests(run, t); });
+  dTest.addSuite('publications refuse missing arguments (server/publicationGateTests.js)', function(run, t) { return _publicationGateTests(run, t); });
+  dTest.addSuite('every argument is checked (server/argumentCheckTests.js)', function(run, t) { return _argumentCheckTests(run, t); });
 }

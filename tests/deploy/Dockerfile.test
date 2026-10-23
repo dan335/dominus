@@ -1,0 +1,8 @@
+# Stand-in for the real Dockerfile, which apt-gets from archive.debian.org
+# (not reachable from the cloud sandbox). deploy.sh does not care what is in
+# the image, only that it serves the commit hash.
+FROM node:14
+ENV PORT=80
+ADD .build/dominus.tar.gz /opt/app/
+WORKDIR /opt/app/bundle
+CMD ["node", "main.js"]

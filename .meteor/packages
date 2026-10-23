@@ -45,6 +45,7 @@ reload@1.3.1
 ejson@1.1.1
 spacebars@1.0.12
 check@1.3.1
+audit-argument-checks@1.0.7
 danimal:mapmover
 dominus-hexmap
 ecmascript@0.16.1

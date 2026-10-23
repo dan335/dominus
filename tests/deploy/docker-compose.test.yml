@@ -1,0 +1,9 @@
+# Mirrors the shape of ~/server on the real host: services dominus-web and
+# dominus-worker on :latest, compose project "server".
+services:
+  dominus-web:
+    image: registry.gitlab.com/danphi/dominus:latest
+    ports: ["8080:80"]
+  dominus-worker:
+    image: registry.gitlab.com/danphi/dominus:latest
+    environment: [PORT=81]
