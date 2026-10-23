@@ -250,7 +250,7 @@ if (Meteor.isServer) {
           check({pub: 'userImages', as: null, args: [[f.ranked, f.plain, 'nope']], coll: 'users', source: Meteor.users,
             query: {_id: {$in: [f.ranked, f.plain]}}, keys: ['avatarFilename']});
           check({pub: 'userImages', as: null, args: [[]], coll: 'users', source: Meteor.users, query: null});
-          check({pub: 'userImages', as: null, args: [], coll: 'users', source: Meteor.users, query: null});
+          check({pub: 'userImages', as: null, args: [], error: 400});
           // a logged in caller's own document also arrives, from the null publication
           check({pub: 'userImages', as: f.plain, args: [[f.ranked]], coll: 'users', source: Meteor.users, query: {_id: f.ranked},
             keys: ['avatarFilename'], skip: [f.plain]});
