@@ -84,50 +84,9 @@ if (Meteor.isServer) {
       // --- The check ---
 
       // Subscribes as `as` ('out' for logged out, or a player index) and checks
-      // that each part's local collection holds exactly the docs `query` finds
-      // in `source`, with exactly the fields in `keys` (or all of them).
-      // nested: {field: [subfields]} for a dotted projection like income.worth.
+      // exactly which documents and fields arrive (dTest.checkPublication)
       function check(spec) {
-        var client = dTest.ddp.connect(spec.as === 'out' ? null : uid(spec.as));
-        try {
-          var parts = spec.parts || [_.pick(spec, 'coll', 'source', 'query', 'keys', 'nested', 'sort')];
-          parts.forEach(function(p) { client.collection(p.coll); });
-          var sub = client.subscribe.apply(null, [spec.pub].concat(spec.args || []));
-          if (spec.error) {
-            assert(sub.error, spec.pub + ': expected the subscription to fail');
-            equal(sub.error.error, spec.error, spec.pub + ': error');
-            return;
-          }
-          assert(sub.ready, spec.pub + ': ready (error: ' + (sub.error && sub.error.reason) + ')');
-          parts.forEach(function(p) {
-            var label = spec.pub + ' -> ' + p.coll;
-            var got = client.docs(p.coll);
-            var want = p.query === null ? [] : p.source.find(p.query, {sort: {_id: 1}}).fetch();
-            equal(_.pluck(got, '_id').join(','), _.pluck(want, '_id').join(','), label + ': documents (' + spec.as + ')');
-            got.forEach(function(doc, n) {
-              var db = want[n];
-              if (p.keys == 'all') {
-                assert(EJSON.equals(doc, db), label + ': whole document ' + doc._id);
-                return;
-              }
-              var allowed = ['_id'].concat(p.keys);
-              var extra = _.difference(_.keys(doc), allowed);
-              assert(!extra.length, label + ': unexpected fields ' + extra.join(','));
-              p.keys.forEach(function(k) {
-                var expected = db[k];
-                if (p.nested && p.nested[k] && expected) expected = _.pick(expected, p.nested[k]);
-                if (expected === undefined) {
-                  assert(!_.has(doc, k), label + ': ' + k + ' should not be sent when not set');
-                } else {
-                  assert(EJSON.equals(doc[k], expected), label + ': ' + k + ' (' + JSON.stringify(doc[k]) + ' vs ' + JSON.stringify(expected) + ')');
-                }
-              });
-            });
-          });
-          sub.stop();
-        } finally {
-          client.close();
-        }
+        dTest.checkPublication(_.extend({}, spec, {as: spec.as === 'out' ? null : uid(spec.as), who: spec.as}));
       }
 
       var test = dTest.contractTest(run);

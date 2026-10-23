@@ -196,8 +196,15 @@ def scan_file(path):
     for m in re.finditer(r'Meteor\.publish\s*\(\s*', masked):
         q = m.end()
         name = string_at(src, q) if masked[q] in '\'"' else ('(null: auto-published)' if masked.startswith('null', q) else '?')
+        if masked.startswith('name', q):
+            continue  # the Meteor.publish(name, ...) inside the admin_publish helper below
         close = match_brace(masked, masked.index('(', m.start()))
         add('publication', name, function_body(src, masked, q, close), m.start())
+
+    # admin_publish('name', function () {}) (packages/dominus-admin/server/publish.js)
+    for m in re.finditer(r'\badmin_publish\s*\(\s*([\'"])', masked):
+        close = match_brace(masked, masked.index('(', m.start()))
+        add('publication', string_at(src, m.start(1)), function_body(src, masked, m.end(), close), m.start())
 
     # Queues.name.process(n, Meteor.bindEnvironment(function (job) {}))
     for m in re.finditer(r'Queues\.([A-Za-z_$][\w$]*)\.process\s*\(', masked):
