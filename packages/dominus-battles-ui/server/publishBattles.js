@@ -1,4 +1,5 @@
 Meteor.publish('battle', function(id) {
+  check(id, Match.OneOf(String, null));
   if (id) {
     return Battles2.find(id)
   }
@@ -17,6 +18,9 @@ DDPRateLimiter.addRule(battleSubRule, 10, 5000);
 
 
 Meteor.publish('battle_notifications_at_hex', function(gameId, x, y) {
+  check(gameId, Match.OneOf(String, null));
+  check(x, Match.OneOf(Number, null));
+  check(y, Match.OneOf(Number, null));
   var fields = {
     createdAt:1,
     updatedAt:1,
@@ -45,6 +49,7 @@ DDPRateLimiter.addRule(battle_notifications_at_hexSubRule, 10, 5000);
 
 
 Meteor.publish('fight', function(id) {
+  check(id, Match.OneOf(String, null));
   if (id) {
     return Rounds.find(id)
   }
@@ -62,6 +67,7 @@ DDPRateLimiter.addRule(fightSubRule, 10, 5000);
 
 
 Meteor.publish('lastFightInBattle', function(battle_id) {
+  check(battle_id, Match.OneOf(String, null));
   if (battle_id) {
     return Rounds.find({battle_id:battle_id}, {sort:{roundNumber:-1}, limit:1})
   }
@@ -80,6 +86,7 @@ DDPRateLimiter.addRule(lastFightInBattleSubRule, 10, 5000);
 
 
 Meteor.publish('roundtitles', function(battle_id) {
+  check(battle_id, Match.OneOf(String, null));
   var sub = this;
   var cur = Rounds.find({battle_id:battle_id}, {fields: { roundNumber:1, battle_id:1, createdAt:1 }});
   Mongo.Collection._publishCursor(cur, sub, 'roundtitles');

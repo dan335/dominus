@@ -42,4 +42,33 @@
       {{/each}}
     </tbody>
   </table>
+
+  <h4>Real job durations</h4>
+  <p>How long each job's work really took, from Queues.timeWork. The table above uses Bull's timing, which ends when a job first waits on the database. Kept per day and not cleared by Reset Stats.</p>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <td>title</td>
+        <td>days</td>
+        <td>times run</td>
+        <td>avg duration</td>
+        <td>max duration</td>
+        <td>max today</td>
+        <td>last duration</td>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each jobworkstats}}
+        <tr>
+          <td>{{type}}</td>
+          <td>{{days}}</td>
+          <td>{{round count}}</td>
+          <td>{{humanizeDuration avgDuration}}</td>
+          <td>{{humanizeDuration max}}</td>
+          <td>{{humanizeDuration maxToday}}</td>
+          <td>{{humanizeDuration last}}</td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
 </template>

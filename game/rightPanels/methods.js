@@ -67,6 +67,10 @@ Meteor.methods({
 
 
 	edit_name: function(type, id, name, playerId) {
+		check(type, String);
+		check(id, String);
+		check(name, String);
+		check(playerId, String);
 		var error = false;
 
 		if (name.length < 1) {

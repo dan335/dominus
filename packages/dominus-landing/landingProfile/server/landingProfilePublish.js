@@ -1,6 +1,7 @@
 // publish user => ProfileUser
 // Players and Games that are over
 Meteor.publish('userProfile', function(userId) {
+	check(userId, Match.OneOf(String, null));
 	var fields = {
 		username:1,
 		rankingRegular:1,

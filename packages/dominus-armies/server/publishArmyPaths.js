@@ -1,5 +1,6 @@
 // always subscribe to your own army paths
 Meteor.publish('myArmyPaths', function(gameId) {
+  check(gameId, Match.OneOf(String, null));
   if (this.userId) {
     return Armypaths.find({gameId:gameId, user_id:this.userId});
   } else {

@@ -25,6 +25,7 @@ admin_publish('admin_chatrooms', function() {
 });
 
 Meteor.publish('adminRoomchats', function(chatroom_id) {
+	check(chatroom_id, Match.OneOf(String, null));
 	if(this.userId && get_user_property("admin", this.userId)) {
 		return Roomchats.find({room_id: chatroom_id}, {sort: {created_at: -1}, limit: 500}, {disableOplog:true});
 	} else {
@@ -33,6 +34,7 @@ Meteor.publish('adminRoomchats', function(chatroom_id) {
 });
 
 Meteor.publish('adminChatUsers', function(userIds) {
+	check(userIds, Match.OneOf([String], null));
 	var self = this;
 
 	if (this.userId && get_user_property("admin", this.userId)) {

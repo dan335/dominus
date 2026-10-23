@@ -6,6 +6,7 @@ Meteor.methods({
   // throws error if fails
   // if no username then main username is used
   joinGame: function(gameId, username) {
+    check(username, Match.Maybe(String));
     check(gameId, String);
 
     var self = this;

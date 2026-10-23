@@ -49,6 +49,78 @@ Queues.trackJob = function(type, duration) {
 }
 
 
+// Bull calls a job handler outside a fiber. Our handlers are wrapped in
+// Meteor.bindEnvironment, which then starts a fiber and returns to Bull as soon
+// as the handler first waits on the database, so Bull marks the job completed
+// while its work is still running and the 'completed' timing above measures
+// almost nothing. Queues.timeWork measures the work itself: it runs the handler
+// in a fiber of its own, where a bound handler runs to its end, and times it
+// until it returns, or until the promise it returns settles. Bull still gets
+// what it got before: the handler's return value if it returned without
+// waiting, otherwise undefined.
+// The totals are kept in memory and added to JobWorkStats, one doc per job
+// type and UTC day, once a minute, to set real timeouts and lock durations
+// before the Meteor upgrade.
+const Fiber = Npm.require('fibers');
+
+Queues.workTimes = {};
+
+Queues.recordWork = function(type, duration) {
+  let t = Queues.workTimes[type];
+  if (!t) {
+    t = Queues.workTimes[type] = {count:0, total:0, max:0, last:0};
+  }
+  t.count++;
+  t.total += duration;
+  t.max = Math.max(t.max, duration);
+  t.last = duration;
+};
+
+Queues.workDay = function() {
+  return new Date().toISOString().slice(0, 10);
+};
+
+Queues.flushWorkTimes = function() {
+  let times = Queues.workTimes;
+  let day = Queues.workDay();
+  Queues.workTimes = {};
+  _.each(times, function(t, type) {
+    JobWorkStats.upsert({type:type, day:day}, {
+      $setOnInsert: {type:type, day:day},
+      $set: {last:t.last, updatedAt:new Date()},
+      $inc: {count:t.count, total:t.total},
+      $max: {max:t.max}
+    });
+  });
+};
+
+Queues.timeWork = function(type, handler) {
+  return function(job) {
+    const start = Date.now();
+    const done = function() {
+      Queues.recordWork(type, Date.now() - start);
+    };
+    let result;
+    const run = function() {
+      result = handler(job);
+      if (result && typeof result.then === 'function') {
+        result.then(done, done);
+      } else {
+        done();
+      }
+    };
+    // called from server code that is already in a fiber (a test), it runs
+    // there and has finished when it returns
+    if (Fiber.current) {
+      run();
+    } else {
+      Fiber(run).run();
+    }
+    return result;
+  };
+};
+
+
 // Bull 2 emits 'failed' after every failed attempt, including attempts it will
 // retry. Only release the uniqueId once the job is in the failed set for good,
 // otherwise a duplicate can be queued while the retry is still pending.
@@ -78,6 +150,16 @@ Queues.create = function(jobName) {
 
   Queues[jobName] = Queue(jobName, self.settings.port, self.settings.host, self.settings.options);
   self.queueNames = _.union(self.queueNames, jobName);
+
+  // time every handler's work (see Queues.timeWork)
+  let bullProcess = Queues[jobName].process;
+  Queues[jobName].process = function(concurrency, handler) {
+    if (typeof concurrency === 'function') {
+      handler = concurrency;
+      concurrency = 1;
+    }
+    return bullProcess.call(this, concurrency, Queues.timeWork(jobName, handler));
+  };
 
   if (process.env.DOMINUS_WORKER == 'true') {
 
@@ -176,6 +258,9 @@ Queues.create('resetQueueStats');
 // clean jobs
 Meteor.startup(function() {
   if (process.env.DOMINUS_WORKER == 'true') {
+    Meteor.setInterval(Queues.flushWorkTimes, 1000*60);
+
+
     SyncedCron.add({
       name: 'clean up old jobs',
       schedule: function(parser) {return parser.cron('* * * * *');},
