@@ -40,3 +40,6 @@ jspm_packages
 
 # Optional REPL history
 .node_repl_history
+
+# test results (tests/run-server-tests.sh, tests/e2e, tests/soak)
+.test-results
