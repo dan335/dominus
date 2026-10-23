@@ -5,6 +5,7 @@ _s.armies.types.forEach(function(type) {
 });
 
 Meteor.publish("armiesOnScreen", function (countryIds) {
+  check(countryIds, Match.OneOf([String], null));
   if (countryIds instanceof Array) {
     var find = {countryId: {$in: countryIds}};
     return Armies.find(find, {fields: armyFields});
@@ -23,6 +24,7 @@ DDPRateLimiter.addRule(armiesOnScreenSubRule, 5, 5000);
 
 
 Meteor.publish('armiesInCountry', function(countryId) {
+  check(countryId, Match.OneOf(String, null));
   //this.unblock();
 
   if (this.userId) {
@@ -41,6 +43,9 @@ DDPRateLimiter.addRule(armiesInCountrySubRule, 5, 5000);
 
 
 Meteor.publish('armiesAtHex', function(gameId, x, y) {
+  check(gameId, Match.OneOf(String, null));
+  check(x, Match.OneOf(Number, null));
+  check(y, Match.OneOf(Number, null));
   return Armies.find({gameId:gameId, x:x, y:y}, {fields: armyFields});
 });
 
@@ -57,6 +62,7 @@ DDPRateLimiter.addRule(armiesAtHexSubRule, 5, 5000);
 
 // always publish my armies
 Meteor.publish('myArmies', function(gameId) {
+  check(gameId, Match.OneOf(String, null));
   var self = this;
   if(self.userId) {
 

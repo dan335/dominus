@@ -4,6 +4,8 @@ Meteor.methods({
   // otherwise it will insert game
   // return gameId
   addOrEditGame: function(name, desc, maxPlayers, startAtTimeString, isRelaxed, isSpeed, isCrazyFast, isProOnly, isKingOfHill, isNoLargeResources, gameId) {
+    check(desc, String);
+    check(gameId, Match.Maybe(String));
 
     check(name, String);
     check(maxPlayers, Match.Integer);

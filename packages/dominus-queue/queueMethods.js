@@ -51,6 +51,8 @@ Meteor.methods({
   },
 
   runBullJob: function(jobName, jobData) {
+    check(jobName, String);
+    check(jobData, Match.Any);
     var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
     if (!user || !user.admin) {
       throw new Meteor.Error('control.games.addGame', 'Must be admin.');

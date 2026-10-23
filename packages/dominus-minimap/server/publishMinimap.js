@@ -1,4 +1,5 @@
 Meteor.publish('user_buildings_for_minimap', function(playerId) {
+	check(playerId, Match.OneOf(String, null));
 	var self = this;
 	var fields = {playerId:1, name:1, x:1, y:1};
 
