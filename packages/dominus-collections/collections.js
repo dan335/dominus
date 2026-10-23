@@ -32,6 +32,10 @@ OldProUsers = new Mongo.Collection('prousers');
 
 KueStats = new Mongo.Collection('kuestats');
 
+// how long each job's work really takes, per job type and UTC day
+// (Queues.timeWork); kept apart from KueStats, which is reset every midnight
+JobWorkStats = new Mongo.Collection('jobworkstats');
+
 // mailing list, old mailing list + users
 MailingList = new Mongo.Collection('newmailinglist');
 

@@ -4,6 +4,8 @@ if (Meteor.isServer) {
 
 Meteor.methods({
   addArmyPath: function(gameId, x, y, armyId) {
+    check(x, Number);
+    check(y, Number);
     var self = this;
     check(armyId, String);
     check(gameId, String);

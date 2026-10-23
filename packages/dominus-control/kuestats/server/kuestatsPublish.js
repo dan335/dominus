@@ -10,3 +10,17 @@ Meteor.publish('kuestats', function() {
 
   return KueStats.find();
 })
+
+
+Meteor.publish('jobworkstats', function() {
+  if (!this.userId) {
+    return this.ready();
+  }
+
+  var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
+  if (!user || !user.admin) {
+    return this.ready();
+  }
+
+  return JobWorkStats.find();
+})
