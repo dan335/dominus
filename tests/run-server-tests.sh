@@ -7,6 +7,10 @@
 #   RUNS=3 tests/run-server-tests.sh            run the suites 3 times in a row
 #   COVERAGE=1 tests/run-server-tests.sh        also report server line coverage
 #                                               (tests/coverage-report.py, needs npx)
+#                                               and write coverage-map.md, every
+#                                               method, publication, job, cron, hook
+#                                               and route with its coverage
+#                                               (tests/coverage-map.py)
 #
 # Needs meteor and either a Redis on localhost:6379 or docker (it starts
 # redis:6 if nothing answers). The app runs with DOMINUS_WORKER=true like
@@ -99,6 +103,8 @@ trap - EXIT
 if [ -n "$COVERAGE" ]; then
     echo "Writing coverage report..."
     python3 tests/coverage-report.py "$OUT/v8-coverage" "$OUT/coverage" >> "$REPORT" || STATUS=1
+    python3 tests/coverage-map.py "$OUT/coverage/coverage-final.json" "$OUT/coverage-map.md" || STATUS=1
+    echo "Coverage map: $OUT/coverage-map.md"
 fi
 
 grep -E "^## Run" "$REPORT"
