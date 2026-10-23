@@ -3,6 +3,10 @@ Meteor.publish('forumPinnedTopics', function() {
 });
 
 Meteor.publish('forumTopics', function(sort, numShow, categoryId, filter) {
+  check(sort, String);
+  check(numShow, Match.Integer);
+  check(categoryId, Match.OneOf(String, Match.Integer));
+  check(filter, String);
   if (!this.userId) {
     return this.ready();
   }
@@ -54,6 +58,7 @@ DDPRateLimiter.addRule(forumTopicsSubRule, 5, 5000);
 
 
 Meteor.publish('forumTopic', function(topicId) {
+  check(topicId, Match.OneOf(String, null));
   if (!this.userId) {
     return this.ready();
   }

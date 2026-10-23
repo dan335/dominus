@@ -1,4 +1,6 @@
 Meteor.publish('left_panel_allies', function(gameId, playerId) {
+	check(gameId, Match.OneOf(String, null));
+	check(playerId, Match.OneOf(String, null));
 	if(this.userId) {
 		var sub = this;
 
@@ -20,6 +22,8 @@ Meteor.publish('left_panel_allies', function(gameId, playerId) {
 
 
 Meteor.publish('left_panel_lords', function(gameId, playerId) {
+	check(gameId, Match.OneOf(String, null));
+	check(playerId, Match.OneOf(String, null));
 	if(this.userId) {
 		var sub = this
 		var cur = Players.find({gameId:gameId, allies_below:playerId}, {fields: {
@@ -37,6 +41,7 @@ Meteor.publish('left_panel_lords', function(gameId, playerId) {
 })
 
 Meteor.publish('left_panel_castle', function(gameId) {
+	check(gameId, Match.OneOf(String, null));
 	if(this.userId) {
 		var sub = this
 
@@ -54,6 +59,7 @@ Meteor.publish('left_panel_castle', function(gameId) {
 })
 
 Meteor.publish('left_panel_villages', function(gameId) {
+	check(gameId, Match.OneOf(String, null));
 	if(this.userId) {
 		var sub = this;
 		var fields = {playerId:1, name:1, x:1, y:1, user_id:1, level:1, "income.worth":1, under_construction:1, constructionStarted:1};
@@ -72,6 +78,8 @@ Meteor.publish('left_panel_villages', function(gameId) {
 
 
 Meteor.publish('left_panel_capitals', function(gameId, playerId) {
+	check(gameId, Match.OneOf(String, null));
+	check(playerId, Match.OneOf(String, null));
 	if(this.userId) {
 		var sub = this;
 		var fields = {playerId:1, name:1, x:1, y:1, "income.worth":1};

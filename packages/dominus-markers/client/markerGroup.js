@@ -41,7 +41,7 @@ Template.markerGroup.events({
     event.preventDefault();
     var data = Template.currentData();
     if (data) {
-      Meteor.call('moveMarkerGroupDown', data.groupId, data.order);
+      Meteor.call('moveMarkerGroupDown', data.groupId);
     }
   },
 
@@ -49,7 +49,7 @@ Template.markerGroup.events({
     event.preventDefault();
     var data = Template.currentData();
     if (data) {
-      Meteor.call('removeMarkerGroup', data.groupId, data.order);
+      Meteor.call('removeMarkerGroup', data.groupId);
     }
   }
 })

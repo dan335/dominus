@@ -1,5 +1,8 @@
 Meteor.methods({
   signupForGame: function(userId, gameId, username) {
+    check(userId, Match.OneOf(String, null));
+    check(gameId, String);
+    check(username, String);
     var self = this;
 
     username = username.replace(/[^0-9a-zA-Z_\s]/g, '');
@@ -87,6 +90,7 @@ Meteor.methods({
 
   // userId argument is ignored -- you can only cancel your own signup
   cancelSignupForGame: function(userId, gameId) {
+    check(userId, Match.OneOf(String, null));
     var self = this;
     check(gameId, String);
 

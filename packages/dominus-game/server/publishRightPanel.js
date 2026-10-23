@@ -30,6 +30,7 @@ _s.armies.types.forEach(function(type) {
 
 // public so logged out spectators can watch
 Meteor.publish('rightPanelPlayers', function(playerId) {
+	check(playerId, Match.OneOf(String, null));
 	if (Match.test(playerId, String)) {
 		var sub = this
 		var fields = {
@@ -67,6 +68,7 @@ DDPRateLimiter.addRule(rightPanelPlayersSubRule, 5, 5000);
 
 
 Meteor.publish('castleForHexInfo', function(id) {
+	check(id, Match.OneOf(String, null));
 	if (Match.test(id, String)) {
 		var sub = this
 		var cur = Castles.find(id, {fields:castle_fields});
@@ -89,6 +91,7 @@ DDPRateLimiter.addRule(castleForHexInfoSubRule, 5, 5000);
 
 
 Meteor.publish('armyForHexInfo', function(id) {
+	check(id, Match.OneOf(String, null));
 	if (Match.test(id, String)) {
 		var sub = this
 		var cur = Armies.find(id, {fields:army_fields})
@@ -110,6 +113,7 @@ DDPRateLimiter.addRule(armyForHexInfoSubRule, 5, 5000);
 
 
 Meteor.publish('villageForHexInfo', function(id) {
+	check(id, Match.OneOf(String, null));
 	if (Match.test(id, String)) {
 		var sub = this
 		var cur = Villages.find(id, {fields:village_fields})
@@ -132,6 +136,7 @@ DDPRateLimiter.addRule(villageForHexInfoSubRule, 5, 5000);
 
 
 Meteor.publish('rightPanelTree', function(playerId) {
+	check(playerId, Match.OneOf(String, null));
 	if (Match.test(playerId, String)) {
 		let player = Players.findOne(playerId, {fields: {allies_above:1}});
 		if (player) {

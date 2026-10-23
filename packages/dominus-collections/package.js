@@ -42,6 +42,7 @@ Package.onUse(function(api) {
     'OldProUsers',
     'MailingList',
     'KueStats',
+    'JobWorkStats',
     'Settings'
   ]);
   api.export([
