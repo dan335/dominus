@@ -902,6 +902,28 @@ if (Meteor.isServer) {
         cleanupUser: _testCleanupUser
       });
 
+      // --- Publications refuse missing arguments (server/publicationGateTests.js) ---
+
+      _publicationGateTests(run, {
+        assert: _testAssert,
+        equal: _testEqual,
+        createTestGame: _createTestGame,
+        createTestUser: _createTestUser,
+        cleanup: _testCleanup,
+        cleanupUser: _testCleanupUser
+      });
+
+      // --- Every argument is checked (server/argumentCheckTests.js) ---
+
+      _argumentCheckTests(run, {
+        assert: _testAssert,
+        equal: _testEqual,
+        createTestGame: _createTestGame,
+        createTestUser: _createTestUser,
+        cleanup: _testCleanup,
+        cleanupUser: _testCleanupUser
+      });
+
       // --- Results ---
       console.log('\n========================================');
       console.log('  Game Creation Tests: ' + passed + ' passed, ' + failed + ' failed, ' + skipped + ' skipped');

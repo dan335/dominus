@@ -1,4 +1,5 @@
 Meteor.publish('dominusPopupGameId', function(gameId) {
+    check(gameId, Match.OneOf(String, null));
     var sub = this
     var cur = Players.find({gameId:gameId, is_dominus:true}, {fields: {
         username:1,
@@ -23,6 +24,7 @@ DDPRateLimiter.addRule(dominusPopupGameIdSubRule, 5, 5000);
 
 
 Meteor.publish('dominusPopupPlayer', function(playerId) {
+    check(playerId, Match.OneOf(String, null));
     var sub = this
     var cur = Players.find(playerId, {fields: {
         username:1,

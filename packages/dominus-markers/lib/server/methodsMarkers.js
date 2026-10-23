@@ -2,6 +2,8 @@ Meteor.methods({
   // for marking hexes
   // client doesn't know hex id only x,y
   addMarkerCoords: function(gameId, unitType, x, y) {
+    check(gameId, String);
+    check(unitType, String);
     var self = this;
 
     check(x, Match.Integer);
@@ -59,6 +61,7 @@ Meteor.methods({
 
   // for everything but hexes
   addMarker: function(gameId, unitType, unitId) {
+    check(gameId, String);
     var self = this;
 
     check(unitType, String);

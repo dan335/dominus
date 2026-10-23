@@ -141,18 +141,22 @@ Meteor.methods({
 
 
 	show_coords: function(playerId) {
+		check(playerId, String);
 		Players.update({_id:playerId, userId:this.userId}, {$set: {sp_show_coords: true}});
 	},
 
 	hide_coords: function(playerId) {
+		check(playerId, String);
 		Players.update({_id:playerId, userId:this.userId}, {$set: {sp_show_coords: false}});
 	},
 
 	show_minimap: function (playerId) {
+		check(playerId, String);
 		Players.update({_id:playerId, userId:this.userId}, {$set: {sp_show_minimap: true}});
 	},
 
 	hide_minimap: function(playerId) {
+		check(playerId, String);
 		Players.update({_id:playerId, userId:this.userId}, {$set: {sp_show_minimap: false}});
 	}
 })

@@ -13,6 +13,9 @@ _s.armies.types.forEach(function(type) {
 
 // public so logged out spectators can watch
 Meteor.publish('gamePiecesAtHex', function(gameId, x, y) {
+	check(gameId, Match.OneOf(String, null));
+	check(x, Match.OneOf(Number, null));
+	check(y, Match.OneOf(Number, null));
 	//this.unblock();
 	if (Match.test(gameId, String) && Match.test(x, Match.Integer) && Match.test(y, Match.Integer)) {
 		return [
@@ -37,6 +40,7 @@ DDPRateLimiter.addRule(gamePiecesAtHexSubRule, 5, 5000);
 
 
 Meteor.publish('countries', function(countryIds) {
+	check(countryIds, Match.OneOf([String], null));
 	//this.unblock();
 	if (this.userId) {
 		return Countries.find({_id: {$in: countryIds}}, {fields: {paths:1, image:1, imageWithCoords:1}});
@@ -67,6 +71,7 @@ _s.armies.types.forEach(function(type) {
 
 // public so logged out spectators can watch
 Meteor.publish('countryOnScreen', function(countryId) {
+	check(countryId, Match.OneOf(String, null));
 	//this.unblock();
 	if (Match.test(countryId, String)) {
 		return [
@@ -94,6 +99,7 @@ DDPRateLimiter.addRule(countryOnScreenSubRule, 60, 5000);
 var countryIndexFields = {neighbors:1, minX:1, maxX:1, minY:1, maxY:1, minZ:1, maxZ:1, gameId:1};
 // public so logged out spectators can watch
 Meteor.publish('countryIndex', function(gameId) {
+	check(gameId, Match.OneOf(String, null));
 	if (Match.test(gameId, String)) {
 		var sub = this
 		var cur = Countries.find({gameId:gameId}, {fields: countryIndexFields});

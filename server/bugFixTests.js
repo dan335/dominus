@@ -613,14 +613,27 @@ if (Meteor.isServer) {
 
     // --- #8a room_list publication ---
 
-    run('room_list: bad arguments give an empty ready subscription, good ones the player rooms', function() {
+    run('room_list: bad arguments are refused, null ones give an empty ready subscription, good ones the player rooms', function() {
       let gameId = 'bf_' + Random.id();
       let p1 = 'bf_p_' + Random.id(), p2 = 'bf_p_' + Random.id(), p3 = 'bf_p_' + Random.id();
       let r1 = Rooms.insert({gameId: gameId, members: [p1, p2], type: 'normal', name: 'a'});
       let r2 = Rooms.insert({gameId: gameId, members: [p2], type: 'normal', name: 'b'});
       let r3 = Rooms.insert({gameId: gameId, members: [p3], type: 'normal', name: 'c'});
       try {
+        // a missing argument, or one that isn't a string or null, is refused
+        // (server/publicationGate.js and the check()s, see server/argumentCheckTests.js)
         [[], [gameId], [gameId, {$exists: true}], [gameId, 5], [{$ne: null}, p2]].forEach(function(args) {
+          let error = null;
+          try {
+            runPublication('room_list', 'bf_user', args);
+          } catch (e) {
+            error = e;
+          }
+          assert(error, 'refused for ' + JSON.stringify(args));
+        });
+
+        // the browser sends null for an id it doesn't have
+        [[gameId, null], [null, p2]].forEach(function(args) {
           let out = runPublication('room_list', 'bf_user', args);
           equal(out.ready, 1, 'ready once for ' + JSON.stringify(args));
           equal(allPublishedIds(out).length, 0, 'nothing published for ' + JSON.stringify(args));
@@ -660,11 +673,19 @@ if (Meteor.isServer) {
             'only the tree fields are published');
         });
 
-        [[noAllies, 'bf_user'], ['bf_missing_' + Random.id(), 'bf_user'], [{$ne:null}, null]].forEach(function(c) {
+        [[noAllies, 'bf_user'], ['bf_missing_' + Random.id(), 'bf_user'], [null, null]].forEach(function(c) {
           let o = runPublication('rightPanelTree', c[1], [c[0]]);
           equal(o.ready, 1, 'ready once for ' + c[0] + ' as ' + c[1]);
           equal(allPublishedIds(o).length, 0, 'nothing published for ' + c[0] + ' as ' + c[1]);
         });
+
+        let refused = null;
+        try {
+          runPublication('rightPanelTree', null, [{$ne: null}]);
+        } catch (e) {
+          refused = e;
+        }
+        assert(refused, 'an object for an id is refused');
 
         // public so logged out spectators can see the tree
         let loggedOut = runPublication('rightPanelTree', null, [player]);

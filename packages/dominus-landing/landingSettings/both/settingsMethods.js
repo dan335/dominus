@@ -22,6 +22,8 @@ Meteor.methods({
 
 
   uploadAvatarToS3: function(file, type, size) {
+    check(file, String);
+    check(size, Number);
     //this.unblock();
     check(type, String);
 
@@ -150,6 +152,7 @@ Meteor.methods({
 
 
   changeMainUsername: function(username) {
+    check(username, String);
     let options = {fields: {username:1}};
     let user = Meteor.users.findOne(this.userId, options);
 

@@ -15,6 +15,7 @@ DDPRateLimiter.addRule(landingGamesSubRule, 5, 5000);
 
 
 Meteor.publish('landingGame', function(gameId) {
+  check(gameId, Match.OneOf(String, null));
   var landingGameFields = {isNoLargeResources:1, isKingOfHill:1, isRelaxed:1, isSpeed:1, isSuperSpeed:1, isCrazyFast:1, isProOnly:1, numPlayers:1, startAt:1, maxPlayers:1, name:1, desc:1, hasEnded:1, hasStarted:1};
   return Games.find(gameId, {fields:landingGameFields});
 });
@@ -46,6 +47,7 @@ DDPRateLimiter.addRule(gamesSignupsSubRule, 5, 5000);
 
 
 Meteor.publish('gameSignups', function(gameId) {
+  check(gameId, Match.OneOf(String, null));
   //this.unblock();
   return Gamesignups.find({gameId:gameId});
 });
