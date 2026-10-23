@@ -1,5 +1,6 @@
 Meteor.methods({
   daysSincePlayerActive: function(userId) {
+    check(userId, Match.OneOf(String, null));
     let options = {fields: {presence:1}};
     let user = Meteor.users.findOne(userId, options);
     if (user) {

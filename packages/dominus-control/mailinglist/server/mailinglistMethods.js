@@ -4,6 +4,7 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 Meteor.methods({
   sendToMailingList: function(templateName) {
+    check(templateName, String);
     if (!this.userId) {
       throw new Meteor.Error('Not admin.');
     }

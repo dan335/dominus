@@ -18,9 +18,13 @@ meteor run --settings settings.json
 # Build for production
 meteor build .build --architecture os.linux.x86_64
 
-# Deploy to production: ./deploy.sh (Mac/Linux or Git Bash) or ./deploy.ps1 (Windows).
+# Deploy to production: ./deploy.sh (Mac/Linux or Git Bash) or deploy.bat (Windows wrapper).
 # Registry-free — the image is streamed to the server over SSH (docker save | ssh | docker load).
 # Never `docker compose pull` the dominus services on the server; there is no upstream registry.
+# The server keeps the images of the last 2 deploys, tagged by commit:
+#   ./deploy.sh --rollback [commit]   # back to the previous (or a named) kept image, no rebuild
+#   ./deploy.sh --list                # kept images and recent deploys
+# tests/deploy/ tests deploy.sh against a throwaway server (setup.sh, then run.sh).
 ```
 
 ```bash

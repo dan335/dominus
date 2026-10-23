@@ -555,10 +555,16 @@ if (Meteor.isServer) {
         let players = pub('rightPanelPlayers', null, [w.P]).docs.right_panel_players;
         assert(players && players[w.P] && !_.has(players[w.P], 'possibleDupe'), 'rightPanelPlayers leaves out possibleDupe');
 
-        // object selectors don't dump other data
+        // object selectors are refused (server/argumentCheckTests.js)
         [['countryIndex', [{$ne: null}]], ['castleForHexInfo', [{$ne: null}]], ['rightPanelPlayers', [{$ne: null}]],
           ['game', [{$ne: null}]], ['market', [{$ne: null}]]].forEach(function(c) {
-          equal(publishedCount(pub(c[0], null, c[1])), 0, c[0] + ' ignores an object selector');
+          var refused = null;
+          try {
+            pub(c[0], null, c[1]);
+          } catch (e) {
+            refused = e;
+          }
+          assert(refused, c[0] + ' refuses an object selector');
         });
 
         // a spectator's private data is empty, and nothing private about the victim
@@ -603,6 +609,14 @@ if (Meteor.isServer) {
 
         callAsClient(uid, 'edit_name', ['castle', w.castle, 'New Name', w.P]);
         equal(Castles.findOne(w.castle).name, 'New Name', 'owner can rename a castle');
+
+        // the castle panel sends the gameId as the 4th argument
+        Meteor.users.update(uid, {$set: {purchases: {castles: ['castle_01', 'castle_02_keep']}}});
+        callAsClient(uid, 'set_unit_image', [w.castle, 'castles', 'castle_02_keep', w.G]);
+        equal(Castles.findOne(w.castle).image, 'castle_02_keep', 'owner can change their castle image');
+        var imageError = throws(function() { callAsClient(uid, 'set_unit_image', [w.castle, 'castles', 'castle_01', w.P]); });
+        assert(imageError && imageError.error === 'not-authorized', 'a playerId in the gameId slot is refused');
+        equal(Castles.findOne(w.castle).image, 'castle_02_keep', 'image unchanged after the refused call');
 
         callAsClient(uid, 'markAlertAsRead', [w.G, w.alert]);
         assert(Alerts.findOne(w.alert).playerIds[0].read, 'player can mark their alert read');
@@ -697,7 +711,17 @@ if (Meteor.isServer) {
       try {
         Gamesignups.insert({gameId: game._id, userId: victim._id, username: victim.username, createdAt: new Date(), usedToken: false});
         Gamesignups.insert({gameId: game._id, userId: attacker._id, username: attacker.username, createdAt: new Date(), usedToken: false});
-        callAsServer(attacker._id, 'cancelSignupForGame', [{$ne: null}, game._id]);
+        var refused = null;
+        try {
+          callAsServer(attacker._id, 'cancelSignupForGame', [{$ne: null}, game._id]);
+        } catch (e) {
+          refused = e;
+        }
+        assert(refused, 'an object for the user id is refused');
+        equal(Gamesignups.find({gameId: game._id}).count(), 2, 'and cancels nothing');
+
+        // the userId argument is ignored
+        callAsServer(attacker._id, 'cancelSignupForGame', [victim._id, game._id]);
         equal(Gamesignups.find({gameId: game._id, userId: victim._id}).count(), 1, 'victim signup kept');
         equal(Gamesignups.find({gameId: game._id, userId: attacker._id}).count(), 0, 'own signup cancelled');
       } finally {

@@ -26,6 +26,7 @@ DDPRateLimiter.addRule(gamesForControlSubRule, 5, 5000);
 
 
 Meteor.publish('gameForControl', function(gameId) {
+  check(gameId, Match.OneOf(String, null));
   if (!this.userId) {
     return this.ready();
   }
