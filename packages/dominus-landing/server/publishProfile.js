@@ -1,10 +1,12 @@
 Meteor.publish('userImageForProfile', function(userId) {
+  check(userId, Match.OneOf(String, null));
   return Meteor.users.find(userId, {fields: {avatarFilename:1}});
 });
 
 
 
 Meteor.publish('userImages', function(userIds) {
+  check(userIds, Match.OneOf([String], null));
   if (userIds === undefined || userIds === null || userIds.length === 0) {
     return this.ready();
   }

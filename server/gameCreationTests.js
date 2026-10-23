@@ -891,9 +891,42 @@ if (Meteor.isServer) {
         cleanupUser: _testCleanupUser
       });
 
+      // --- Job handlers are timed (server/jobTimingTests.js) ---
+
+      _jobTimingTests(run, {
+        assert: _testAssert,
+        equal: _testEqual,
+        createTestGame: _createTestGame,
+        createTestUser: _createTestUser,
+        cleanup: _testCleanup,
+        cleanupUser: _testCleanupUser
+      });
+
       // --- Spectators can't change a game (server/spectatorTests.js) ---
 
       _spectatorTests(run, {
+        assert: _testAssert,
+        equal: _testEqual,
+        createTestGame: _createTestGame,
+        createTestUser: _createTestUser,
+        cleanup: _testCleanup,
+        cleanupUser: _testCleanupUser
+      });
+
+      // --- Publications refuse missing arguments (server/publicationGateTests.js) ---
+
+      _publicationGateTests(run, {
+        assert: _testAssert,
+        equal: _testEqual,
+        createTestGame: _createTestGame,
+        createTestUser: _createTestUser,
+        cleanup: _testCleanup,
+        cleanupUser: _testCleanupUser
+      });
+
+      // --- Every argument is checked (server/argumentCheckTests.js) ---
+
+      _argumentCheckTests(run, {
         assert: _testAssert,
         equal: _testEqual,
         createTestGame: _createTestGame,

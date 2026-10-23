@@ -1,6 +1,7 @@
 // client needs game info for the game person is playing for settings
 // subscribe is in Template.game.onCreated
 Meteor.publish('game', function(gameId) {
+  check(gameId, Match.OneOf(String, null));
   let fields = {
     isRelaxed:1,
     isSpeed:1,
@@ -49,6 +50,7 @@ DDPRateLimiter.addRule(gameSubRule, 5, 5000);
 
 // subscribed from template.game.onCreated
 Meteor.publish('player', function(gameId) {
+  check(gameId, Match.OneOf(String, null));
   if (this.userId) {
     return Players.find({gameId:gameId, userId:this.userId}, {fields: {incomeFromVassals:0, incomeFromVillages:0, incomeFromCapitals:0}});
   } else {
