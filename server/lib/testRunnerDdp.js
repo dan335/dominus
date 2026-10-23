@@ -112,6 +112,112 @@ if (Meteor.isServer) {
     return client;
   };
 
+  // Subscribes to a publication over a fresh client and checks that each
+  // part's local collection holds exactly the documents the database has for
+  // it, with exactly the expected fields. Throws a FAIL error otherwise.
+  //
+  //   pub     the publication's name; null checks what the null (universal)
+  //           publications send on their own
+  //   args    its arguments
+  //   as      userId to log in as, or null for a logged out client
+  //   who     how to name the caller in messages (defaults to `as`)
+  //   error   the error code the subscription should fail with instead
+  //   coll, source, query, ids, keys, nested, skip: one part, or a list of
+  //   them in `parts`:
+  //     coll    the collection name on the client
+  //     source  the server collection the documents come from
+  //     query   selector for the documents expected in source; null for none
+  //     ids     or the expected _ids, when a selector can't say it (limits)
+  //     keys    the fields expected, or 'all' for the whole document
+  //     nested  {field: [paths]} for a dotted projection like income.worth
+  //     skip    _ids left out on both sides, such as the caller's own user,
+  //             which the null publication also sends
+  dTest.checkPublication = function(spec) {
+    var assert = function(ok, message) { if (!ok) throw new Error('FAIL: ' + message); };
+    var equal = function(got, expected, message) {
+      if (got !== expected) throw new Error('FAIL: ' + message + ' (expected ' + expected + ', got ' + got + ')');
+    };
+    var who = spec.who === undefined ? spec.as : spec.who;
+    var client = dTest.ddp.connect(spec.as || null);
+    try {
+      var parts = spec.parts || [_.pick(spec, 'coll', 'source', 'query', 'ids', 'keys', 'nested', 'skip')];
+      parts.forEach(function(p) { client.collection(p.coll); });
+      var sub = null;
+      if (spec.pub) {
+        sub = client.subscribe.apply(null, [spec.pub].concat(spec.args || []));
+        if (spec.error) {
+          assert(sub.error, spec.pub + ': expected the subscription to fail');
+          equal(sub.error.error, spec.error, spec.pub + ': error');
+          return;
+        }
+        assert(sub.ready, spec.pub + ': ready (error: ' + (sub.error && sub.error.reason) + ')');
+      }
+      parts.forEach(function(p) {
+        var label = (spec.pub || 'null publications') + ' -> ' + p.coll;
+        var skip = p.skip || [];
+        var fetchWant = function() {
+          if (p.query === null) return [];
+          var selector = p.ids ? {_id: {$in: p.ids}} : p.query;
+          return _.reject(p.source.find(selector, {sort: {_id: 1}}).fetch(), function(d) { return _.contains(skip, d._id); });
+        };
+        var fetchGot = function() {
+          return _.reject(client.docs(p.coll), function(d) { return _.contains(skip, d._id); });
+        };
+        // documents can still be changing (presence, the null publications
+        // after login), so give the two sides a moment to agree
+        var got, want;
+        dTest.waitFor(function() {
+          got = fetchGot();
+          want = fetchWant();
+          return _.pluck(got, '_id').join(',') == _.pluck(want, '_id').join(',');
+        }, spec.pub ? 2000 : 3000);
+        equal(_.pluck(got, '_id').join(','), _.pluck(want, '_id').join(','), label + ': documents (' + who + ')');
+        got.forEach(function(doc, n) {
+          var db = want[n];
+          if (p.keys == 'all') {
+            assert(EJSON.equals(doc, db), label + ': whole document ' + doc._id);
+            return;
+          }
+          var allowed = ['_id'].concat(p.keys);
+          var extra = _.difference(_.keys(doc), allowed);
+          assert(!extra.length, label + ': unexpected fields ' + extra.join(','));
+          p.keys.forEach(function(k) {
+            var expected = db[k];
+            if (p.nested && p.nested[k] && expected) expected = dTest.pickPaths(expected, p.nested[k]);
+            if (expected === undefined) {
+              assert(!_.has(doc, k), label + ': ' + k + ' should not be sent when not set');
+            } else {
+              assert(EJSON.equals(doc[k], expected), label + ': ' + k + ' (' + JSON.stringify(doc[k]) + ' vs ' + JSON.stringify(expected) + ')');
+            }
+          });
+        });
+      });
+      if (sub) sub.stop();
+    } finally {
+      client.close();
+    }
+  };
+
+  // obj with only the dotted paths given ('winner.username'), like a projection
+  dTest.pickPaths = function(obj, paths) {
+    var out = {};
+    paths.forEach(function(path) {
+      var keys = path.split('.');
+      var src = obj, dst = out;
+      for (var i = 0; i < keys.length; i++) {
+        if (src === null || typeof src !== 'object' || !_.has(src, keys[i])) return;
+        if (i == keys.length - 1) {
+          dst[keys[i]] = src[keys[i]];
+        } else {
+          dst[keys[i]] = dst[keys[i]] || {};
+          dst = dst[keys[i]];
+          src = src[keys[i]];
+        }
+      }
+    });
+    return out;
+  };
+
   // runs fn(client) with a client logged in as userId, and closes it after
   dTest.ddp.as = function(userId, fn) {
     var client = dTest.ddp.connect(userId);
