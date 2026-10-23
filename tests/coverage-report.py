@@ -19,8 +19,35 @@ BUNDLE = os.path.join(REPO, '.meteor/local/build/programs/server/')
 PREFIX = 'meteor://💻app/'
 
 
+def listed(coverage_dir, name):
+    path = os.path.join(coverage_dir, name + '.txt')
+    return set(open(path).read().split()) if os.path.exists(path) else None
+
+
+def zero_counts(data):
+    for script in data.get('result', []):
+        for fn in script.get('functions', []):
+            for r in fn.get('ranges', []):
+                r['count'] = 0
+
+
 def rewrite_urls(coverage_dir):
+    """Keep only what ran inside test runs, with bundle file URLs.
+
+    runAllTests resets V8's counters before and after each run and lists the
+    files written (before-runs.txt, test-runs.txt). After a reset V8 leaves out
+    functions that haven't run since, so a run's file alone would make code
+    that never ran look covered. The before-run files list every function, so
+    they are kept with their counts zeroed: merged with the run files, code
+    that didn't run during a test run counts as not covered.
+    """
+    runs = listed(coverage_dir, 'test-runs')
+    before = listed(coverage_dir, 'before-runs') or set()
     for path in glob.glob(os.path.join(coverage_dir, '*.json')):
+        name = os.path.basename(path)
+        if runs is not None and name not in runs and name not in before:
+            os.remove(path)
+            continue
         with open(path) as f:
             data = json.load(f)
         # keep only the app server process: meteor-tool and meteor shell also
@@ -28,6 +55,8 @@ def rewrite_urls(coverage_dir):
         if not any(s.get('url', '').endswith('/programs/server/boot.js') for s in data.get('result', [])):
             os.remove(path)
             continue
+        if name in before:
+            zero_counts(data)
         for script in data.get('result', []):
             url = script.get('url', '')
             if url.startswith(PREFIX):
@@ -72,7 +101,7 @@ def main():
     total = sum(v['total'] for v in files.values())
     covered = sum(v['covered'] for v in files.values())
     lines = ['## Server line coverage', '',
-             '%d of %d lines in %d files (%.1f%%). Test files included.' % (
+             '%d of %d lines in %d files (%.1f%%), counting only what ran during test runs. Test files included.' % (
                  covered, total, len(files), 100.0 * covered / total if total else 0), '',
              '<details><summary>Per file</summary>', '',
              '| File | Lines | Covered |', '|---|---:|---:|']

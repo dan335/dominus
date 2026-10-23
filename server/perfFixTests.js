@@ -333,6 +333,8 @@ if (Meteor.isServer) {
         equal(Queues.addUniqueId(name, 'retryJob'), false, 'id still held after the retried failure');
 
         assert(waitFor(function() { return attempts >= 2; }, 10000), 'second attempt ran');
+        // the handler sets heldDuringRetry once Redis answers, a moment after it starts
+        assert(waitFor(function() { return heldDuringRetry !== null; }, 10000), 'second attempt read Redis');
         equal(heldDuringRetry, 1, 'id held while the retry ran');
         assert(waitFor(function() { return storedIds(name).length === 0; }, 10000), 'id released after success');
       } finally {

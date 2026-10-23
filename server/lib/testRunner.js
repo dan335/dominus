@@ -196,6 +196,23 @@ if (Meteor.isServer) {
     }
   };
 
+  // With NODE_V8_COVERAGE set (tests/run-server-tests.sh COVERAGE=1), write
+  // out and reset V8's counters before and after a run, so the run's coverage
+  // leaves out whatever the worker did outside it. The files written are
+  // listed in <list>.txt, which tests/coverage-report.py reads.
+  dTest.takeCoverage = function(list) {
+    var dir = process.env.NODE_V8_COVERAGE;
+    var v8 = Npm.require('v8');
+    if (!dir || !v8.takeCoverage) return;
+    var fs = Npm.require('fs');
+    var before = fs.readdirSync(dir);
+    v8.takeCoverage();
+    var written = _.difference(fs.readdirSync(dir), before);
+    if (written.length) {
+      fs.appendFileSync(Npm.require('path').join(dir, list + '.txt'), written.join('\n') + '\n');
+    }
+  };
+
   var inProgress = false;
 
   function runAllTests() {
@@ -204,9 +221,11 @@ if (Meteor.isServer) {
     if (inProgress) throw new Meteor.Error('already-running', 'a test run is already in progress');
     inProgress = true;
     try {
+      dTest.takeCoverage('before-runs');
       var out = dTest.outsideDomain(function() {
         return dTest.runSuites(suites, dTest.helpers);
       });
+      dTest.takeCoverage('test-runs');
     } finally {
       inProgress = false;
     }
