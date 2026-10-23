@@ -2437,9 +2437,7 @@
     },
     "reports": 0
    },
-   "invariantProblems": [
-    "num_allies_above counts the list: sim_dave has 1, the list has 2"
-   ],
+   "invariantProblems": [],
    "jobs": {
     "failed": [],
     "notRun": {},
@@ -2482,7 +2480,7 @@
    "collections": {
     "players": {
      "count": 4,
-     "hash": "592b25d12784b864"
+     "hash": "32c8a85c1d84b16d"
     },
     "castles": {
      "count": 4,
@@ -2562,7 +2560,7 @@
     },
     "dailystats": {
      "count": 8,
-     "hash": "250aaecb4b357980"
+     "hash": "166caece4527105f"
     },
     "gamestats": {
      "count": 24,
@@ -2920,7 +2918,7 @@
     },
     "dailystats": {
      "count": 40,
-     "hash": "303bc0b363f9fd52"
+     "hash": "9ee32db458fef357"
     },
     "gamestats": {
      "count": 310,
