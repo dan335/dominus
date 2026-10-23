@@ -5,6 +5,7 @@ _s.armies.types.forEach(function(type) {
 });
 
 Meteor.publish("castlesOnScreen", function (countryIds) {
+	check(countryIds, Match.OneOf([String], null));
 	if (countryIds instanceof Array) {
 		var find = {countryId: {$in: countryIds}};
 	  return Castles.find(find, {fields: castleFields});
@@ -23,6 +24,7 @@ DDPRateLimiter.addRule(castlesOnScreenSubRule, 5, 5000);
 
 
 Meteor.publish("castlesInCountry", function (countryId) {
+	check(countryId, Match.OneOf(String, null));
 	//this.unblock();
 	
 	if (this.userId) {

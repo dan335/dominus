@@ -540,10 +540,16 @@ if (Meteor.isServer) {
         let players = pub('rightPanelPlayers', null, [w.P]).docs.right_panel_players;
         assert(players && players[w.P] && !_.has(players[w.P], 'possibleDupe'), 'rightPanelPlayers leaves out possibleDupe');
 
-        // object selectors don't dump other data
+        // object selectors are refused (server/argumentCheckTests.js)
         [['countryIndex', [{$ne: null}]], ['castleForHexInfo', [{$ne: null}]], ['rightPanelPlayers', [{$ne: null}]],
           ['game', [{$ne: null}]], ['market', [{$ne: null}]]].forEach(function(c) {
-          equal(publishedCount(pub(c[0], null, c[1])), 0, c[0] + ' ignores an object selector');
+          var refused = null;
+          try {
+            pub(c[0], null, c[1]);
+          } catch (e) {
+            refused = e;
+          }
+          assert(refused, c[0] + ' refuses an object selector');
         });
 
         // a spectator's private data is empty, and nothing private about the victim
@@ -682,7 +688,17 @@ if (Meteor.isServer) {
       try {
         Gamesignups.insert({gameId: game._id, userId: victim._id, username: victim.username, createdAt: new Date(), usedToken: false});
         Gamesignups.insert({gameId: game._id, userId: attacker._id, username: attacker.username, createdAt: new Date(), usedToken: false});
-        callAsServer(attacker._id, 'cancelSignupForGame', [{$ne: null}, game._id]);
+        var refused = null;
+        try {
+          callAsServer(attacker._id, 'cancelSignupForGame', [{$ne: null}, game._id]);
+        } catch (e) {
+          refused = e;
+        }
+        assert(refused, 'an object for the user id is refused');
+        equal(Gamesignups.find({gameId: game._id}).count(), 2, 'and cancels nothing');
+
+        // the userId argument is ignored
+        callAsServer(attacker._id, 'cancelSignupForGame', [victim._id, game._id]);
         equal(Gamesignups.find({gameId: game._id, userId: victim._id}).count(), 1, 'victim signup kept');
         equal(Gamesignups.find({gameId: game._id, userId: attacker._id}).count(), 0, 'own signup cancelled');
       } finally {

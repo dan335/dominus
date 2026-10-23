@@ -1,5 +1,10 @@
 Meteor.methods({
   setMarkerOrder: function(id, fromGroupId, toGroupId, oldIndex, newIndex) {
+    check(id, String);
+    check(fromGroupId, Match.OneOf(String, Number));
+    check(toGroupId, Match.OneOf(String, Number));
+    check(oldIndex, Match.Integer);
+    check(newIndex, Match.Integer);
     // remove from group
     Markers.update({user_id:this.userId, groupId:fromGroupId, order:{$gte:oldIndex}}, {$inc:{order:-1}}, {multi:true});
     // make space
@@ -9,6 +14,7 @@ Meteor.methods({
   },
 
   saveMarkerInfo: function(id, name, desc) {
+    check(desc, String);
     check(id, String);
     check(name, String);
 
@@ -52,11 +58,13 @@ Meteor.methods({
   },
 
   moveMarkerGroupUp: function(id) {
+    check(id, Match.OneOf(String, Number));
     MarkerGroups.update({user_id:this.userId, _id:id}, {$inc: {order:-1.5}});
     Meteor.call('fixMarkerGroupOrder');
   },
 
   moveMarkerGroupDown: function(id) {
+    check(id, Match.OneOf(String, Number));
     MarkerGroups.update({user_id:this.userId, _id:id}, {$inc: {order:1.5}});
     Meteor.call('fixMarkerGroupOrder');
   },
@@ -73,12 +81,15 @@ Meteor.methods({
   },
 
   removeMarkerGroup: function(id) {
+    check(id, Match.OneOf(String, Number));
     Markers.remove({user_id:this.userId, groupId:id});
     MarkerGroups.remove({_id:id, user_id:this.userId});
     Meteor.call('fixMarkerGroupOrder');
   },
 
   addMarkerGroup: function(gameId, name) {
+    check(gameId, String);
+    check(name, String);
     name = name.toString();
     name = name.replace(/[^0-9a-zA-Z_\s]/g, '');
 
@@ -121,6 +132,7 @@ Meteor.methods({
   },
 
   removeMarker: function(id) {
+    check(id, String);
     Markers.remove({user_id:this.userId, _id:id});
   }
 })

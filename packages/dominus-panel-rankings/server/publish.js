@@ -1,4 +1,6 @@
 Meteor.publish('income_rankings', function(gameId, page) {
+	check(gameId, Match.OneOf(String, null));
+	check(page, Match.Integer);
 	var skip = (page-1) * _s.panels.rankings.perPage
 
 	var sub = this
@@ -25,6 +27,8 @@ DDPRateLimiter.addRule(income_rankingsSubRule, 5, 5000);
 
 
 Meteor.publish('ally_rankings', function(gameId, page) {
+	check(gameId, Match.OneOf(String, null));
+	check(page, Match.Integer);
 	var skip = (page-1) * _s.panels.rankings.perPage
 
 	var sub = this
@@ -51,6 +55,8 @@ DDPRateLimiter.addRule(ally_rankingsSubRule, 5, 5000);
 
 
 Meteor.publish('losses_rankings', function(gameId, page) {
+	check(gameId, Match.OneOf(String, null));
+	check(page, Match.Integer);
 	var skip = (page-1) * _s.panels.rankings.perPage
 
 	var sub = this
@@ -79,6 +85,7 @@ DDPRateLimiter.addRule(losses_rankingsSubRule, 5, 5000);
 
 
 Meteor.publish('dominus_rankings', function(gameId) {
+	check(gameId, Match.OneOf(String, null));
 	//this.unblock();
 
 	var sub = this
@@ -106,6 +113,8 @@ DDPRateLimiter.addRule(dominus_rankingsSubRule, 5, 5000);
 
 
 Meteor.publish('country_rankings', function(gameId, page) {
+	check(gameId, Match.OneOf(String, null));
+	check(page, Match.Integer);
 	//this.unblock();
 	
 	var skip = (page-1) * _s.panels.rankings.perPage
@@ -134,6 +143,8 @@ DDPRateLimiter.addRule(country_rankingsSubRule, 5, 5000);
 
 
 Meteor.publish('village_rankings', function(gameId, page) {
+	check(gameId, Match.OneOf(String, null));
+	check(page, Match.Integer);
 	var skip = (page-1) * _s.panels.rankings.perPage
 
 	var sub = this

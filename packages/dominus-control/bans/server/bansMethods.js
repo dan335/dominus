@@ -1,5 +1,7 @@
 Meteor.methods({
   banUser: function(userId, reason) {
+    check(userId, String);
+    check(reason, String);
     var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
     if (user) {
       if (!user.admin && !user.moderator) {
@@ -15,6 +17,7 @@ Meteor.methods({
 
 
   unbanUser: function(userId) {
+    check(userId, String);
     var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
     if (user) {
       if (!user.admin && !user.moderator) {
