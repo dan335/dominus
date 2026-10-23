@@ -16,7 +16,7 @@ dChat.createChatroom = function(gameId, name, type, owner, members, memberData) 
 		memberData:memberData,
 		admins: [],
 		owner: owner,
-		created_at: new Date()
+		created_at: dClock.now()
 	})
 	return id
 }

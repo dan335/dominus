@@ -83,7 +83,7 @@ Meteor.startup(function() {
       job: function() {
         Games.find({hasStarted:true, hasEnded:false}, {fields: {_id:1}}).forEach(function(game) {
           let interval = _gs.battles(game._id, 'battleInterval');
-          let cutoff = moment().subtract(interval, 'ms').toDate();
+          let cutoff = moment(dClock.now()).subtract(interval, 'ms').toDate();
           Battles2.find({gameId:game._id, isOver:false, updatedAt: {$lt:cutoff}}, {fields: {gameId:1, x:1, y:1}}).forEach(function(battle) {
             Queues.add('runBattle', {gameId:battle.gameId, x:battle.x, y:battle.y}, {delay:0, timeout:1000*60*5}, battle.gameId+'_'+battle.x+'_'+battle.y);
           })

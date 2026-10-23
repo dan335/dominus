@@ -8,6 +8,6 @@ if (process.env.DOMINUS_WORKER == 'true') {
 
 
 dBattles.removeStuckBattles = function() {
-  let cutoff = moment().subtract(3, 'hours').toDate();
+  let cutoff = moment(dClock.now()).subtract(3, 'hours').toDate();
   Battles2.update({isRunning:true, updatedAt: {$lt:cutoff}}, {$set: {isRunning:false}}, {multi:true});
 }

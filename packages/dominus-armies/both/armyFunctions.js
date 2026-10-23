@@ -1,6 +1,6 @@
 dArmies.createName = function() {
-  var part1 = _s.armies.names.part1[_.random(_s.armies.names.part1.length-1)];
-  var part2 = _s.armies.names.part2[_.random(_s.armies.names.part2.length-1)];
+  var part1 = _s.armies.names.part1[dRandom.random(_s.armies.names.part1.length-1)];
+  var part2 = _s.armies.names.part2[dRandom.random(_s.armies.names.part2.length-1)];
   return part1+' '+part2;
 }
 

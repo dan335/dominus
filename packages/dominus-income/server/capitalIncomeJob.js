@@ -12,7 +12,7 @@ if (process.env.DOMINUS_WORKER == 'true') {
     Games.find({hasStarted:true, hasEnded:false}, {fields: {_id:1}}).forEach(function(game) {
 
       const interval = _gs.capitals(game._id, 'incomeInterval');
-      const cutoff = moment().subtract(interval, 'ms').toDate();
+      const cutoff = moment(dClock.now()).subtract(interval, 'ms').toDate();
       const capitalFields = {playerId:1, countryId:1};
       Capitals.find({gameId:game._id, lastIncomeUpdate: {$lte:cutoff}}, {fields:capitalFields}).forEach(function(capital) {
 
@@ -45,7 +45,7 @@ if (process.env.DOMINUS_WORKER == 'true') {
 					capitalSet['income.'+type] = capitalIncome[type];
 				});
 				capitalSet['income.worth'] = capitalIncome.worth;
-				capitalSet.lastIncomeUpdate = new Date();
+				capitalSet.lastIncomeUpdate = dClock.now();
 				bulkCapitals.find({_id:capital._id}).updateOne({$set:capitalSet});
 				hasBulkOp = true;
 

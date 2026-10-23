@@ -68,6 +68,10 @@ if (Meteor.isServer) {
         runner.results.push({name: name, status: 'FAIL', error: (e && e.message) || String(e)});
         runner.failed++;
       } finally {
+        // a test that fixed the game clock or seeded the random source must not
+        // leave it that way for the next one
+        dClock.reset();
+        dRandom.reset();
         // Node reports an unhandled rejection after the current tick, so wait
         // one turn of the event loop to blame it on the test that caused it
         dTest.sleep(0);

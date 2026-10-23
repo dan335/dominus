@@ -23,9 +23,9 @@ _gs.graphs = function(gameId, path) {
 }
 
 _gs.statsBegin = function(gameId) {
-	var currentHour = moment().hour();
+	var currentHour = moment(dClock.now()).hour();
 	var beginHour = currentHour - (currentHour % _gs.graphs(gameId, 'statsInverval'));
-	return moment().startOf('day').add(beginHour, 'hours').toDate();
+	return moment(dClock.now()).startOf('day').add(beginHour, 'hours').toDate();
 },
 
 _gs.statsEnd = function(gameId) {

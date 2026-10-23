@@ -109,7 +109,7 @@ var newGlobalAlert = function(gameId, alertType, vars) {
 
     GlobalAlerts.insert({
       gameId: gameId,
-      created_at: new Date(),
+      created_at: dClock.now(),
       type: alertType,
       vars: vars
     });

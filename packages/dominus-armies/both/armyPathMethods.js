@@ -90,7 +90,7 @@ Meteor.methods({
       index:index,
       armyId:armyId,
       user_id:self.userId,
-      createdAt:new Date(),
+      createdAt:dClock.now(),
       paused:false,     // used to pause army movement
       countryIds:null,  // array of country ids to use in pathfinding
       hexes:null,        // path for army to follow

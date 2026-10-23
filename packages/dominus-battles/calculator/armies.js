@@ -11,15 +11,15 @@ BattleArmy = function() {
 
   // assign random id
   // set to _id of army or leave random value
-  this._id = Math.floor(Math.random() * 1000000).toString();
-  this.name = _s.armies.names.part1[_.random(_s.armies.names.part1.length-1)] +' '+ _s.armies.names.part2[_.random(_s.armies.names.part2.length-1)];
+  this._id = Math.floor(dRandom.fraction() * 1000000).toString();
+  this.name = _s.armies.names.part1[dRandom.random(_s.armies.names.part1.length-1)] +' '+ _s.armies.names.part2[dRandom.random(_s.armies.names.part2.length-1)];
 
   // -----------------------------
   // private
   // these are filled in when run
 
   // these get filled in if isRealArmy is true
-  this.playerId = Math.floor(Math.random() * 100000).toString();
+  this.playerId = Math.floor(dRandom.fraction() * 100000).toString();
   this.allies_below = [];
   this.allies_above = [];
   this.team = [];
@@ -28,7 +28,7 @@ BattleArmy = function() {
   this.vassals = [];
   this.is_dominus = false;
 
-  this.createdAt = new Date();
+  this.createdAt = dClock.now();
 
   _s.armies.types.forEach(function(type) {
       self.units[type] = 0;

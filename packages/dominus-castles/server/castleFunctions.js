@@ -84,7 +84,7 @@ dCastles.create = function(gameId, user_id, isTest) {
     name: dCastles.createName(),
     x: coords.x,
     y: coords.y,
-    created_at: new Date(),
+    created_at: dClock.now(),
     user_id: user._id,
     username: player.username,
     image: _s.castles.startingImage,
@@ -113,7 +113,7 @@ dCastles.create = function(gameId, user_id, isTest) {
 
 
 dCastles.createName = function() {
-  return _s.castles.names.part1[_.random(_s.castles.names.part1.length-1)] + _s.castles.names.part2[_.random(_s.castles.names.part2.length-1)];
+  return _s.castles.names.part1[dRandom.random(_s.castles.names.part1.length-1)] + _s.castles.names.part2[dRandom.random(_s.castles.names.part2.length-1)];
 }
 
 
@@ -184,7 +184,7 @@ dCastles.createPlayer = function(gameId, userId, username, makePro) {
     userId: userId,
     gameId: gameId,
     gameName: game.name,
-    createdAt: new Date(),
+    createdAt: dClock.now(),
 
     gold: _gs.init(gameId, 'startingResources.gold'),
     grain: _gs.init(gameId, 'startingResources.grain'),
@@ -216,7 +216,7 @@ dCastles.createPlayer = function(gameId, userId, username, makePro) {
     losses_num: 0,
     sp_show_coords: false,
     sp_show_minimap: true,
-    lastActive: new Date(),
+    lastActive: dClock.now(),
 
     // flag for has notification that your account will soon been deleted been sent to this user
     //accountDelNotificationSent: false,
@@ -235,7 +235,7 @@ dCastles.createPlayer = function(gameId, userId, username, makePro) {
 		gameIsOver:false,
     gameIsClosed:false, // used in topNav
 
-    lastIncomeUpdate: new Date(),   // last date income ran
+    lastIncomeUpdate: dClock.now(),   // last date income ran
 
     // income graphs
     totalIncome:0,

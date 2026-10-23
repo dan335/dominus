@@ -22,10 +22,10 @@ var checkForGameEnd = function() {
   //     update: {$set:{hasEnded:true, endDate:new Date()}}
   // });
 
-  let game = Games.findOne({hasStarted:true, hasEnded:false, hasClosed:false, endDate: {$lte: new Date()}});
+  let game = Games.findOne({hasStarted:true, hasEnded:false, hasClosed:false, endDate: {$lte: dClock.now()}});
 
   if (game) {
-    Games.update(game._id, {$set:{hasEnded:true, endDate:new Date()}});
+    Games.update(game._id, {$set:{hasEnded:true, endDate:dClock.now()}});
     
     // wait a couple seconds for jobs to finish
     // jobs should stop queueing when hasEnded is set to true
@@ -61,7 +61,7 @@ var checkForGameEnd = function() {
       }
 
       // closeDate is when the game will be erased
-      let closeDate = moment().add(3, 'days').toDate();
+      let closeDate = moment(dClock.now()).add(3, 'days').toDate();
 
       Games.update(game._id, {$set: {winningPlayer:winnerData, closeDate:closeDate}});
 

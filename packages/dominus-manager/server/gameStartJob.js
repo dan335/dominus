@@ -14,7 +14,7 @@ if (process.env.DOMINUS_WORKER == 'true') {
     //   console.log(game)
     //   startGame(game);
     // }
-    let game = Games.findOne({hasStarted:false, isStarting:false, startAt:{$lte:new Date()}});
+    let game = Games.findOne({hasStarted:false, isStarting:false, startAt:{$lte:dClock.now()}});
 
     if (game) {
       Games.update(game._id, {$set: {isStarting:true}});
@@ -73,7 +73,7 @@ dManager.startGame = function(game, isTest) {
   // start game
   let update = {
     hasStarted: true,
-    startedAt: new Date(),
+    startedAt: dClock.now(),
     taxesCollected: 0
   };
   Games.update(game._id, {$set:update});

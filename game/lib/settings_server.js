@@ -65,9 +65,9 @@ if (Meteor.isServer) {
 	s.statsInverval = 6;
 
 	statsBegin = function() {
-		var currentHour = moment().hour();
+		var currentHour = moment(dClock.now()).hour();
 		var beginHour = currentHour - (currentHour % s.statsInverval);
-		return moment().startOf('day').add(beginHour, 'hours').toDate();
+		return moment(dClock.now()).startOf('day').add(beginHour, 'hours').toDate();
 	};
 	statsEnd = function() {
 		var begin = moment(statsBegin());
@@ -78,9 +78,9 @@ if (Meteor.isServer) {
 	s.gamestatsInterval = 3;
 
 	gamestatsBegin = function() {
-		var currentHour = moment().hour();
+		var currentHour = moment(dClock.now()).hour();
 		var beginHour = currentHour - (currentHour % s.gamestatsInterval);
-		return moment().startOf('day').add(beginHour, 'hours').toDate();
+		return moment(dClock.now()).startOf('day').add(beginHour, 'hours').toDate();
 	};
 	gamestatsEnd = function() {
 		var begin = moment(statsBegin());

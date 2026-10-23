@@ -124,7 +124,7 @@ Mapmaker = {
     let minHexes = _gs.mapmaker(gameId, 'minHexesInCountry');
     let maxHexes = _gs.mapmaker(gameId, 'maxHexesInCountry');
 
-    country.numHexes = Math.floor(Math.random() * (maxHexes - minHexes + 1) + minHexes);
+    country.numHexes = Math.floor(dRandom.fraction() * (maxHexes - minHexes + 1) + minHexes);
     var data = this.createHexesFrom(gameId, x, y, country.numHexes, []);
     country.hexes = data.hexes;
     country.minX = data.minX;
@@ -249,7 +249,7 @@ Mapmaker = {
 
       var newHexCreated = false;
 
-      var hexesToCheck = _.shuffle(existingHexes);
+      var hexesToCheck = dRandom.shuffle(existingHexes);
       for (var h=0; h<hexesToCheck.length; h++) {
 
         if (!newHexCreated) {
@@ -258,7 +258,7 @@ Mapmaker = {
 
           // check all sides of hex in random order
           // to see if they're empty
-          var directions = _.shuffle([0,1,2,3,4,5]);
+          var directions = dRandom.shuffle([0,1,2,3,4,5]);
           for (var i=0; i<directions.length; i++) {
             if (!newHexCreated) {
               var direction = directions[i];
@@ -370,7 +370,7 @@ Mapmaker = {
       nearbyBuildings: false
     }
 
-    var rand = Math.random();
+    var rand = dRandom.fraction();
 
     if (rand >= _s.mapmaker.grain_min && rand <= _s.mapmaker.grain_max) {
       hex.type = 'grain';
@@ -393,7 +393,7 @@ Mapmaker = {
 
     // is it a large resource
     if (hex.type != 'grain') {
-      hex.large = Math.random() <= _gs.mapmaker(gameId, 'large');
+      hex.large = dRandom.fraction() <= _gs.mapmaker(gameId, 'large');
       //hex.large = Math.random() <= _s.mapmaker.large;
     }
 
@@ -401,7 +401,7 @@ Mapmaker = {
     if (hex.large) {
       hex.tileImage = '01';
     } else {
-      var randNum = Math.floor(Math.random() * _s.mapmaker.numTileImages[hex.type]) + 1;
+      var randNum = Math.floor(dRandom.fraction() * _s.mapmaker.numTileImages[hex.type]) + 1;
       randNum = zeroFill(randNum, 2);
       hex.tileImage = randNum;
     }
@@ -555,7 +555,7 @@ Mapmaker = {
     while (tries < maxTries) {
       var skip = false;
 
-      var randNum = Math.floor(Math.random() * num);
+      var randNum = Math.floor(dRandom.fraction() * num);
 
       var hex =  Hexes.findOne(query, {skip:randNum, limit:1});
 
@@ -653,7 +653,7 @@ Mapmaker = {
     var maxTries = num * 4;
 
     while (!found && tries < maxTries) {
-      var randNum = Math.floor(Math.random() * num);
+      var randNum = Math.floor(dRandom.fraction() * num);
       var find = {isBorder:true, gameId:gameId};
       var hex =  Hexes.findOne(find, {skip:randNum, limit:1});
       if (!hex || typeof hex.x === 'undefined' || typeof hex.y === 'undefined') {
@@ -661,7 +661,7 @@ Mapmaker = {
         return false;
       }
 
-      var directions = _.shuffle([0,1,2,3,4,5]);
+      var directions = dRandom.shuffle([0,1,2,3,4,5]);
       var coords = null;
       for (var dir in directions) {
         if (!coords) {

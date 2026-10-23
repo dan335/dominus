@@ -30,7 +30,7 @@ Meteor.methods({
 			if (player.lastReportDate) {
 				var lastReportDate = moment(new Date(player.lastReportDate));
 
-				if (moment() - lastReportDate < _s.init.canReportEvery) {
+				if (moment(dClock.now()) - lastReportDate < _s.init.canReportEvery) {
 					var dur = moment.duration(_s.init.canReportEvery);
 					throw new Meteor.Error('Can only make a report once '+dur.humanize()+'.');
 				}
@@ -43,7 +43,7 @@ Meteor.methods({
 			userId: player.userId,
 			username: player.username,
 			reason: reason,
-			createdAt: new Date(),
+			createdAt: dClock.now(),
 			reportedPlayerId: rPlayer._id,
 			reportedUserId: rPlayer.userId,
 			reportedUsername: rPlayer.username,
@@ -62,7 +62,7 @@ Meteor.methods({
 
 		// record date
 		// users can only report once every ...
-		Players.update(player._id, {$set: {lastReportDate: new Date()}});
+		Players.update(player._id, {$set: {lastReportDate: dClock.now()}});
 	},
 
 

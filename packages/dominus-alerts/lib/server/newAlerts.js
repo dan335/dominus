@@ -223,7 +223,7 @@ var newAlert = function(gameId, alertType, playerIds, vars) {
 
     Alerts.insert({
       gameId: gameId,
-      created_at: new Date(),
+      created_at: dClock.now(),
       type: alertType,
       vars: vars,
       playerIds: playerData

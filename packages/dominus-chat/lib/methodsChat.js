@@ -14,7 +14,7 @@ Meteor.methods({
       return false;
     }
 
-    var chatDate = new Date();
+    var chatDate = dClock.now();
 
     text = text.toString().trim();
 

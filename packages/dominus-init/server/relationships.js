@@ -374,8 +374,8 @@ var updateVassalAllyCountMultiple = function(playerIds) {
 		bulkPlayers.find({_id:player._id}).updateOne({$set:set});
 
 		var dsFind = {playerId: player._id, created_at: {$gte: _gs.statsBegin(player.gameId), $lt: _gs.statsEnd(player.gameId)}};
-    var dsSet = {numVassals:num_allies_below, updated_at:new Date()};
-    var dsSetOnInsert = {_id:Random.id(), gameId:player.gameId, user_id:player.userId, playerId:player._id, created_at: new Date()};
+    var dsSet = {numVassals:num_allies_below, updated_at:dClock.now()};
+    var dsSetOnInsert = {_id:Random.id(), gameId:player.gameId, user_id:player.userId, playerId:player._id, created_at: dClock.now()};
     bulkDailystats.find(dsFind).upsert().updateOne({$set:dsSet, $setOnInsert:dsSetOnInsert});
 
 		hasBulkOp = true;

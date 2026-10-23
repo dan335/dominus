@@ -57,7 +57,7 @@ dVillages.villageConstructionJob = function(gameId) {
     let timeToBuild = _gs.villages(village.gameId, path);
 		//var timeToBuild = _s.villages.cost['level'+(village.level+1)].timeToBuild;
 		var finishAt = moment(new Date(village.constructionStarted)).add(timeToBuild, 'ms');
-		if (moment().isAfter(finishAt)) {
+		if (moment(dClock.now()).isAfter(finishAt)) {
 			dVillages.finishBuildingVillage(village._id);
 		}
 	})

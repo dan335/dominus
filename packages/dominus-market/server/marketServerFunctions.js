@@ -56,8 +56,8 @@ dMarket.record_market_history = function(gameId, quantity) {
 	check(quantity, validNumber);
 	check(gameId, String);
 
-	var begin = moment().startOf('hour').toDate()
-	var end = moment().endOf('hour').toDate()
+	var begin = moment(dClock.now()).startOf('hour').toDate()
+	var end = moment(dClock.now()).endOf('hour').toDate()
 
   let price = {};
 	Market.find({gameId:gameId}, {fields: {price:1, type:1}}).forEach(function(m) {
@@ -68,6 +68,6 @@ dMarket.record_market_history = function(gameId, quantity) {
   Markethistory.upsert(find, {
     $inc: {quantity:quantity},
     $set: {price:price},
-    $setOnInsert: {created_at:new Date(), gameId:gameId}
+    $setOnInsert: {created_at:dClock.now(), gameId:gameId}
   });
 }

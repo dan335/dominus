@@ -66,7 +66,7 @@ Meteor.methods({
       throw new Meteor.Error('Cannot build a village on an enemy occupied hex.');
     }
 
-    var name = _s.villages.names.part1[_.random(_s.villages.names.part1.length-1)] + _s.villages.names.part2[_.random(_s.villages.names.part2.length-1)];
+    var name = _s.villages.names.part1[dRandom.random(_s.villages.names.part1.length-1)] + _s.villages.names.part2[dRandom.random(_s.villages.names.part2.length-1)];
 
 		// find how much the village makes
 		var income = {};
@@ -100,7 +100,7 @@ Meteor.methods({
 			x: x,
 			y: y,
 			user_id: self.userId,
-			created_at: new Date(),
+			created_at: dClock.now(),
 			name: name,
 			username: player.username,
 			castle_x: player.x,
@@ -109,10 +109,10 @@ Meteor.methods({
       countryId: countryId,
 			income: income,
 			under_construction:true,
-			constructionStarted: new Date(),
+			constructionStarted: dClock.now(),
 			level: 0,	// villages are level 0 until finished building
       male: player.male,
-      lastIncomeUpdate: new Date()
+      lastIncomeUpdate: dClock.now()
 		};
 
     _s.armies.types.forEach(function(type) {
@@ -204,7 +204,7 @@ Meteor.methods({
     }
 
     // passed tests, set under construction flag to true
-    Villages.update(villageId, {$set:{under_construction:true, constructionStarted:new Date()}})
+    Villages.update(villageId, {$set:{under_construction:true, constructionStarted:dClock.now()}})
 
     // subtract cost from user
     var inc = {}
