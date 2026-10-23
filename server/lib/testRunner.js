@@ -1,5 +1,6 @@
 // Server test runner (Oct 2026).
 // Run from meteor shell:   Meteor.call('runAllTests')
+//                      or   Meteor.call('runAllTests', 'spectator')  (suites whose name contains it)
 // runGameCreationTests is the same thing under its old name.
 //
 // Every server suite (server/*Tests.js) registers itself with dTest.addSuite and
@@ -215,15 +216,18 @@ if (Meteor.isServer) {
 
   var inProgress = false;
 
-  function runAllTests() {
+  // filter: only run suites whose name contains it, e.g. 'method contracts'
+  function runAllTests(filter) {
     dTest.guard(this);
+    check(filter, Match.Optional(String));
     // the runner's own tests call this method; never let it start a second run
     if (inProgress) throw new Meteor.Error('already-running', 'a test run is already in progress');
     inProgress = true;
     try {
       dTest.takeCoverage('before-runs');
+      var list = filter ? _.filter(suites, function(suite) { return suite.name.indexOf(filter) !== -1; }) : suites;
       var out = dTest.outsideDomain(function() {
-        return dTest.runSuites(suites, dTest.helpers);
+        return dTest.runSuites(list, dTest.helpers);
       });
       dTest.takeCoverage('test-runs');
     } finally {

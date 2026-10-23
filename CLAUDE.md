@@ -28,6 +28,7 @@ meteor build .build --architecture os.linux.x86_64
 meteor shell
 # Then in the shell:
 Meteor.call('runAllTests')        # runGameCreationTests is the same thing
+Meteor.call('runAllTests', 'method contracts')   # only suites whose name contains it
 
 # Or, without a running app: starts the app (and Redis in docker if needed),
 # runs the suites, and writes .test-results/server-tests.md
@@ -36,6 +37,8 @@ RUNS=3 COVERAGE=1 tests/run-server-tests.sh   # repeat runs, plus c8 coverage
 ```
 
 The runner is `server/lib/testRunner.js` (`dTest`). Each `server/*Tests.js` suite registers with `dTest.addSuite`. Results print to the server console and return as an object to the shell. The runner is async-aware: a test or method call that returns a promise is awaited and a rejection fails it, and any unhandled rejection or uncaught exception during the run fails the run. SyncedCron is paused while the suites run. Call method and publication handlers through `dTest.settle(...)` and check for errors with `dTest.throws(fn)`, so they keep working when the code under test becomes async.
+
+Method contract suites (`server/*ContractTests.js`) call methods the way the browser does: `dTest.ddp.connect(userId)` opens a real DDP connection logged in as that user (`server/lib/testRunnerDdp.js`), so calls go through the rate limiter, `server/methodGate.js` and the method. `dTest.buildGameWorld()` (`server/lib/testRunnerWorld.js`) starts a real game with players, castles and a market, and `dTest.snapshot` / `dTest.assertUnchanged` check that a refused call changed nothing. They pin down what the code does today; a test named "known bug" describes a bug, so fixing the bug means changing that test on purpose.
 
 The tests remove every document in several collections (`Games.remove({})` etc.), so only run them against a local development database. The method refuses calls from clients and from production builds.
 
