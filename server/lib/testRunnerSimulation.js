@@ -322,7 +322,7 @@ if (Meteor.isServer) {
       // This process takes no more jobs from Bull until the end, so a delayed
       // job another test left behind (a retry, enemies_together_check) can't
       // land in the middle of the game.
-      Queues.queueNames.forEach(function(name) { Queues[name].pause(true, true); });
+      Queues.pauseLocal();
       restore.push(function() {
         Queues.queueNames.forEach(function(name) { dTest.settle(Queues[name].resume(true)); });
       });

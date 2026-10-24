@@ -56,6 +56,9 @@ if (Meteor.isServer) {
     runner.run = function(name, fn) {
       runner.current = name;
       dTest.current = name;  // readable from a second meteor shell when a run hangs
+      // DOMINUS_TEST_TRACE=true logs each test as it starts, to find the one
+      // running when the process crashed
+      if (process.env.DOMINUS_TEST_TRACE == 'true') console.log('TEST_START ' + name);
       try {
         if (dTest.settle(fn()) === 'skip') {
           runner.results.push({name: name, status: 'SKIP'});

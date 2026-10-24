@@ -1,5 +1,6 @@
-// Tests for Queues.timeWork (packages/dominus-queue/queue.js, Oct 2026): every
-// job handler's real work is timed, without changing what Bull sees.
+// Tests for Queues.runJob (packages/dominus-queue/queue.js, Oct 2026): every
+// job handler's real work is timed, and since Bull 4 (upgrade PR 4) Bull waits
+// for that work before it counts the job done.
 //
 // They run as part of runGameCreationTests (server/gameCreationTests.js), so the
 // same rule applies: only against a local development database.
@@ -41,74 +42,127 @@ if (Meteor.isServer) {
     }
 
 
-    run('job timing: a fiber-bound handler is timed to the end of its work, and Bull still gets undefined right away', function() {
+    // catches what Meteor._debug logs while fn runs
+    function captureDebug(fn) {
+      var logged = [];
+      var debug = Meteor._debug;
+      Meteor._debug = function() { logged.push(_.toArray(arguments).join(' ')); };
+      try {
+        fn();
+      } finally {
+        Meteor._debug = debug;
+      }
+      return logged;
+    }
+
+    function settled(promise) {
+      var state = {done: false};
+      promise.then(function(value) { state.done = true; state.value = value; }, function(error) { state.done = true; state.error = error; });
+      return state;
+    }
+
+    run('job timing: a fiber-bound handler\'s promise resolves when its work is done, and the work is timed', function() {
       var name = type();
       var finished = false;
-      var wrapped = Queues.timeWork(name, Meteor.bindEnvironment(function(job) {
+      var wrapped = Queues.runJob(name, Meteor.bindEnvironment(function(job) {
         Meteor._sleepForMs(400);
         finished = true;
         return Promise.resolve();
       }));
 
-      var out = callOutsideFiber(function() { return wrapped({data: {}}); });
+      var out = callOutsideFiber(function() { return wrapped({id: 'a', data: {}}); });
       assert(out.returned, 'returned');
-      equal(out.value, undefined, 'Bull gets undefined, as before');
-      equal(finished, false, 'it returned before the work finished, as before');
+      assert(out.value && typeof out.value.then === 'function', 'Bull gets a promise');
+      var state = settled(out.value);
+      equal(finished, false, 'the work is still running');
+      Meteor._sleepForMs(100);
+      equal(state.done, false, 'and the promise waits for it');
+      assert(Queues.isRunning(name, 'a'), 'the job is listed as running');
 
-      assert(waitFor(function() { return Queues.workTimes[name]; }, 5000), 'the work was timed');
+      assert(waitFor(function() { return state.done; }, 5000), 'the promise resolves');
       assert(finished, 'after the work finished');
+      assert(!state.error, 'without an error');
+      assert(!Queues.isRunning(name, 'a'), 'no longer listed as running');
       var times = Queues.workTimes[name];
-      equal(times.count, 1, 'once');
+      equal(times.count, 1, 'timed once');
       assert(times.max >= 400 && times.max < 5000, 'for as long as the work took (' + times.max + 'ms)');
       delete Queues.workTimes[name];
     });
 
-    run('job timing: called from inside a fiber, the handler has finished when it returns', function() {
+    run('job timing: called from inside a fiber, the handler runs in a fiber of its own and the promise waits for it', function() {
       var name = type();
       var finished = false;
-      var wrapped = Queues.timeWork(name, Meteor.bindEnvironment(function(job) {
+      var wrapped = Queues.runJob(name, Meteor.bindEnvironment(function(job) {
         Meteor._sleepForMs(200);
         finished = true;
       }));
-      wrapped({data: {}});
-      assert(finished, 'the work is done');
+      var promise = wrapped({id: 'b', data: {}});
+      equal(finished, false, 'the caller is not held up');
+      dTest.settle(promise);
+      assert(finished, 'the work is done when the promise resolves');
       assert(Queues.workTimes[name] && Queues.workTimes[name].max >= 200, 'and timed');
       delete Queues.workTimes[name];
     });
 
-    run('job timing: a plain handler\'s promise reaches Bull unchanged and is timed until it settles', function() {
+    run('job timing: a plain handler\'s promise is waited for; a rejection or a throw is logged and the job still completes', function() {
       var name = type();
       var resolve;
-      var promise = new Promise(function(r) { resolve = r; });
-      var wrapped = Queues.timeWork(name, function(job) { return promise; });
+      var pending = new Promise(function(r) { resolve = r; });
+      var wrapped = Queues.runJob(name, function(job) { return pending; });
 
-      var out = callOutsideFiber(function() { return wrapped({data: {}}); });
-      assert(out.value === promise, 'Bull gets the same promise');
+      var state = settled(wrapped({id: 'c', data: {}}));
       Meteor._sleepForMs(200);
-      assert(!Queues.workTimes[name], 'not timed while it is pending');
-      resolve();
-      assert(waitFor(function() { return Queues.workTimes[name]; }, 5000), 'timed once it resolves');
-      assert(Queues.workTimes[name].max >= 200, 'including the time it was pending');
+      equal(state.done, false, 'waits while the handler\'s promise is pending');
+      assert(!Queues.workTimes[name], 'not timed yet');
+      resolve('a result');
+      assert(waitFor(function() { return state.done; }, 5000), 'resolves once it resolves');
+      equal(state.value, undefined, 'Bull stores no result');
+      assert(Queues.workTimes[name].max >= 200, 'timed, including the time it was pending');
       delete Queues.workTimes[name];
 
-      // a rejected promise is passed on too, and still timed
-      var failing = Promise.reject(new Error('test'));
-      failing.catch(function() {});
-      wrapped = Queues.timeWork(name, function(job) { return failing; });
-      out = callOutsideFiber(function() { return wrapped({data: {}}); });
-      assert(out.value === failing, 'Bull gets the rejected promise');
-      assert(waitFor(function() { return Queues.workTimes[name]; }, 5000), 'a failure is timed');
-      delete Queues.workTimes[name];
+      // a rejected promise and a thrown error: logged, and Bull counts the job
+      // done (no retries, as before Bull 4)
+      [function(job) { return Promise.reject(new Error('rejected')); },
+       function(job) { throw new Error('thrown'); }].forEach(function(handler, i) {
+        var promise;
+        var logged = captureDebug(function() {
+          promise = Queues.runJob(name, handler)({id: 'd' + i, data: {}});
+          dTest.settle(promise);
+        });
+        equal(logged.length, 1, 'logged once');
+        assert(logged[0].indexOf('Exception in job ' + name) === 0, 'as an exception in the job: ' + logged[0]);
+        assert(logged[0].indexOf(i ? 'thrown' : 'rejected') !== -1, 'with its error');
+        assert(Queues.workTimes[name], 'still timed');
+        delete Queues.workTimes[name];
+      });
 
-      // a handler that throws throws to Bull
-      wrapped = Queues.timeWork(name, function(job) { throw new Error('thrown'); });
-      var error = null;
+      // a fiber-bound handler that throws is logged by bindEnvironment, as before
+      var logged = captureDebug(function() {
+        dTest.settle(Queues.runJob(name, Meteor.bindEnvironment(function() { throw new Error('bound'); }))({id: 'e', data: {}}));
+      });
+      equal(logged.length, 1, 'logged once');
+      assert(logged[0].indexOf('Exception in callback of async function') === 0, 'by bindEnvironment: ' + logged[0]);
+      delete Queues.workTimes[name];
+    });
+
+    run('job timing: a job\'s uniqueId is released when its work ends, not before', function() {
+      var name = 'jobTimingIdQueue';
+      if (!Queues[name]) Queues.create(name);
+      Queues.clearUniqueIdsForJob(name);
       try {
-        wrapped({data: {}});
-      } catch (e) {
-        error = e;
+        assert(Queues.addUniqueId(name, 'x'), 'id taken');
+        var wrapped = Queues.runJob(name, Meteor.bindEnvironment(function(job) {
+          Meteor._sleepForMs(300);
+        }));
+        var state = settled(wrapped({id: 'f', data: {jobName: name, uniqueId: 'x'}}));
+        Meteor._sleepForMs(100);
+        equal(Queues.addUniqueId(name, 'x'), false, 'held while the work runs');
+        assert(waitFor(function() { return state.done; }, 5000), 'work done');
+        equal(Queues.addUniqueId(name, 'x'), true, 'free once it ended');
+      } finally {
+        Queues.clearUniqueIdsForJob(name);
+        delete Queues.workTimes[name];
       }
-      equal(error && error.message, 'thrown', 'a thrown error reaches Bull');
     });
 
     run('job timing: every queue times its handler, and a real job is timed to the end of its work', function() {
