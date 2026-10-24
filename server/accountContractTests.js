@@ -167,6 +167,41 @@ if (Meteor.isServer) {
           expectError(function() { return p.client.call('daysSincePlayerActive', never); }, 500, null, 'no presence');
         });
 
+        test('presence (danimal:userpresence): a connection marks the user online, and closing it marks them offline', function() {
+          var id = account();
+          var first = dTest.ddp.connect(id);
+          made.clients.push(first);
+          assert(dTest.waitFor(function() {
+            var user = Meteor.users.findOne(id);
+            return user.presence && user.presence.status == 'online';
+          }, 10000), 'online once connected');
+          equal(UserPresenceSessions.find({userId: id}).count(), 1, 'one session');
+          var presence = Meteor.users.findOne(id).presence;
+          assert(presence.serverId && presence.updatedAt instanceof Date, 'with the server and the time');
+          equal(UserPresenceSessions.findOne({userId: id}).serverId, presence.serverId, 'the session names the same server');
+
+          // a second connection, then each closed in turn
+          var second = dTest.ddp.connect(id);
+          made.clients.push(second);
+          assert(dTest.waitFor(function() { return UserPresenceSessions.find({userId: id}).count() == 2; }, 10000), 'two sessions');
+          first.close();
+          assert(dTest.waitFor(function() { return UserPresenceSessions.find({userId: id}).count() == 1; }, 10000), 'one session left');
+          equal(Meteor.users.findOne(id).presence.status, 'online', 'still online while one connection is open');
+          second.close();
+          assert(dTest.waitFor(function() {
+            return Meteor.users.findOne(id).presence.status == 'offline';
+          }, 10000), 'offline once every connection closed');
+          equal(UserPresenceSessions.find({userId: id}).count(), 0, 'no sessions left');
+
+          // a logged-out connection leaves no session
+          var before = UserPresenceSessions.find().count();
+          var anon = dTest.ddp.connect();
+          made.clients.push(anon);
+          Meteor._sleepForMs(300);
+          equal(UserPresenceSessions.find().count(), before, 'no session for a logged-out client');
+          anon.close();
+        });
+
         test('store checkouts: bad arguments are refused before Stripe is called', function() {
           var p = person();
           expectError(function() { return p.client.call('stripeProCheckout', 'singleGame', 'tok'); }, 400, null, 'pro, token not an object');
