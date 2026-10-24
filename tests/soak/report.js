@@ -27,11 +27,9 @@ const read = (name) => {
 };
 const lines = (name) => read(name).split('\n');
 
-// Invariant problems the game has today (the "known bug" tests in
-// server/simulationTests.js). The nightly rebuild puts this one right.
-const KNOWN_PROBLEMS = [
-  /^num_allies_above counts the list: /
-];
+// Invariant problems the game has today, each pinned by a "known bug" test in
+// server/simulationTests.js. None at the moment.
+const KNOWN_PROBLEMS = [];
 
 // --- the monitor's samples ---
 
