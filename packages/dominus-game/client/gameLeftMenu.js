@@ -2,7 +2,8 @@ Template.gameLeftMenu.helpers({
   leftPanels: function() {
     // spectators only get panels that don't need a player
     if (dInit.isSpectating()) {
-      return _.where(_s.panels.leftPanels, {spectator:true});
+      // not _.where: in Meteor's underscore 1.6.0 and 1.6.1 it returns only the first match
+      return _.filter(_s.panels.leftPanels, function(panel) { return panel.spectator; });
     }
     return _s.panels.leftPanels;
   },
