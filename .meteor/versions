@@ -110,7 +110,6 @@ mdg:validated-method@0.2.3
 mdg:validation-error@0.5.1
 meteor@1.11.5
 meteor-base@1.5.1
-meteorhacks:picker@1.0.3
 minifier-css@1.6.4
 minifier-js@2.8.0
 minimongo@1.9.4

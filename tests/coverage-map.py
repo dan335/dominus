@@ -228,7 +228,7 @@ def scan_file(path):
         add('accounts hook', 'emailTemplates.' + m.group(1), function_body(src, masked, m.start()), m.start())
 
     # HTTP routes
-    for m in re.finditer(r'Picker\.route\s*\(\s*', masked):
+    for m in re.finditer(r'HttpRoutes\.route\s*\(\s*', masked):
         close = match_brace(masked, masked.index('(', m.start()))
         q = m.end()
         name = string_at(src, q) if masked[q] in '\'"' else src[q:masked.index(',', q)].strip()

@@ -1,10 +1,11 @@
 // /robots.txt
 //
-// Served through Picker rather than a static file in public/ so it can emit the
-// environment-dependent Sitemap: URL and flip to a blanket Disallow on dev
-// (otherwise the dev host gets indexed as duplicate content).
+// Served as a route (server/lib/httpRoutes.js) rather than a static file in
+// public/ so it can emit the environment-dependent Sitemap: URL and flip to a
+// blanket Disallow on dev (otherwise the dev host gets indexed as duplicate
+// content).
 //
-// Picker registers on WebApp.rawConnectHandlers, which runs before both the
+// The routes are on WebApp.rawConnectHandlers, which runs before both the
 // static file handler and the boilerplate handler, so this always wins.
 
 
@@ -86,7 +87,7 @@ SEO.robotsTxt = function() {
 };
 
 
-Picker.route('/robots.txt', function(params, req, res) {
+HttpRoutes.route('/robots.txt', function(req, res) {
   try {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=3600');
