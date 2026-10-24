@@ -1,4 +1,4 @@
-Picker.route('/astroepatreon', function(params, req, res, next) {
+HttpRoutes.route('/astroepatreon', function(req, res) {
   HTTP.get('http://astroe.io/patreonsync', {}, (error, result) => {
     if (error) {
       console.log(error);

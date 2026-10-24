@@ -83,7 +83,7 @@ SEO.llmsFull = function() {
 
 
 function serveMarkdown(fn) {
-  return function(params, req, res) {
+  return function(req, res) {
     try {
       res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
       res.setHeader('Cache-Control', 'public, max-age=3600');
@@ -97,5 +97,5 @@ function serveMarkdown(fn) {
 }
 
 
-Picker.route('/llms.txt', serveMarkdown(function() { return SEO.llmsIndex(); }));
-Picker.route('/llms-full.txt', serveMarkdown(function() { return SEO.llmsFull(); }));
+HttpRoutes.route('/llms.txt', serveMarkdown(function() { return SEO.llmsIndex(); }));
+HttpRoutes.route('/llms-full.txt', serveMarkdown(function() { return SEO.llmsFull(); }));

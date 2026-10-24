@@ -38,11 +38,6 @@ function urlset(urls) {
 }
 
 
-var distinctUserIds = Meteor.wrapAsync(function(query, callback) {
-  Players.rawCollection().distinct('userId', query, callback);
-});
-
-
 var builders = {
 
   'sitemap-static.xml': function() {
@@ -81,14 +76,14 @@ var builders = {
     return urlset(urls);
   },
 
-  'sitemap-players.xml': function() {
+  'sitemap-players.xml': async function() {
     // Only players with at least one finished game - that is all /profile has
     // anything to render for.
     //
     // Dedup in Mongo rather than in JS: a player has one doc per game, so
     // streaming every one of them back just to throw away duplicates would
     // scale with games-times-players.
-    var userIds = distinctUserIds({ gameIsOver: true });
+    var userIds = await Players.rawCollection().distinct('userId', { gameIsOver: true });
 
     var urls = userIds.slice(0, MAX_PLAYERS).filter(Boolean).map(function(userId) {
       return { loc: '/profile/' + userId, freq: 'monthly', pri: '0.3' };
@@ -103,25 +98,25 @@ var builders = {
 };
 
 
-function build(key) {
+async function build(key) {
   var entry = cache[key];
   if (entry && (Date.now() - entry.at) < TTL) return entry.xml;
 
-  var xml = builders[key]();
+  var xml = await builders[key]();
   cache[key] = { xml: xml, at: Date.now() };
   return xml;
 }
 
 
 function serveXml(fn) {
-  return function(params, req, res) {
+  return async function(req, res) {
     if (SEO.IS_DEV) {
       res.writeHead(404);
       res.end();
       return;
     }
     try {
-      var xml = fn();
+      var xml = await fn();
       res.setHeader('Content-Type', 'application/xml; charset=utf-8');
       res.setHeader('Cache-Control', 'public, max-age=21600');
       res.end(xml);
@@ -134,7 +129,7 @@ function serveXml(fn) {
 }
 
 
-Picker.route('/sitemap.xml', serveXml(function() {
+HttpRoutes.route('/sitemap.xml', serveXml(function() {
   var children = Object.keys(builders);
   return '<?xml version="1.0" encoding="UTF-8"?>\n' +
     '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
@@ -146,5 +141,11 @@ Picker.route('/sitemap.xml', serveXml(function() {
 
 
 Object.keys(builders).forEach(function(key) {
-  Picker.route('/' + key, serveXml(function() { return build(key); }));
+  HttpRoutes.route('/' + key, serveXml(function() { return build(key); }));
 });
+
+
+// for server/httpRouteTests.js: the next request builds every child sitemap again
+SEO.clearSitemapCache = function() {
+  cache = {};
+};
