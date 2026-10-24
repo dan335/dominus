@@ -1000,7 +1000,7 @@ if (Meteor.isServer) {
       var doneAtCompletion = null;
       var listener = function() { doneAtCompletion = perfFixFiberDone; };
       Queues.perfFixFiberQueue.once('completed', listener);
-      Queues.perfFixFiberQueue.add({});
+      dTest.settle(Queues.perfFixFiberQueue.add({}));
       assert(waitFor(function() { return doneAtCompletion !== null; }, 10000), 'job completed');
       equal(doneAtCompletion, true, 'its work had finished when Bull reported completion');
     });

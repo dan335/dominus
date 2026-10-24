@@ -1,0 +1,14 @@
+{
+  "name": "dominus-async-tools",
+  "private": true,
+  "description": "The missing-await checker and the async call graph for the Meteor 3 upgrade (stage 2). See README.md.",
+  "scripts": {
+    "check": "node check-await.js",
+    "graph": "node async-graph.js",
+    "test": "node --test check-await.test.js"
+  },
+  "devDependencies": {
+    "acorn": "8.15.0",
+    "acorn-walk": "8.3.4"
+  }
+}

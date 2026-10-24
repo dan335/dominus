@@ -178,7 +178,7 @@ if (Meteor.isServer) {
       delete Queues.workTimes.jobTimingTestQueue;
       timingQueueSleep = 600;
       timingQueueDone = false;
-      Queues.jobTimingTestQueue.add({});
+      dTest.settle(Queues.jobTimingTestQueue.add({}));
       assert(waitFor(function() { return Queues.workTimes.jobTimingTestQueue; }, 10000), 'the job was timed');
       assert(timingQueueDone, 'after its work finished');
       assert(Queues.workTimes.jobTimingTestQueue.max >= 600, 'for the time its work took (' + Queues.workTimes.jobTimingTestQueue.max + 'ms)');

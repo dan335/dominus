@@ -76,6 +76,9 @@ Meteor.methods({
       data.dominusAchieved = false;   // close registration after dominus
       data.minimap = null;
       let gameId = Games.insert(data);
+      if (Meteor.isServer) {
+        _gs.cacheGame(_.extend({_id:gameId}, data));
+      }
       return gameId;
     }
   },

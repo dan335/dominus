@@ -13,6 +13,8 @@ Package.onUse(function(api) {
     'underscore',
     'mongo',
     'dominus-collections',
+    // _gs.ready and _gs.ensureGame (queue.js)
+    'dominus-settings',
     'ejson',
     'check',
     'momentjs:moment@2.18.1'

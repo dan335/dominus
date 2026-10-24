@@ -18,7 +18,8 @@ if (Meteor.isServer) {
       throw new Error('FAIL: no handler for job ' + name + ' (handlers only exist on the worker)');
     }
     var job = {id: 'test-' + Random.id(), data: _.extend({jobName: name}, data || {}), progressed: []};
-    job.progress = function(percent) { job.progressed.push(percent); };
+    // a promise, as Bull 4's job.progress returns
+    job.progress = function(percent) { job.progressed.push(percent); return Promise.resolve(); };
     if (opts.job) opts.job(job);
 
     var logged = [];

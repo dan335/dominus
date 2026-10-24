@@ -48,6 +48,7 @@ dManager.createNextGame = function() {
   };
 
   let gameId = Games.insert(data);
+  _gs.cacheGame(_.extend({_id:gameId}, data));
   console.log('--- auto-created next game: ' + data.name + ' (starts ' + moment(data.startAt).format('YYYY-MM-DD HH:mm') + ' UTC) ---');
   return gameId;
 }

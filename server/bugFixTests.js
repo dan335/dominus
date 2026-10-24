@@ -483,6 +483,8 @@ if (Meteor.isServer) {
 
     // --- #5 Settings cache ---
 
+    // Since upgrade PR 6 every game is cached, not only running ones (see
+    // packages/dominus-settings/namespace.js), so an ended game stays.
     run('settings cache follows a game from start to end and removal', function() {
       let ended = t.createTestGame({hasStarted: true, hasEnded: false, isSpeed: false});
       let removed = t.createTestGame({hasStarted: true, hasEnded: false});
@@ -492,9 +494,10 @@ if (Meteor.isServer) {
         assert(waitFor(function() { return _gs._cachedGames[ended._id] && _gs._cachedGames[ended._id].isSpeed === true; }),
           'cache picks up a changed flag');
 
-        Games.update(ended._id, {$set: {hasEnded: true}});
-        assert(waitFor(function() { return !_gs._cachedGames[ended._id]; }), 'ended game leaves the cache');
-        equal(_gs.getGame(ended._id).isSpeed, true, 'ended game settings still readable');
+        Games.update(ended._id, {$set: {hasEnded: true, isSpeed: false}});
+        assert(waitFor(function() { return _gs._cachedGames[ended._id] && _gs._cachedGames[ended._id].isSpeed === false; }),
+          'ended game stays cached and follows its changes');
+        equal(_gs.getGame(ended._id).isSpeed, false, 'ended game settings still readable');
 
         assert(waitFor(function() { return !!_gs._cachedGames[removed._id]; }), 'second game is cached');
         Games.remove(removed._id);
@@ -532,10 +535,21 @@ if (Meteor.isServer) {
           'all games cached');
         let cached = games.map(function(g) { return snapshot(g._id); });
 
-        games.forEach(function(g) { Games.update(g._id, {$set: {hasEnded: true}}); });
-        assert(waitFor(function() { return games.every(function(g) { return !_gs._cachedGames[g._id]; }); }),
-          'all games left the cache');
-        let uncached = games.map(function(g) { return snapshot(g._id); });
+        // read them again without the cache: from the database, as a cache
+        // miss does (and logs, which is kept out of the test output)
+        let uncached;
+        let error = console.error;
+        console.error = function() {};
+        try {
+          uncached = games.map(function(g) {
+            delete _gs._cachedGames[g._id];
+            let out = snapshot(g._id);
+            delete _gs._cachedGames[g._id];
+            return out;
+          });
+        } finally {
+          console.error = error;
+        }
 
         games.forEach(function(g, i) {
           _.each(cached[i], function(value, key) {
@@ -547,16 +561,23 @@ if (Meteor.isServer) {
       }
     });
 
-    run('uncached getGame reads only the settings fields, and unknown ids give {}', function() {
+    run('getGame reads only the settings fields, cached or not, and unknown ids give {}', function() {
       let game = t.createTestGame({hasStarted: false, isSpeed: true, tree: {big: true}, minimap: {big: true}});
+      let error = console.error;
+      console.error = function() {};
       try {
-        let g = _gs.getGame(game._id);
-        equal(g.isSpeed, true, 'flag read');
-        assert(!('tree' in g), 'tree not loaded');
-        assert(!('minimap' in g), 'minimap not loaded');
+        assert(waitFor(function() { return !!_gs._cachedGames[game._id]; }), 'cached');
+        [true, false].forEach(function(cached) {
+          if (!cached) delete _gs._cachedGames[game._id];
+          let g = _gs.getGame(game._id);
+          equal(g.isSpeed, true, 'flag read (cached ' + cached + ')');
+          assert(!('tree' in g), 'tree not loaded (cached ' + cached + ')');
+          assert(!('minimap' in g), 'minimap not loaded (cached ' + cached + ')');
+        });
         equal(JSON.stringify(_gs.getGame('bf_missing_' + Random.id())), '{}', 'unknown id');
         equal(JSON.stringify(_gs.getGame(undefined)), '{}', 'no id');
       } finally {
+        console.error = error;
         t.cleanup(game._id);
       }
     });

@@ -72,6 +72,17 @@ REPORT="$OUT/server-tests.md"
     echo
 } > "$REPORT"
 
+# the missing-await checker and its own tests (tests/async/README.md)
+[ -d tests/async/node_modules ] || npm ci --prefix tests/async --no-audit --no-fund > /dev/null 2>&1 || true
+if node tests/async/check-await.js > "$OUT/check-await.txt" 2>&1 &&
+    (cd tests/async && node --test check-await.test.js) > "$OUT/check-await-tests.txt" 2>&1; then
+    printf '## Missing-await check: passed\n\n%s, and its own tests.\n\n' "$(tail -1 "$OUT/check-await.txt")" >> "$REPORT"
+else
+    STATUS=1
+    printf '## Missing-await check: FAILED\n\n```\n%s\n%s\n```\n\n' "$(tail -40 "$OUT/check-await.txt")" \
+        "$(grep -E '^not ok|^# (pass|fail)' "$OUT/check-await-tests.txt" 2>/dev/null)" >> "$REPORT"
+fi
+
 i=1
 while [ $i -le $RUNS ]; do
     echo "Run $i of $RUNS..."
@@ -107,6 +118,6 @@ if [ -n "$COVERAGE" ]; then
     echo "Coverage map: $OUT/coverage-map.md"
 fi
 
-grep -E "^## Run" "$REPORT"
+grep -E "^## (Run|Missing)" "$REPORT"
 echo "Report: $REPORT"
 exit $STATUS

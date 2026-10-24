@@ -136,7 +136,9 @@ if (process.env.DOMINUS_WORKER == 'true') {
       query.forEach(function(country) {
         Queues.add('bakeCountry', {countryId:country._id}, {backoff:{type:'fixed', delay:30000}, attempts:10, delay:0, timeout:1000*60*5}, country._id);
         numBaked++;
-        job.progress(100 / numCountries * numBaked);
+        job.progress(100 / numCountries * numBaked).catch(function(error) {
+          console.error('could not set the progress of bakeCountries', error);
+        });
       })
     }
     return Promise.resolve();
