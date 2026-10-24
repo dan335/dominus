@@ -40,10 +40,17 @@ let gameRankToPoints = function(rankInGame) {
 }
 
 
-var fut = Npm.require('fibers/future');
+// a bulk's writes, logged and not thrown if they fail, as before
+let executeBulk = async function(bulk) {
+  try {
+    await bulk.execute();
+  } catch (error) {
+    console.error(error);
+  }
+};
 
 dRankings = {
-  updateOverallPlayerRankings: function() {
+  updateOverallPlayerRankings: async function() {
 
     let hasBulk = false;
     let bulk = Meteor.users.rawCollection().initializeUnorderedBulkOp();
@@ -52,7 +59,7 @@ dRankings = {
     // zero out everyone
     // reset rankings
     // find wins and num Games
-    Meteor.users.find({}, {fields: {_id:1}}).forEach(function(user) {
+    for (const user of await Meteor.users.find({}, {fields: {_id:1}}).fetchAsync()) {
 
       let rankingRegular = {
     		 wins: 0,
@@ -76,8 +83,8 @@ dRankings = {
         incomePoints: 0,
     	};
 
-      Players.find({userId:user._id}, {fields: {gameId:1, wonGame:1}}).forEach(function(player) {
-        let game = Games.findOne(player.gameId, {fields: {hasEnded:1, isProOnly:1, isCrazyFast:1}});
+      for (const player of await Players.find({userId:user._id}, {fields: {gameId:1, wonGame:1}}).fetchAsync()) {
+        let game = await Games.findOneAsync(player.gameId, {fields: {hasEnded:1, isProOnly:1, isCrazyFast:1}});
 
         if (!game.isCrazyFast) {
           if (game.hasEnded) {
@@ -99,18 +106,18 @@ dRankings = {
             }
           }
         }
-      });
+      }
 
       bulk.find({_id:user._id}).updateOne({$set: {rankingRegular:rankingRegular, rankingPro:rankingPro}});
       hasBulk = true;
-    });
+    }
 
 
 
     // results
 
     // num vassal points
-    Games.find({hasEnded:true}, {fields: {isProOnly:1, results:1, isCrazyFast:1}}).forEach(function(game) {
+    for (const game of await Games.find({hasEnded:true}, {fields: {isProOnly:1, results:1, isCrazyFast:1}}).fetchAsync()) {
       if (!game.isCrazyFast) {
         if (game.results) {
           game.results.numVassals.forEach(function(u) {
@@ -143,19 +150,12 @@ dRankings = {
           });
         }
       }
-    });
-
-    // save
-    var future = new fut();
-    if (hasBulk) {
-      bulk.execute({}, function(error, result) {
-        if (error) {
-          console.error(error);
-        }
-        future.return(result);
-      });
     }
-    future.wait();
+
+    // save. (Before, a run with nothing to save waited here for ever.)
+    if (hasBulk) {
+      await executeBulk(bulk);
+    }
 
 
     // overall points
@@ -164,34 +164,27 @@ dRankings = {
     let oBulk = Meteor.users.rawCollection().initializeUnorderedBulkOp();
 
     // regular
-    Meteor.users.find({"rankingRegular.numGames": {$gt:0}}, {fields: {rankingRegular:1}}).forEach(function(user) {
+    for (const user of await Meteor.users.find({"rankingRegular.numGames": {$gt:0}}, {fields: {rankingRegular:1}}).fetchAsync()) {
       if (user.rankingRegular) {
         let overall = user.rankingRegular.incomePoints + user.rankingRegular.numVassalsPoints;
         oBulk.find({_id:user._id}).updateOne({$inc: {"rankingRegular.overallPoints":overall}});
         hasOBulk = true;
       }
-    });
+    }
 
     // pro
-    Meteor.users.find({"rankingPro.numGames": {$gt:0}}, {fields: {rankingPro:1}}).forEach(function(user) {
+    for (const user of await Meteor.users.find({"rankingPro.numGames": {$gt:0}}, {fields: {rankingPro:1}}).fetchAsync()) {
       if (user.rankingPro) {
         let overall = user.rankingPro.incomePoints + user.rankingPro.numVassalsPoints;
         oBulk.find({_id:user._id}).updateOne({$inc: {"rankingPro.overallPoints":overall}});
         hasOBulk = true;
       }
-    });
+    }
 
     // save
-    var oFuture = new fut();
     if (hasOBulk) {
-      oBulk.execute({}, function(error, result) {
-  	    if (error) {
-  	      console.error(error);
-  	    }
-        oFuture.return(result);
-  	  });
+      await executeBulk(oBulk);
     }
-    oFuture.wait();
 
     // ranking
     // everyone should have points, now figure out ranking by sorting by points
@@ -202,63 +195,56 @@ dRankings = {
     // vassal rank
     // if two people have same number of points ranking is random?
     let rank = 1;
-    Meteor.users.find({"rankingPro.numVassalsPoints": {$gt:0}}, {fields: {"rankingPro.numVassalsPoints":1}, sort: {"rankingPro.numVassalsPoints":-1}}).forEach(function(user) {
+    for (const user of await Meteor.users.find({"rankingPro.numVassalsPoints": {$gt:0}}, {fields: {"rankingPro.numVassalsPoints":1}, sort: {"rankingPro.numVassalsPoints":-1}}).fetchAsync()) {
       rBulk.find({_id:user._id}).updateOne({$set: {"rankingPro.numVassalsRank":rank}});
       hasRBulk = true;
       rank++;
-    });
+    }
 
     // income rank
     rank = 1;
-    Meteor.users.find({"rankingPro.incomePoints": {$gt:0}}, {fields: {"rankingPro.incomePoints":1}, sort: {"rankingPro.incomePoints":-1}}).forEach(function(user) {
+    for (const user of await Meteor.users.find({"rankingPro.incomePoints": {$gt:0}}, {fields: {"rankingPro.incomePoints":1}, sort: {"rankingPro.incomePoints":-1}}).fetchAsync()) {
       rBulk.find({_id:user._id}).updateOne({$set: {"rankingPro.incomeRank":rank}});
       hasRBulk = true;
       rank++;
-    });
+    }
 
     // overall rank
     rank = 1;
-    Meteor.users.find({"rankingPro.overallPoints": {$gt:0}}, {fields: {"rankingPro.overallPoints":1}, sort: {"rankingPro.overallPoints":-1}}).forEach(function(user) {
+    for (const user of await Meteor.users.find({"rankingPro.overallPoints": {$gt:0}}, {fields: {"rankingPro.overallPoints":1}, sort: {"rankingPro.overallPoints":-1}}).fetchAsync()) {
       rBulk.find({_id:user._id}).updateOne({$set: {"rankingPro.overallRank":rank}});
       hasRBulk = true;
       rank++;
-    });
+    }
 
     // regular
     // vassal rank
     rank = 1;
-    Meteor.users.find({"rankingRegular.numVassalsPoints": {$gt:0}}, {fields: {"rankingRegular.numVassalsPoints":1}, sort: {"rankingRegular.numVassalsPoints":-1}}).forEach(function(user) {
+    for (const user of await Meteor.users.find({"rankingRegular.numVassalsPoints": {$gt:0}}, {fields: {"rankingRegular.numVassalsPoints":1}, sort: {"rankingRegular.numVassalsPoints":-1}}).fetchAsync()) {
       rBulk.find({_id:user._id}).updateOne({$set: {"rankingRegular.numVassalsRank":rank}});
       hasRBulk = true;
       rank++;
-    });
+    }
 
     // income rank
     rank = 1;
-    Meteor.users.find({"rankingRegular.incomePoints": {$gt:0}}, {fields: {"rankingRegular.incomePoints":1}, sort: {"rankingRegular.incomePoints":-1}}).forEach(function(user) {
+    for (const user of await Meteor.users.find({"rankingRegular.incomePoints": {$gt:0}}, {fields: {"rankingRegular.incomePoints":1}, sort: {"rankingRegular.incomePoints":-1}}).fetchAsync()) {
       rBulk.find({_id:user._id}).updateOne({$set: {"rankingRegular.incomeRank":rank}});
       hasRBulk = true;
       rank++;
-    });
+    }
 
     // overall rank
     rank = 1;
-    Meteor.users.find({"rankingRegular.overallPoints": {$gt:0}}, {fields: {"rankingRegular.overallPoints":1}, sort: {"rankingRegular.overallPoints":-1}}).forEach(function(user) {
+    for (const user of await Meteor.users.find({"rankingRegular.overallPoints": {$gt:0}}, {fields: {"rankingRegular.overallPoints":1}, sort: {"rankingRegular.overallPoints":-1}}).fetchAsync()) {
       rBulk.find({_id:user._id}).updateOne({$set: {"rankingRegular.overallRank":rank}});
       hasRBulk = true;
       rank++;
-    });
+    }
 
     // save
-    var rFuture = new fut();
     if (hasRBulk) {
-      rBulk.execute({}, function(error, result) {
-  	    if (error) {
-  	      console.error(error);
-  	    }
-        rFuture.return(result);
-  	  });
+      await executeBulk(rBulk);
     }
-    rFuture.wait();
   }
 }

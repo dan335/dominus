@@ -1,8 +1,7 @@
 Queues.create('updateOverallPlayerRankings');
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.updateOverallPlayerRankings.process(Meteor.bindEnvironment(function(job) {
-    dRankings.updateOverallPlayerRankings();
-    return Promise.resolve();
-  }));
+  Queues.updateOverallPlayerRankings.process(async function(job) {
+    await dRankings.updateOverallPlayerRankings();
+  });
 }

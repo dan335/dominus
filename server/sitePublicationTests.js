@@ -343,6 +343,45 @@ if (Meteor.isServer) {
           });
         });
 
+        test('meteor_facts: the server facts go to admins only, and follow a change to admin', function() {
+          // Nothing reports to the old facts package on 2.16 (Meteor's own
+          // packages report to facts-base), so there are none unless one is
+          // made here
+          Package.facts.Facts.incrementServerFact('dTest', 'factsTest', 1);
+          var factsFor = function(userId) {
+            dTest.ddp.resetRateLimits();
+            var client = dTest.ddp.connect(userId);
+            try {
+              client.collection('meteor_Facts_server');
+              var sub = client.subscribe('meteor_facts');
+              assert(sub.ready && !sub.error, 'meteor_facts is ready for ' + userId);
+              return client.docs('meteor_Facts_server').length;
+            } finally {
+              client.close();
+            }
+          };
+          assert(factsFor(f.admin) > 0, 'an admin gets the facts');
+          equal(factsFor(f.mod), 0, 'a moderator gets none');
+          equal(factsFor(f.plain), 0, 'a player gets none');
+          equal(factsFor(null), 0, 'logged out gets none');
+
+          // the filter reads the admins from an observer, so it follows changes
+          var later = account({});
+          try {
+            equal(factsFor(later), 0, 'not an admin yet');
+            Meteor.users.update(later, {$set: {admin: true}});
+            assert(dTest.waitFor(function() { return factsFor(later) > 0; }, 5000), 'made an admin: gets the facts');
+            Meteor.users.update(later, {$set: {admin: false}});
+            assert(dTest.waitFor(function() { return factsFor(later) === 0; }, 5000), 'admin: false: none again');
+            Meteor.users.update(later, {$set: {admin: true}});
+            assert(dTest.waitFor(function() { return factsFor(later) > 0; }, 5000), 'admin again');
+            Meteor.users.update(later, {$unset: {admin: ''}});
+            assert(dTest.waitFor(function() { return factsFor(later) === 0; }, 5000), 'admin field removed: none');
+          } finally {
+            Meteor.users.remove(later);
+          }
+        });
+
         test('admin_users_online: any caller gets the username and status of users with status.online (known bug)', function() {
           // there is no admin check, and status is the old user-status field;
           // presence (danimal:userpresence) replaced it

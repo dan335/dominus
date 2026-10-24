@@ -66,8 +66,9 @@ var checkForGameEnd = function() {
       Games.update(game._id, {$set: {winningPlayer:winnerData, closeDate:closeDate}});
 
       dAlerts.gAlert_gameOver(game._id, winningPlayer._id);
-      dGraphs.updateIncomeRank(game._id);
-      dGraphs.updateVassalRank(game._id);
+      // async since upgrade PR 7; this job converts in PR 15
+      Promise.await(dGraphs.updateIncomeRank(game._id));
+      Promise.await(dGraphs.updateVassalRank(game._id));
       updatePlayersWithRank(game._id);
       updateGameWithResults(game._id);
       Queues.add('updateOverallPlayerRankings', {}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*10}, false);

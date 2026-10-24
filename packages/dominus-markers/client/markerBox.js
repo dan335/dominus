@@ -33,6 +33,6 @@ Template.markerBox.events({
   'click .removeMarkerButton': function(event, template) {
     event.preventDefault();
     var data = Template.currentData();
-    Meteor.call('removeMarker', data._id);
+    dFunc.callAndForget('removeMarker', data._id);
   }
 })

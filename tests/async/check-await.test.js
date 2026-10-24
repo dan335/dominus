@@ -113,3 +113,23 @@ test('an ignore comment with a reason skips its line or the next', function() {
     'function c() { load(); } // check-await: ignore',
   ].join('\n')), [5]);
 });
+
+test('--meteor3 flags observe, observeChanges and _publishCursor outside client files', function() {
+  const source = [
+    'function a() { Players.find().observe({added: function() {}}); }',
+    'function b() { var h = Players.find().observeChanges({}); }',
+    'function c(sub) { Mongo.Collection._publishCursor(Players.find(), sub, "players"); }',
+    'async function d(sub) { await Mongo.Collection._publishCursor(Players.find(), sub, "players"); }',
+    'async function e() { await Players.find().observeAsync({}); }',
+    'function f() { return Players.find().observe({}); }'
+  ].join('\n');
+  const lines = function(name, options) {
+    return checkSources({[name]: source}, options).map(function(f) { return f.line; });
+  };
+  assert.deepStrictEqual(lines('server/a.js', {meteor3: true}), [1, 2, 3]);
+  assert.deepStrictEqual(lines('lib/a.js', {meteor3: true}), [1, 2, 3], 'shared files too');
+  assert.deepStrictEqual(lines('client/a.js', {meteor3: true}), [], 'not client files: observe stays sync there');
+  assert.deepStrictEqual(lines('server/a.js'), [], 'not without the option');
+  const finding = checkSources({'server/a.js': source}, {meteor3: true})[0];
+  assert.strictEqual(finding.kind, 'meteor3');
+});

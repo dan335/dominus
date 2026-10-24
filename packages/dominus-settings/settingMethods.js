@@ -1,6 +1,6 @@
 Meteor.methods({
-  getGameInfo: function(gameId) {
+  getGameInfo: async function(gameId) {
     check(gameId, String);
-    return Games.findOne(gameId);
+    return await Games.findOneAsync(gameId);
   }
 })

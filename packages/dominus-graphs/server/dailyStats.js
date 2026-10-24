@@ -4,17 +4,16 @@
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.update_losses_worth.process(Meteor.bindEnvironment(function(job) {
-    dGraphs.update_losses_worth(job.data.playerId);
-    return Promise.resolve();
-  }));
+  Queues.update_losses_worth.process(async function(job) {
+    await dGraphs.update_losses_worth(job.data.playerId);
+  });
 }
 
 
-dGraphs.update_losses_worth = function(playerId) {
+dGraphs.update_losses_worth = async function(playerId) {
 	check(playerId, String);
 
-	var player = Players.findOne(playerId, {fields: {losses:1, gameId:1, userId:1}})
+	var player = await Players.findOneAsync(playerId, {fields: {losses:1, gameId:1, userId:1}})
 	if (player && player.losses) {
 		// worth of losses in gold
 		var worth = {gold: 0}
@@ -34,11 +33,11 @@ dGraphs.update_losses_worth = function(playerId) {
 		worth.total = worth.gold
 
 		// convert to gold
-		_s.market.types.forEach(function(t) {
-			var m = Market.findOne({gameId:player.gameId, type: t}, {fields: {price: 1}})
-			if (!m) { return false }
+		for (const t of _s.market.types) {
+			var m = await Market.findOneAsync({gameId:player.gameId, type: t}, {fields: {price: 1}})
+			if (!m) { continue }
 			worth.total += m.price * worth[t]
-		})
+		}
 
 		check(worth.total, validNumber)
 
@@ -52,7 +51,7 @@ dGraphs.update_losses_worth = function(playerId) {
 
 		check(num, validNumber)
 		check(player.userId, String);
-		Dailystats.upsert({
+		await Dailystats.upsertAsync({
 			playerId:playerId,
 			created_at: {$gte: _gs.statsBegin(player.gameId), $lt: _gs.statsEnd(player.gameId)}
 		}, {
@@ -67,7 +66,7 @@ dGraphs.update_losses_worth = function(playerId) {
 				updated_at:dClock.now()
 			}
 		})
-		Players.update(playerId, {$set: {losses_worth:worth.total, losses_num:num}})
+		await Players.updateAsync(playerId, {$set: {losses_worth:worth.total, losses_num:num}})
 	}
 }
 
@@ -76,18 +75,16 @@ dGraphs.update_losses_worth = function(playerId) {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.updateIncomeStats.process(Meteor.bindEnvironment(function(job) {
+  Queues.updateIncomeStats.process(async function(job) {
 
     const playerFields = {gameId:1, castleIncome:1, capitalIncome:1, villageIncome:1, vassalIncome:1, userId:1};
-		Players.find({gameId:job.data.gameId}, {fields:playerFields}).forEach(function(player) {
-			dGraphs.updateIncomeStats(player);
-		});
-
-    return Promise.resolve();
-  }));
+		for (const player of await Players.find({gameId:job.data.gameId}, {fields:playerFields}).fetchAsync()) {
+			await dGraphs.updateIncomeStats(player);
+		}
+  });
 }
 
-dGraphs.updateIncomeStats = function(player) {
+dGraphs.updateIncomeStats = async function(player) {
 
   let totalIncome = 0;
   let capitalIncome = 0;
@@ -119,7 +116,7 @@ dGraphs.updateIncomeStats = function(player) {
   }
 
 	check(player.userId, String);
-	Dailystats.upsert({
+	await Dailystats.upsertAsync({
 		playerId: player._id,
 		created_at: {$gte: _gs.statsBegin(player.gameId), $lt: _gs.statsEnd(player.gameId)}
 	}, {
@@ -145,19 +142,18 @@ dGraphs.updateIncomeStats = function(player) {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.updateIncomeRank.process(Meteor.bindEnvironment(function(job) {
-    dGraphs.updateIncomeRank(job.data.gameId);
-    return Promise.resolve();
-  }));
+  Queues.updateIncomeRank.process(async function(job) {
+    await dGraphs.updateIncomeRank(job.data.gameId);
+  });
 }
 
 
 
-dGraphs.updateIncomeRank = function(gameId) {
+dGraphs.updateIncomeRank = async function(gameId) {
 	var rank = 1
 	var prevIncome = null
 
-	Players.find({gameId:gameId}, {sort: {income:-1}, fields: {userId:1, income:1}}).forEach(function(player) {
+	for (const player of await Players.find({gameId:gameId}, {sort: {income:-1}, fields: {userId:1, income:1}}).fetchAsync()) {
 
 		check(player.userId, String);
 
@@ -170,7 +166,7 @@ dGraphs.updateIncomeRank = function(gameId) {
 			rank++
 		}
 
-		Dailystats.upsert({
+		await Dailystats.upsertAsync({
 			playerId: player._id,
 			created_at: {$gte: _gs.statsBegin(gameId), $lt: _gs.statsEnd(gameId)}
 		}, {
@@ -179,29 +175,28 @@ dGraphs.updateIncomeRank = function(gameId) {
 		});
 
 		prevIncome = player.income;
-	})
+	}
 }
 
 
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.updateVassalRank.process(2, Meteor.bindEnvironment(function(job) {
-    dGraphs.updateVassalRank(job.data.gameId);
-    return Promise.resolve();
-  }));
+  Queues.updateVassalRank.process(2, async function(job) {
+    await dGraphs.updateVassalRank(job.data.gameId);
+  });
 }
 
 
 
-dGraphs.updateVassalRank = function(gameId) {
+dGraphs.updateVassalRank = async function(gameId) {
 	let playerFields = {userId:1, num_allies_below:1};
 	let playerSort = {num_allies_below:-1};
 
 	let rank = 1;
 	let prevNumVassals = null;
 
-	Players.find({gameId:gameId}, {sort:playerSort, fields:playerFields}).forEach(function(player) {
+	for (const player of await Players.find({gameId:gameId}, {sort:playerSort, fields:playerFields}).fetchAsync()) {
 
 		check(player.userId, String);
 
@@ -214,7 +209,7 @@ dGraphs.updateVassalRank = function(gameId) {
 			rank++;
 		}
 
-		Dailystats.upsert({
+		await Dailystats.upsertAsync({
 			playerId: player._id,
 			created_at: {$gte: _gs.statsBegin(gameId), $lt: _gs.statsEnd(gameId)}
 		}, {
@@ -223,7 +218,7 @@ dGraphs.updateVassalRank = function(gameId) {
 		});
 
 		prevNumVassals = player.num_allies_below;
-	})
+	}
 }
 
 
@@ -232,18 +227,17 @@ dGraphs.updateVassalRank = function(gameId) {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.initDailystatsForNewUser.process(4, Meteor.bindEnvironment(function(job) {
-    dGraphs.init_dailystats_for_new_user(job.data.gameId, job.data.userId, job.data.playerId);
-    return Promise.resolve();
-  }));
+  Queues.initDailystatsForNewUser.process(4, async function(job) {
+    await dGraphs.init_dailystats_for_new_user(job.data.gameId, job.data.userId, job.data.playerId);
+  });
 }
 
-dGraphs.init_dailystats_for_new_user = function(gameId, userId, playerId) {
+dGraphs.init_dailystats_for_new_user = async function(gameId, userId, playerId) {
 	check(userId, String);
 	check(gameId, String);
 	check(playerId, String);
 
-	let game = Games.findOne(gameId, {fields: {numPlayers:1}});
+	let game = await Games.findOneAsync(gameId, {fields: {numPlayers:1}});
 	if (!game) {
 		game = {numPlayers:0};
 	}
@@ -286,5 +280,5 @@ dGraphs.init_dailystats_for_new_user = function(gameId, userId, playerId) {
 		losses_num: 0,
 		incomeRank: game.numPlayers
 	}
-	Dailystats.insert(stat)
+	await Dailystats.insertAsync(stat)
 }

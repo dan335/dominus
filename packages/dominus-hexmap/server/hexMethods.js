@@ -1,5 +1,5 @@
 Meteor.methods({
-  coords_to_id: function(gameId, x, y, type) {
+  coords_to_id: async function(gameId, x, y, type) {
     check(gameId, String);
     check(x, validNumber);
     check(y, validNumber);
@@ -9,7 +9,7 @@ Meteor.methods({
 
     switch (type) {
       case 'hex':
-        var h = Hexes.findOne({gameId: gameId, x: x, y: y}, {fields: {_id: 1}});
+        var h = await Hexes.findOneAsync({gameId: gameId, x: x, y: y}, {fields: {_id: 1}});
         if (h) {
           id = h._id;
         }
@@ -26,6 +26,7 @@ getResourcesGatheredAtHex: function(gameId, x, y) {
   check(y, Match.Integer);
   check(gameId, String);
 
+  // sync until the villages domain converts (upgrade PR 11)
   var resources = dVillages.resourcesFromSurroundingHexes(gameId, x, y, _s.villages.num_rings_village);
   return resources;
 },

@@ -61,7 +61,7 @@ if (Meteor.isServer) {
 
     // runs a method's handler the way a call from the server would (so the
     // method gate is skipped and only the method's own checks can refuse it);
-    // returns the error it threw, or null
+    // returns the error it threw (or its promise rejected with), or null
     function callMethod(name, args, userId) {
       var invocation = {
         isSimulation: false, userId: userId, connection: null, randomSeed: null,
@@ -69,7 +69,7 @@ if (Meteor.isServer) {
       };
       try {
         DDP._CurrentMethodInvocation.withValue(invocation, function() {
-          Meteor.server.method_handlers[name].apply(invocation, args);
+          dTest.settle(Meteor.server.method_handlers[name].apply(invocation, args));
         });
         return null;
       } catch (e) {
@@ -91,7 +91,7 @@ if (Meteor.isServer) {
     function publish(name, args, userId) {
       var sub = fakeSub(userId);
       try {
-        return {result: Meteor.server.publish_handlers[name].apply(sub, args)};
+        return {result: dTest.settle(Meteor.server.publish_handlers[name].apply(sub, args))};
       } catch (e) {
         return {error: e};
       } finally {

@@ -132,12 +132,14 @@ The server code is moving from fibers to `async`/`await`, one domain per PR, whi
   - The worker takes no jobs until `_gs.ready` resolves.
   - A cache miss logs an error with its stack, once per game.
 - **Methods** (`both/*Methods.js` run on client and server):
-  - The method body becomes `async`.
-  - Any client-only simulation stays sync behind `if (this.isSimulation)`.
+  - A server-only method becomes an `async function`.
+  - A shared method stays a plain function. Its simulation is sync, behind `if (this.isSimulation) { ...; return; }`, and the server's part is `return (async () => { ... })();`. On 2.16 two async simulations that overlap throw "Called saveOriginals twice without retrieveOriginals" in the browser and the second one's change is lost (`tests/e2e/specs/markers.spec.js`).
   - A method with no useful simulation loses its client stub.
-  - As each method converts, its client callers move from `Meteor.call` to `Meteor.callAsync`.
+  - As each method converts, its client callers move from `Meteor.call` to `Meteor.callAsync`: `dFunc.callAndForget(name, ...args)` for a call nobody waits for (it logs a refusal the way `Meteor.call` does), and `dFunc.callWithCallback(name, args, callback)` in place of `Meteor.apply(name, args, {}, callback)`. A server-only method (no stub) can keep `Meteor.call`.
   - Shared helpers the client calls sync get a server `…Async` twin, as with `dMarket.total_of_buyAsync`.
 - **Order.** Callers can go first. On 2.16, an async function can still make sync Meteor calls after an `await`. `node tests/async/async-graph.js` shows how far converting a domain ripples into others.
+  - A sync caller in a domain that hasn't converted yet calls a converted function as `Promise.await(fn())`, with a comment naming the PR that converts the caller. The final sweep removes these.
+- **Publications and observers.** On Meteor 3, server `observe`, `observeChanges` and `Mongo.Collection._publishCursor` return promises. Use `observeAsync`/`observeChangesAsync`, and make a publication that calls `_publishCursor` async and await it. `node tests/async/check-await.js --meteor3` lists the ones left.
 - **Tests.** Test files keep their own sync setup calls until the final sweep. They add `await`, or `dTest.settle`, only where they call converted functions.
 
 ### Tech Stack

@@ -33,14 +33,14 @@ Meteor.publish('adminRoomchats', function(chatroom_id) {
 	}
 });
 
-Meteor.publish('adminChatUsers', function(userIds) {
+Meteor.publish('adminChatUsers', async function(userIds) {
 	check(userIds, Match.OneOf([String], null));
 	var self = this;
 
 	if (this.userId && get_user_property("admin", this.userId)) {
 		var options = {fields:{username:1, x:1, y:1, castle_id:1}};
     var query = Meteor.users.find({_id: {$in:userIds}}, options, {disableOplog:true});
-    Mongo.Collection._publishCursor(query, self, 'adminchatusers');
+    await Mongo.Collection._publishCursor(query, self, 'adminchatusers');
 	}
 	return self.ready();
 })

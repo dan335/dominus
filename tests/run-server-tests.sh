@@ -76,7 +76,9 @@ REPORT="$OUT/server-tests.md"
 [ -d tests/async/node_modules ] || npm ci --prefix tests/async --no-audit --no-fund > /dev/null 2>&1 || true
 if node tests/async/check-await.js > "$OUT/check-await.txt" 2>&1 &&
     (cd tests/async && node --test check-await.test.js) > "$OUT/check-await-tests.txt" 2>&1; then
-    printf '## Missing-await check: passed\n\n%s, and its own tests.\n\n' "$(tail -1 "$OUT/check-await.txt")" >> "$REPORT"
+    node tests/async/check-await.js --meteor3 > "$OUT/check-await-meteor3.txt" 2>&1 || true
+    printf '## Missing-await check: passed\n\n%s, and its own tests. Left for Meteor 3 (observe, observeChanges, _publishCursor; `--meteor3`): %s.\n\n' \
+        "$(tail -1 "$OUT/check-await.txt")" "$(grep -c '' "$OUT/check-await-meteor3.txt" | awk '{print $1 - 1}')" >> "$REPORT"
 else
     STATUS=1
     printf '## Missing-await check: FAILED\n\n```\n%s\n%s\n```\n\n' "$(tail -40 "$OUT/check-await.txt")" \

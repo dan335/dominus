@@ -315,6 +315,87 @@ if (Meteor.isServer) {
           equal(doc.inc.gold, 0, 'inc.gold');
         });
 
+        test('generateTree: a lord\'s vassals are listed by name', function() {
+          conquer(0, 2);
+          conquer(0, 1);
+          runJob('generateTree', {gameId: w.gameId});
+          var tree = Games.findOne(w.gameId).tree;
+          equal(tree.length, 1, 'one king');
+          equal(JSON.stringify(_.pluck(tree[0].vassals, 'username')),
+            JSON.stringify(_.sortBy([w.players[1].username, w.players[2].username], _.identity)), 'both vassals, by name');
+          equal(JSON.stringify(_.pluck(tree[0].vassals, 'vassals')), '[[],[]]', 'with no vassals of their own');
+          restoreRelations();
+        });
+
+
+        // --- updateOverallPlayerRankings ---
+
+        test('updateOverallPlayerRankings: wins, games and points from ended games, regular and pro kept apart', function() {
+          var users = _.times(3, function() { return t.createTestUser(); });
+          var a = users[0]._id, b = users[1]._id, c = users[2]._id;
+          var results = function(numVassals, income) {
+            return {numVassals: numVassals, income: income};
+          };
+          var games = [
+            // regular: a won, a is 1st by vassals and 3rd by income, b 2nd and 1st
+            t.createTestGame({name: 'Rankings Regular', hasEnded: true,
+              results: results([{userId: a, rank: 1}, {userId: b, rank: 2}], [{userId: b, rank: 1}, {userId: a, rank: 3}])}),
+            // pro: c is 1st by both
+            t.createTestGame({name: 'Rankings Pro', hasEnded: true, isProOnly: true,
+              results: results([{userId: c, rank: 1}], [{userId: c, rank: 1}])}),
+            // not ended, and crazy fast: neither counts
+            t.createTestGame({name: 'Rankings Running'}),
+            t.createTestGame({name: 'Rankings Crazy', hasEnded: true, isCrazyFast: true,
+              results: results([{userId: b, rank: 1}], [{userId: b, rank: 1}])})
+          ];
+          var gameIds = _.pluck(games, '_id');
+          var join = function(game, userId, won) {
+            Players.insert({gameId: gameIds[game], userId: userId, username: 'rankings', wonGame: won});
+          };
+          join(0, a, true);
+          join(0, b, false);
+          join(1, c, false);
+          join(2, a, true);
+          join(3, b, true);
+          // a rank 1 is 110 points, 2 is 89, 3 is 78
+          try {
+            runJob('updateOverallPlayerRankings', {});
+            var ranking = function(userId, kind) { return Meteor.users.findOne(userId)[kind]; };
+            var fields = function(r) { return [r.numGames, r.wins, r.numVassalsPoints, r.incomePoints, r.overallPoints].join(','); };
+            equal(fields(ranking(a, 'rankingRegular')), '1,1,110,78,688', 'a regular: one game, a win, 500 + 110 + 78 points');
+            equal(fields(ranking(b, 'rankingRegular')), '1,0,89,110,199', 'b regular: the crazy fast win doesn\'t count');
+            equal(fields(ranking(c, 'rankingPro')), '1,0,110,110,220', 'c pro');
+            equal(fields(ranking(a, 'rankingPro')), '0,0,0,0,0', 'a has no pro games');
+            equal(fields(ranking(c, 'rankingRegular')), '0,0,0,0,0', 'c has no regular games');
+
+            // ranks: one more than the number of users with more points
+            var rankOf = function(userId, kind, field) {
+              var points = ranking(userId, kind)[field + 'Points'];
+              var above = {};
+              above[kind + '.' + field + 'Points'] = {$gt: points};
+              var tied = {};
+              tied[kind + '.' + field + 'Points'] = points;
+              var rank = ranking(userId, kind)[field + 'Rank'];
+              var lowest = Meteor.users.find(above).count() + 1;
+              assert(rank >= lowest && rank < lowest + Meteor.users.find(tied).count(),
+                userId + ' ' + kind + ' ' + field + 'Rank ' + rank + ', expected from ' + lowest);
+              return rank;
+            };
+            assert(rankOf(a, 'rankingRegular', 'numVassals') < rankOf(b, 'rankingRegular', 'numVassals'), 'a above b by vassals');
+            assert(rankOf(b, 'rankingRegular', 'income') < rankOf(a, 'rankingRegular', 'income'), 'b above a by income');
+            assert(rankOf(a, 'rankingRegular', 'overall') < rankOf(b, 'rankingRegular', 'overall'), 'a above b overall');
+            ['numVassals', 'income', 'overall'].forEach(function(field) { rankOf(c, 'rankingPro', field); });
+            equal(ranking(a, 'rankingPro').overallRank, 0, 'no pro points, no pro rank');
+
+            // run again: the same, not doubled
+            runJob('updateOverallPlayerRankings', {});
+            equal(fields(ranking(a, 'rankingRegular')), '1,1,110,78,688', 'a regular after a second run');
+          } finally {
+            gameIds.forEach(function(id) { Players.remove({gameId: id}); Games.remove(id); });
+            users.forEach(function(user) { t.cleanupUser(user._id); });
+          }
+        });
+
 
         // --- sendGameStartedEmail (Email.send replaced) ---
 

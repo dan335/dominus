@@ -34,7 +34,11 @@ if (Meteor.isServer) {
     };
     var result;
     try {
+      // an async handler rejects instead (Queues.runJob logs that as
+      // "Exception in job <name>")
       result = dTest.settle(queue.handler(job));
+    } catch (error) {
+      logged.push(error instanceof Error ? error : new Error(String(error)));
     } finally {
       Meteor._debug = debug;
     }

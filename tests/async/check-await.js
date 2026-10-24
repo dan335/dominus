@@ -4,6 +4,7 @@
 //   node tests/async/check-await.js          # every app file; exit 1 on a finding
 //   node tests/async/check-await.js --json   # the findings as JSON
 //   node tests/async/check-await.js a.js b.js
+//   node tests/async/check-await.js --meteor3  # also the calls listed below
 //
 // It flags a call that returns a promise when nothing waits for it: the call
 // is not awaited, not returned, not handed to Promise.all and not followed by
@@ -26,11 +27,17 @@
 // `void fooAsync()` says nobody waits on purpose. A line can also be skipped
 // with a comment on it or on the line above: // check-await: ignore <reason>
 //
+// With --meteor3 it also flags the calls that are sync on 2.16 but return a
+// promise on Meteor 3, outside client files: a cursor's observe() and
+// observeChanges(), and Mongo.Collection._publishCursor(). They are not
+// findings yet, so the run of the test suite leaves them out; the list is
+// what is left to change before stage 3.
+//
 // knox's S3 calls are not on the list: they take a callback and return a
 // request, not a promise.
 const fs = require('fs');
 const path = require('path');
-const {ROOT, listFiles, parse, dottedName} = require('./sources');
+const {ROOT, listFiles, parse, fileSide, dottedName} = require('./sources');
 
 const BULL_QUEUE_METHODS = new Set(['add', 'pause', 'resume', 'clean', 'close', 'empty', 'obliterate',
   'getJob', 'getJobs', 'getJobCounts', 'getWaiting', 'getActive', 'getDelayed', 'getCompleted', 'getFailed',
@@ -266,8 +273,20 @@ function asyncCallbackFindings(call) {
   return null;
 }
 
-// findings for parsed files: {file: ast}, with {file: source} for ignores
-function check(asts, sources, extraAsyncNames) {
+// why this call returns a promise on Meteor 3 but not on 2.16, or null
+function meteor3Reason(call) {
+  const callee = call.callee;
+  if (callee.type !== 'MemberExpression' || callee.computed) return null;
+  const last = callee.property.name;
+  if (last === 'observe' || last === 'observeChanges') return last + '() returns a promise on Meteor 3 (use ' + last + 'Async)';
+  if (dottedName(callee) === 'Mongo.Collection._publishCursor') return 'Mongo.Collection._publishCursor() returns a promise on Meteor 3';
+  return null;
+}
+
+// findings for parsed files: {file: ast}, with {file: source} for ignores;
+// options.meteor3 adds the calls meteor3Reason names
+function check(asts, sources, extraAsyncNames, options) {
+  options = options || {};
   const asyncNames = Object.assign(asyncDefinitions(asts), extraAsyncNames || {});
   const findings = [];
   for (const [file, ast] of Object.entries(asts)) {
@@ -284,19 +303,24 @@ function check(asts, sources, extraAsyncNames) {
         findings.push({file: file, line: line, column: node.loc.start.column + 1, kind: 'not-awaited',
           message: reason + ', and nothing waits for it'});
       }
+      const laterReason = options.meteor3 && !reason && fileSide(path.join(ROOT, file)) !== 'client' && meteor3Reason(node);
+      if (laterReason && !isWaitedFor(node)) {
+        findings.push({file: file, line: line, column: node.loc.start.column + 1, kind: 'meteor3',
+          message: laterReason + ', and nothing waits for it'});
+      }
     });
   }
   return findings;
 }
 
 // for tests: check({name: source})
-function checkSources(sources) {
+function checkSources(sources, options) {
   const asts = {};
   for (const [file, source] of Object.entries(sources)) asts[file] = link(parse(source));
-  return check(asts, sources);
+  return check(asts, sources, null, options);
 }
 
-function checkFiles(files) {
+function checkFiles(files, options) {
   const sources = {};
   const asts = {};
   for (const file of files) {
@@ -304,7 +328,7 @@ function checkFiles(files) {
     sources[name] = fs.readFileSync(file, 'utf8');
     asts[name] = link(parse(sources[name]));
   }
-  return {findings: check(asts, sources), asyncNames: asyncDefinitions(asts), files: files.length};
+  return {findings: check(asts, sources, null, options), asyncNames: asyncDefinitions(asts), files: files.length};
 }
 
 module.exports = {checkSources, checkFiles, asyncDefinitions};
@@ -312,10 +336,11 @@ module.exports = {checkSources, checkFiles, asyncDefinitions};
 if (require.main === module) {
   const args = process.argv.slice(2);
   const json = args.includes('--json');
+  const meteor3 = args.includes('--meteor3');
   const given = args.filter(function(a) { return !a.startsWith('--'); }).map(function(f) { return path.resolve(f); });
   // async names come from every app file, even when only some are checked
   const all = listFiles();
-  const result = checkFiles(all);
+  const result = checkFiles(all, {meteor3: meteor3});
   let findings = result.findings;
   if (given.length) {
     const wanted = new Set(given.map(function(f) { return path.relative(ROOT, f); }));
