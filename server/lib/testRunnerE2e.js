@@ -120,6 +120,18 @@ if (Meteor.isServer) {
       return army._id;
     },
 
+    // a finished level 1 village for a player at x,y, with no soldiers
+    makeVillage: function(playerId, x, y) {
+      refuseInProduction();
+      var player = Players.findOne(playerId);
+      var id = Villages.insert(_.extend({gameId: player.gameId, x: x, y: y, playerId: player._id, user_id: player.userId,
+        username: player.username, name: 'E2E village', level: 1, under_construction: false, created_at: new Date(),
+        income: dVillages.resourcesFromSurroundingHexes(player.gameId, x, y, _s.villages.num_rings_village)},
+        dTest.soldierCounts({})));
+      Mapmaker.buildingAdded(player.gameId, x, y);
+      return id;
+    },
+
     // sends an army to x,y, through addArmyPath as its owner
     sendArmy: function(armyId, x, y) {
       refuseInProduction();

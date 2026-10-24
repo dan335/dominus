@@ -195,6 +195,78 @@ if (Meteor.isServer) {
           equal(calls, 1, 'called once');
         });
 
+        // when each cron next runs, as SyncedCron schedules it
+        test('every cron next runs on its own boundary, within one interval', function() {
+          var now = Date.now();
+          var seconds = {'army path speed jobs': 2, '5 sec job': 5, 'battle job': 20, 'clean up old jobs': 60,
+            'resume stuck job queue': 60, '1 min job': 60, '5 min job': 300, '10 min job': 600, '30 min job': 1800};
+          _.each(seconds, function(interval, name) {
+            var next = SyncedCron.nextScheduledAtDate(name);
+            assert(next instanceof Date, name + ': has a next run');
+            // later.js keeps the milliseconds of the time it was asked at;
+            // SyncedCron cuts them off the tick's intendedAt
+            next.setMilliseconds(0);
+            assert(next.getTime() > now - 2000 && next.getTime() <= now + interval * 1000, name + ': next run ' + next.toISOString() + ' is within ' + interval + 's');
+            // the boundaries are local time, and every zone is a whole number of minutes from UTC
+            equal((next.getSeconds() + 60 * next.getMinutes()) % interval, 0, name + ': on a ' + interval + 's boundary');
+          });
+          var midnight = SyncedCron.nextScheduledAtDate('midnight job');
+          midnight.setMilliseconds(0);
+          equal(midnight.getHours() + ':' + midnight.getMinutes() + ':' + midnight.getSeconds(), '0:0:0', 'midnight job: at midnight, server time');
+          assert(midnight.getTime() > now && midnight.getTime() <= now + 24 * 60 * 60 * 1000, 'midnight job: within a day');
+        });
+
+        // SyncedCron._entryWrapper is what the timer calls on each tick: it
+        // claims the tick in cronHistory and then runs the job. Worker and
+        // web share the database, and during a deploy two workers can run at
+        // once, so a tick that is already claimed must not run again.
+        test('a tick runs its job once, records it, and a second claim of the same tick is skipped', function() {
+          var name = 'cronTests ' + Random.id(6);
+          var runs = [];
+          SyncedCron.add({name: name, schedule: function(parser) { return parser.cron('* * * * *'); }, job: function(intendedAt) {
+            // a synchronous collection call, as every cron job makes
+            runs.push({intendedAt: intendedAt, games: Games.find({_id: w.gameId}).count()});
+            return 'ran';
+          }});
+          try {
+            var entry = SyncedCron._entries[name];
+            var tick = new Date(Date.now() - 1234);
+            equal(dTest.throws(function() { return SyncedCron._entryWrapper(entry)(tick); }), null, 'first claim');
+            equal(dTest.throws(function() { return SyncedCron._entryWrapper(entry)(tick); }), null, 'second claim of the same tick does not throw');
+            equal(runs.length, 1, 'the job ran once');
+            equal(runs[0].games, 1, 'and could read the database');
+            equal(runs[0].intendedAt.getMilliseconds(), 0, 'intendedAt is cut to the second');
+            var history = SyncedCron._collection.find({name: name}).fetch();
+            equal(history.length, 1, 'one cronHistory record');
+            equal(history[0].intendedAt.getTime(), runs[0].intendedAt.getTime(), 'for the tick');
+            equal(history[0].result, 'ran', 'with the result');
+            assert(history[0].finishedAt instanceof Date, 'and finishedAt');
+
+            equal(dTest.throws(function() { return SyncedCron._entryWrapper(entry)(new Date(tick.getTime() + 60000)); }), null, 'the next tick');
+            equal(runs.length, 2, 'runs again');
+          } finally {
+            delete SyncedCron._entries[name];
+            SyncedCron._collection.remove({name: name});
+          }
+        });
+
+        test('a job that throws is recorded with its error, and does not throw out of the tick', function() {
+          var name = 'cronTests ' + Random.id(6);
+          SyncedCron.add({name: name, schedule: function(parser) { return parser.cron('* * * * *'); }, job: function() {
+            throw new Error('cron boom');
+          }});
+          try {
+            equal(dTest.throws(function() { return SyncedCron._entryWrapper(SyncedCron._entries[name])(new Date()); }), null, 'the tick');
+            var history = SyncedCron._collection.find({name: name}).fetch();
+            equal(history.length, 1, 'one cronHistory record');
+            assert(history[0].finishedAt instanceof Date, 'finished');
+            assert(String(history[0].error).indexOf('cron boom') !== -1, 'with the error');
+          } finally {
+            delete SyncedCron._entries[name];
+            SyncedCron._collection.remove({name: name});
+          }
+        });
+
       } finally {
         t.cleanup(ended._id);
         w.cleanup();

@@ -18,13 +18,16 @@ Package.onUse(function(api) {
     'less',
     'dominus-market',
     'ecmascript',
-    'mdg:validated-method@0.2.0',
     'mdg:validation-error@0.1.0',
-    'aldeed:simple-schema@1.5.4',
     'ddp-rate-limiter',
     'random',
     'dominus-queue',
-    'percolate:synced-cron@1.3.1'
+    // 2.1.0 runs ticks the way percolate:synced-cron did. From 2.2.0 it skips a
+    // tick while an earlier one of the same cron has no finishedAt, and from
+    // 2.2.1 it calls process.exit on SIGTERM, SIGINT, an uncaught exception
+    // and an unhandled rejection, which would cut the worker's shutdown
+    // (dominus-queue/shutdown.js) short.
+    'quave:synced-cron@=2.1.0'
   ]);
   api.addFiles([
     'both/namespace.js'
@@ -54,12 +57,10 @@ Package.onUse(function(api) {
     'underscore',
     'check',
     'danimal:checkvalidnumber',
-    'mdg:validated-method',
     'mdg:validation-error',
-    'aldeed:simple-schema',
     'ddp-rate-limiter',
     'dominus-queue',
-    'percolate:synced-cron'
+    'quave:synced-cron'
   ])
   api.export([
     'dInit',

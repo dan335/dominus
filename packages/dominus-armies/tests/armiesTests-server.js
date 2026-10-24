@@ -103,8 +103,8 @@ Tinytest.add('armies.splitCombineLastMoveAt', function(test) {
   var pathId0 = Meteor.call('addArmyPath', gameId, hex.x, hex.y, newArmyId);
 
   // combine
-  dArmies.methods.combineArmies._execute({userId: 'wee'}, {gameId:gameId, armyId: army._id});
-  //dArmies.methods.combineArmies._execute({userId: 'wee'}, {gameId:gameId, armyId: newArmyId});
+  Meteor.server.method_handlers['armies.combineArmies'].call({userId: 'wee'}, {gameId:gameId, armyId: army._id});
+  //Meteor.server.method_handlers['armies.combineArmies'].call({userId: 'wee'}, {gameId:gameId, armyId: newArmyId});
   test.equal(Armies.find().count(), 1, 'one army after combining');
   var a = Armies.findOne();
   test.equal(a.footmen, 1, 'one foot');
