@@ -69,11 +69,14 @@ Meteor.startup(function() {
       name: '5 sec job',
       schedule: function(parser) {return parser.cron('*/5 * * * * *', true);},
       job: function() {
-        Queues.add('moveArmiesJob', {}, {delay:0, timeout:1000*60}, false);
+				// Each of these does all the work that is due, so one of each, waiting
+				// or running, is enough: while one is, the tick adds no other. Without
+				// the uniqueId a slow run would let them pile up, one more every 5 seconds.
+        Queues.add('moveArmiesJob', {}, {delay:0, timeout:1000*60}, 'every5sec');
 
-				Queues.add('collectCastleIncome', {}, {delay:0, timeout:1000*60*5}, false);
-  			Queues.add('collectVillageIncome', {}, {delay:0, timeout:1000*60*5}, false);
-  			Queues.add('collectCapitalIncome', {}, {delay:0, timeout:1000*60*5}, false);
+				Queues.add('collectCastleIncome', {}, {delay:0, timeout:1000*60*5}, 'every5sec');
+  			Queues.add('collectVillageIncome', {}, {delay:0, timeout:1000*60*5}, 'every5sec');
+  			Queues.add('collectCapitalIncome', {}, {delay:0, timeout:1000*60*5}, 'every5sec');
       }
     });
 

@@ -301,66 +301,339 @@ if (Meteor.isServer) {
       }
     });
 
-    run('a stalled job keeps its uniqueId (no stalled handler releases it)', function() {
+    run('a stalled job is failed, not run again, and nothing listens to stalled', function() {
       if (!isWorker) return 'skip';
       equal(testQueue().listeners('stalled').length, 0, 'no stalled listener');
       equal(Queues.runBattle.listeners('stalled').length, 0, 'none on a real queue either');
+      equal(Queues.runBattle.settings.maxStalledCount, 0, 'a stalled job is failed (its failed event releases the id)');
     });
 
-    run('real Bull job: a retried failure keeps the id, success releases it', function() {
+    run('onJobFailed keeps the id of a job whose work is still running here, or that timed out', function() {
+      testQueue();
+      var name = 'perfFixTestQueue';
+      Queues.clearUniqueIdsForJob(name);
+      var asked = false;
+      var job = {id: 'running1', data: {jobName: name, uniqueId: 'a'}, isFailed: function() { asked = true; return Promise.resolve(true); }};
+      var key = Queues.runningKey(name, 'running1');
+      try {
+        Queues.addUniqueId(name, 'a');
+        Queues.running[key] = {jobName: name};
+        Queues.onJobFailed(job, new Error('job stalled more than allowable limit'));
+        delete Queues.running[key];
+        equal(JSON.stringify(storedIds(name)), JSON.stringify(['a']), 'kept while its work runs');
+
+        var timeout = new Error('Promise timed out after 300 milliseconds');
+        timeout.name = 'TimeoutError';
+        Queues.onJobFailed(job, timeout);
+        equal(JSON.stringify(storedIds(name)), JSON.stringify(['a']), 'kept after a timeout: the work is running somewhere here');
+        equal(asked, false, 'without reading the job state');
+
+        Queues.onJobFailed(job, new Error('job stalled more than allowable limit'));
+        equal(storedIds(name).length, 0, 'released for a job left behind by a worker that stopped');
+      } finally {
+        delete Queues.running[key];
+        Queues.clearUniqueIdsForJob(name);
+      }
+    });
+
+    run('Queues.add never asks Bull for retries, and keeps the other options', function() {
+      var calls = [];
+      var queue = testQueue();
+      var restore = stub(queue, 'add', function(data, options) { calls.push(options); return Promise.resolve(); });
+      try {
+        Queues.add('perfFixTestQueue', {}, {attempts: 10, backoff: {type: 'fixed', delay: 15000}, delay: 3000, timeout: 60000}, false);
+        Queues.add('perfFixTestQueue', {}, {delay: 0}, false);
+      } finally {
+        restore();
+      }
+      equal(JSON.stringify(calls[0]), JSON.stringify({delay: 3000, timeout: 60000, attempts: 1}), 'attempts 1, no backoff, delay and timeout kept');
+      equal(JSON.stringify(calls[1]), JSON.stringify({delay: 0, attempts: 1}), 'attempts 1 when none was given');
+    });
+
+    run('Queues.add releases the uniqueId when Redis refuses the job', function() {
+      var queue = testQueue();
+      var name = 'perfFixTestQueue';
+      Queues.clearUniqueIdsForJob(name);
+      var restores = [
+        stub(queue, 'add', function() { return Promise.reject(new Error('redis down')); }),
+        stub(console, 'error', function() {})
+      ];
+      try {
+        Queues.add(name, {}, {delay: 0}, 'refused');
+        assert(waitFor(function() { return storedIds(name).length === 0; }, 5000), 'id released');
+      } finally {
+        restoreAll(restores);
+        Queues.clearUniqueIdsForJob(name);
+      }
+    });
+
+    run('Queues.addAsync adds a job once Redis has it, and skips a duplicate', function() {
+      var queue = testQueue();
+      var name = 'perfFixTestQueue';
+      Queues.clearUniqueIdsForJob(name);
+      var calls = [];
+      var restore = stub(queue, 'add', function(data, options) { calls.push({data: data, options: options}); return Promise.resolve(); });
+      try {
+        equal(dTest.settle(Queues.addAsync(name, {n: 1}, {attempts: 5, delay: 0}, 'async1')), true, 'added');
+        equal(dTest.settle(Queues.addAsync(name, {n: 2}, {delay: 0}, 'async1')), false, 'duplicate skipped');
+        equal(dTest.settle(Queues.addAsync(name, {n: 3}, {delay: 0}, false)), true, 'a job without an id is added');
+        equal(calls.length, 2, 'two jobs reached Bull');
+        equal(JSON.stringify(calls[0].data), JSON.stringify({n: 1, uniqueId: 'async1', jobName: name}), 'with its id and name');
+        equal(calls[0].options.attempts, 1, 'and no retries');
+        equal(JSON.stringify(storedIds(name)), JSON.stringify(['async1']), 'the id is stored');
+      } finally {
+        restore();
+      }
+
+      restore = stub(queue, 'add', function() { return Promise.reject(new Error('redis down')); });
+      try {
+        var e = dTest.throws(function() { return Queues.addAsync(name, {}, {delay: 0}, 'async2'); });
+        equal(e && e.message, 'redis down', 'a refused job rejects');
+        equal(JSON.stringify(storedIds(name)), JSON.stringify(['async1']), 'and its id is released');
+      } finally {
+        restore();
+        Queues.clearUniqueIdsForJob(name);
+      }
+    });
+
+    run('a queue error is logged, the same one at most once a minute', function() {
+      var logged = [];
+      var restore = stub(console, 'error', function() { logged.push(_.toArray(arguments).join(' ')); });
+      var name = 'perfFixErrorTest' + Random.id(4);
+      try {
+        equal(Queues.onQueueError(name, new Error('connect ECONNREFUSED')), true, 'first one logged');
+        equal(Queues.onQueueError(name, new Error('connect ECONNREFUSED')), false, 'the same again is not');
+        equal(Queues.onQueueError(name, new Error('another')), true, 'a different one is');
+        equal(logged.length, 2, 'two lines');
+        assert(logged[0].indexOf('job queue ' + name + ' error:') === 0, 'naming the queue: ' + logged[0]);
+        assert(testQueue().listeners('error').length >= 1, 'every queue has an error listener');
+      } finally {
+        restore();
+        _.keys(Queues._lastErrors).forEach(function(k) { if (k.indexOf(name) === 0) delete Queues._lastErrors[k]; });
+      }
+    });
+
+    run('the Bull 2 sets of finished jobs are deleted, with their jobs; Bull 4 keys are kept', function() {
+      var queue = testQueue();
+      var name = 'perfFixTestQueue';
+      var client = queue.client;
+      var completed = queue.toKey('completed');
+      var failed = queue.toKey('failed');
+      var saved = {};
+      // keep what Bull 4 has there now, to put it back afterwards
+      [completed, failed].forEach(function(key) {
+        saved[key] = awaitPromise(client.zrange(key, 0, -1, 'WITHSCORES'));
+      });
+      try {
+        awaitPromise(client.del(completed, failed));
+        awaitPromise(client.sadd(completed, 'old1', 'old2'));
+        awaitPromise(client.hset(queue.toKey('old1'), 'data', '{}'));
+        awaitPromise(client.hset(queue.toKey('old2'), 'data', '{}'));
+        awaitPromise(client.zadd(failed, 1, 'new1'));
+        awaitPromise(client.hset(queue.toKey('new1'), 'data', '{}'));
+
+        var dropped = [];
+        var restore = stub(console, 'log', function() {});
+        try {
+          dropped = dTest.settle(Queues.dropBull2Keys(name));
+        } finally {
+          restore();
+        }
+        equal(JSON.stringify(dropped), JSON.stringify(['completed']), 'only the Bull 2 set');
+        equal(awaitPromise(client.exists(completed)), 0, 'the set is gone');
+        equal(awaitPromise(client.exists(queue.toKey('old1'), queue.toKey('old2'))), 0, 'with its jobs');
+        equal(awaitPromise(client.type(failed)), 'zset', 'the Bull 4 sorted set is kept');
+        equal(awaitPromise(client.exists(queue.toKey('new1'))), 1, 'with its job');
+        equal(JSON.stringify(dTest.settle(Queues.dropBull2Keys(name))), '[]', 'nothing to do the second time');
+      } finally {
+        awaitPromise(client.del(completed, failed, queue.toKey('old1'), queue.toKey('old2'), queue.toKey('new1')));
+        [completed, failed].forEach(function(key) {
+          if (saved[key].length) awaitPromise(client.zadd.apply(client, [key].concat(_.flatten(_.zip(_.filter(saved[key], function(v, i) { return i % 2; }), _.filter(saved[key], function(v, i) { return !(i % 2); }))))));
+        });
+      }
+    });
+
+    run('real Bull job: a handler that rejects is logged and not retried, even when attempts are asked for', function() {
       if (!isWorker) return 'skip';
       var queue = testQueue();
       var name = 'perfFixTestQueue';
       Queues.clearUniqueIdsForJob(name);
       var attempts = 0;
-      var heldDuringRetry = null;
       testQueueBehavior = function(job) {
         attempts++;
-        if (attempts == 1) {
-          return Promise.reject(new Error('first attempt fails'));
-        }
-        // second attempt: the id must still be stored at this point
-        // (read Redis directly: this handler runs outside a fiber)
-        return queue.client.exists(Queues.getKeyString(name, 'retryJob')).then(function(exists) {
-          heldDuringRetry = exists;
-        });
+        return Promise.reject(new Error('planted failure'));
       };
+      var logged = [];
+      var restore = stub(Meteor, '_debug', function() { logged.push(_.toArray(arguments).join(' ')); });
+      var completed = null;
+      var listener = function(job) { if (job.data.test == 'retry') completed = job; };
+      queue.on('completed', listener);
       try {
-        Queues.add(name, {test: 'retry'}, {attempts: 2, backoff: {type: 'fixed', delay: 1000}, delay: 0}, 'retryJob');
-
-        assert(waitFor(function() { return attempts >= 1; }, 10000), 'first attempt ran');
-        Meteor._sleepForMs(300);
-        equal(Queues.addUniqueId(name, 'retryJob'), false, 'id still held after the retried failure');
-
-        assert(waitFor(function() { return attempts >= 2; }, 10000), 'second attempt ran');
-        // the handler sets heldDuringRetry once Redis answers, a moment after it starts
-        assert(waitFor(function() { return heldDuringRetry !== null; }, 10000), 'second attempt read Redis');
-        equal(heldDuringRetry, 1, 'id held while the retry ran');
-        assert(waitFor(function() { return storedIds(name).length === 0; }, 10000), 'id released after success');
+        Queues.add(name, {test: 'retry'}, {attempts: 3, backoff: {type: 'fixed', delay: 200}, delay: 0}, 'retryJob');
+        assert(waitFor(function() { return completed; }, 10000), 'Bull counted the job done');
+        assert(waitFor(function() { return storedIds(name).length === 0; }, 5000), 'id released');
+        Meteor._sleepForMs(800);
+        equal(attempts, 1, 'it ran once');
+        assert(_.some(logged, function(line) { return line.indexOf('Exception in job perfFixTestQueue') === 0 && line.indexOf('planted failure') !== -1; }), 'the rejection was logged: ' + logged.join(' | '));
+        equal(Queues.addUniqueId(name, 'retryJob'), true, 'same id can be queued again');
       } finally {
+        queue.removeListener('completed', listener);
+        restore();
         testQueueBehavior = null;
         Queues.clearUniqueIdsForJob(name);
       }
     });
 
-    run('real Bull job: a final failure releases the id', function() {
+    run('real Bull job: Bull counts a job done only once its work is done', function() {
       if (!isWorker) return 'skip';
-      testQueue();
+      var queue = testQueue();
+      var workDone = false;
+      testQueueBehavior = function(job) {
+        return new Promise(function(resolve) { setTimeout(function() { workDone = true; resolve(); }, 1500); });
+      };
+      var doneAtCompletion = null;
+      var listener = function(job) { if (job.data.test == 'slow') doneAtCompletion = workDone; };
+      queue.on('completed', listener);
+      try {
+        var start = Date.now();
+        Queues.add('perfFixTestQueue', {test: 'slow'}, {delay: 0}, false);
+        assert(waitFor(function() { return doneAtCompletion !== null; }, 10000), 'job completed');
+        equal(doneAtCompletion, true, 'its work had finished');
+        assert(Date.now() - start >= 1500, 'not before 1.5 seconds');
+      } finally {
+        queue.removeListener('completed', listener);
+        testQueueBehavior = null;
+      }
+    });
+
+    run('real Bull job: a job past its timeout fails, keeps its uniqueId until its work ends, and no duplicate runs', function() {
+      if (!isWorker) return 'skip';
+      var queue = testQueue();
       var name = 'perfFixTestQueue';
       Queues.clearUniqueIdsForJob(name);
-      var ran = false;
+      var runs = 0;
+      var workDone = false;
       testQueueBehavior = function(job) {
-        ran = true;
-        return Promise.reject(new Error('always fails'));
+        runs++;
+        return new Promise(function(resolve) { setTimeout(function() { workDone = true; resolve(); }, 1500); });
       };
+      var failedWith = null;
+      var listener = function(job, error) { if (job.data.test == 'timeout') failedWith = error; };
+      queue.on('failed', listener);
       try {
-        Queues.add(name, {test: 'final'}, {delay: 0}, 'finalJob');
-        assert(waitFor(function() { return ran; }, 10000), 'job ran');
-        assert(waitFor(function() { return storedIds(name).length === 0; }, 10000), 'id released');
-        equal(Queues.addUniqueId(name, 'finalJob'), true, 'same id can be queued again');
+        Queues.add(name, {test: 'timeout'}, {delay: 0, timeout: 300}, 'slowJob');
+        assert(waitFor(function() { return failedWith; }, 10000), 'Bull failed the job');
+        equal(failedWith.name, 'TimeoutError', 'on its timeout');
+        equal(workDone, false, 'while its work still ran');
+        Meteor._sleepForMs(200);
+        equal(JSON.stringify(storedIds(name)), JSON.stringify(['slowJob']), 'the id is still held');
+        Queues.add(name, {test: 'timeout'}, {delay: 0, timeout: 300}, 'slowJob');
+        assert(waitFor(function() { return workDone; }, 5000), 'the work finished');
+        assert(waitFor(function() { return storedIds(name).length === 0; }, 5000), 'and then the id was released');
+        Meteor._sleepForMs(300);
+        equal(runs, 1, 'the duplicate was never queued');
       } finally {
+        queue.removeListener('failed', listener);
         testQueueBehavior = null;
         Queues.clearUniqueIdsForJob(name);
+      }
+    });
+
+    run('real Bull job: a queue runs one job at a time unless its handler asks for more', function() {
+      if (!isWorker) return 'skip';
+      testQueue();
+      equal(Queues.perfFixTestQueue.concurrency, 1, 'concurrency 1 by default');
+      equal(Queues.createPlayer.concurrency, 1, 'new players one at a time (two new countries at once overlap)');
+      equal(Queues.moveArmiesJob.concurrency, 1, 'one army move tick at a time');
+      equal(Queues.runBattle.concurrency, 5, 'a handler can ask for more');
+      var running = 0;
+      var most = 0;
+      var finished = 0;
+      testQueueBehavior = function(job) {
+        running++;
+        most = Math.max(most, running);
+        return new Promise(function(resolve) {
+          setTimeout(function() { running--; finished++; resolve(); }, 300);
+        });
+      };
+      try {
+        for (var i = 0; i < 3; i++) {
+          Queues.add('perfFixTestQueue', {test: 'serial' + i}, {delay: 0}, false);
+        }
+        assert(waitFor(function() { return finished >= 3; }, 10000), 'all three ran');
+        equal(most, 1, 'never two at once');
+      } finally {
+        testQueueBehavior = null;
+      }
+    });
+
+    run('createPlayer jobs added at the same moment run one after another', function() {
+      if (!isWorker) return 'skip';
+      // Two players' new countries made at once claim the same hexes, so the
+      // jobs that make players must not overlap. Before Bull 4 they did.
+      var running = 0;
+      var most = 0;
+      var ran = 0;
+      var restore = stub(dCastles, 'createPlayer', function() {
+        running++;
+        most = Math.max(most, running);
+        Meteor._sleepForMs(300);
+        running--;
+        ran++;
+        return false;
+      });
+      try {
+        for (var i = 0; i < 3; i++) {
+          Queues.add('createPlayer', {gameId: 'perfFixNoGame', userId: 'perfFixUser' + i, username: 'perfFix' + i, makePro: false}, {delay: 0, timeout: 1000*60}, false);
+        }
+        assert(waitFor(function() { return ran >= 3; }, 10000), 'all three ran');
+        equal(most, 1, 'never two at once');
+      } finally {
+        restore();
+      }
+    });
+
+    run('stopping the worker waits for running work, then the queues can resume', function() {
+      if (!isWorker) return 'skip';
+      var queue = testQueue();
+      var workDone = false;
+      var started = false;
+      testQueueBehavior = function(job) {
+        started = true;
+        return new Promise(function(resolve) { setTimeout(function() { workDone = true; resolve(); }, 1200); });
+      };
+      var restore = stub(console, 'log', function() {});
+      try {
+        Queues.add('perfFixTestQueue', {test: 'shutdown'}, {delay: 0}, false);
+        assert(waitFor(function() { return started; }, 10000), 'job started');
+        var idle = dTest.settle(Queues.stopWorker(5000));
+        equal(idle, true, 'stopWorker reports all work done');
+        equal(workDone, true, 'only after the job\'s work finished');
+        assert(Queues.perfFixTestQueue.paused, 'the queue is paused on this worker');
+
+        // with the work outliving the grace period, it gives up and says so
+        workDone = false;
+        Queues.queueNames.forEach(function(name) { dTest.settle(Queues[name].resume(true)); });
+        var key = Queues.runningKey('perfFixTestQueue', 'stuck');
+        Queues.running[key] = {jobName: 'perfFixTestQueue'};
+        var start = Date.now();
+        idle = dTest.settle(Queues.stopWorker(500));
+        delete Queues.running[key];
+        equal(idle, false, 'work still running after the grace period');
+        assert(Date.now() - start < 3000, 'and it did not wait much longer (' + (Date.now() - start) + 'ms)');
+      } finally {
+        Queues.queueNames.forEach(function(name) { dTest.settle(Queues[name].resume(true)); });
+        restore();
+        testQueueBehavior = null;
+      }
+      // taking jobs again
+      var ranAfter = false;
+      testQueueBehavior = function() { ranAfter = true; return Promise.resolve(); };
+      try {
+        Queues.add('perfFixTestQueue', {test: 'after'}, {delay: 0}, false);
+        assert(waitFor(function() { return ranAfter; }, 10000), 'a job runs after resuming');
+      } finally {
+        testQueueBehavior = null;
       }
     });
 
@@ -711,10 +984,9 @@ if (Meteor.isServer) {
       }
     });
 
-    run('observation: Bull counts a fiber-wrapped job as done before its work finishes', function() {
-      // Documents why shutdown waits a fixed grace period instead of relying on
-      // Bull. If this fails, Bull does wait for fiber work and shutdown could
-      // exit sooner -- nothing is broken either way.
+    run('Bull counts a fiber-wrapped job as done only once its work finishes', function() {
+      // Before Bull 4 this was the other way round, which is why shutdown used
+      // to wait a fixed time instead of waiting for the work.
       if (!isWorker) return 'skip';
       if (!Queues.perfFixFiberQueue) {
         Queues.create('perfFixFiberQueue');
@@ -730,8 +1002,7 @@ if (Meteor.isServer) {
       Queues.perfFixFiberQueue.once('completed', listener);
       Queues.perfFixFiberQueue.add({});
       assert(waitFor(function() { return doneAtCompletion !== null; }, 10000), 'job completed');
-      equal(doneAtCompletion, false, 'work still running when Bull reported completion');
-      assert(waitFor(function() { return perfFixFiberDone; }, 5000), 'work finished afterwards');
+      equal(doneAtCompletion, true, 'its work had finished when Bull reported completion');
     });
 
 
