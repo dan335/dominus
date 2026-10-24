@@ -41,7 +41,7 @@ if (Meteor.isServer) {
       show_lords: 1, show_minimap: 1, show_villages: 1, signupForGame: 3, splitArmy: 3,
       startChatroomWith: 2, stripeDonationCheckout: 2, stripeProCheckout: 2,
       stripePurchaseCheckout: 4, unbanUser: 1, upgradeVillage: 2, uploadAvatarToS3: 3,
-      // ValidatedMethods take one object, checked by their schema
+      // the armies.* methods take one object
       'armies.combineArmies': 1, 'armies.joinBuilding': 1, 'armies.returnToCastle': 1,
       'armies.stopMoving': 1
     };
@@ -193,11 +193,7 @@ if (Meteor.isServer) {
           if (name == 'runAllTests') return;
           var error = callMethod(name, [], user._id);
           assert(error, name + ' with no arguments is refused');
-          // ValidatedMethods are checked by their schema, or by run() itself
-          // when they have none
-          if (name.indexOf('armies.') !== 0) {
-            assert(isMatchFailed(error), name + ': refused by check(), got ' + describe(error));
-          }
+          assert(isMatchFailed(error), name + ': refused by check(), got ' + describe(error));
         });
       } finally {
         t.cleanupUser(user._id);
@@ -212,11 +208,7 @@ if (Meteor.isServer) {
           var args = _.times(count, operator);
           var error = callMethod(name, args, user._id);
           assert(error, name + ' with {$ne: null} arguments is refused');
-          // ValidatedMethods are checked by their schema, or by run() itself
-          // when they have none
-          if (name.indexOf('armies.') !== 0) {
-            assert(isMatchFailed(error), name + ': refused by check(), got ' + describe(error));
-          }
+          assert(isMatchFailed(error), name + ': refused by check(), got ' + describe(error));
         });
       } finally {
         t.cleanupUser(user._id);

@@ -28,6 +28,6 @@ Package.onUse(function(api) {
 });
 
 Npm.depends({
-  "bull":"2.2.6",
+  "bull":"4.16.5",
   //"bull-ui":"1.2.1"
 });

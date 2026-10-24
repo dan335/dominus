@@ -2,8 +2,7 @@
 // (same folder, sorts after it).
 //
 // A job's handler is called directly, inside the test's fiber, so its work has
-// finished when dTest.runJob returns. Through Bull it wouldn't have: Bull
-// counts a fiber-bound job as done as soon as it first waits on the database.
+// finished when dTest.runJob returns, and nothing else runs in between.
 
 if (Meteor.isServer) {
 
