@@ -125,7 +125,7 @@ dInit.remove_lord_and_vassal = function(lord_id, vassal_id) {
 		console.error('winner and loser are the same in remove_lord_and_vassal');
 	}
 
-	var fields = {allies_above:1, allies_below:1, gameId:1};
+	var fields = {allies_above:1, allies_below:1, team:1, gameId:1};
 	var lord = Players.findOne(lord_id, {fields:fields});
 	var vassal = Players.findOne(vassal_id, {fields:fields});
 
@@ -192,8 +192,10 @@ dInit.remove_lord_and_vassal = function(lord_id, vassal_id) {
 	});
 	var result = future.wait();
 
-	// update count of everyone who was changed
-	var ids = _.union([lord_id, vassal_id], lord.team, vassal.team);
+	// update count of everyone who was changed: allies_below shrank for the
+	// lord and everyone above them, allies_above for the vassal and everyone
+	// below them, and team for both old teams
+	var ids = _.union([lord_id, vassal_id], lord.allies_above, vassal.allies_below, lord.team, vassal.team);
 	if (ids.length) {
 		Queues.add('updateVassalAllyCountMultiple', {playerIds:ids}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, false);
 	}
@@ -314,8 +316,10 @@ var create_lord_and_vassal = function(lord_id, vassal_id) {
 	var team = getTeamOf(newKing);
 	Players.update({_id:{$in:team}}, {$set:{team:team}}, {multi:true});
 
-	// update count of everyone who was changed
-	var ids = _.union([lord_id, vassal_id], lord.team);
+	// update count of everyone who was changed: allies_below grew for the
+	// lord and everyone above them, allies_above for the vassal and everyone
+	// below them, and team for both old teams
+	var ids = _.union([lord_id, vassal_id], lord.allies_above, vassal.allies_below, lord.team, vassal.team);
 	if (ids.length) {
 		Queues.add('updateVassalAllyCountMultiple', {playerIds:ids}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, false);
 	}

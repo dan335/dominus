@@ -235,6 +235,70 @@ if (Meteor.isServer) {
     });
 
 
+    // Random conquests through set_lord_and_vassal, with each queued
+    // updateVassalAllyCountMultiple run straight away the way the worker would.
+    // After every conquest the lists must agree with each other and the counts
+    // with the lists. A failure names the seed and the conquests that led to it.
+    // The 2.16 soak found num_allies_below drifting: remove_lord_and_vassal
+    // didn't read the team fields it recounted, and neither function recounted
+    // the players above the lord or below the vassal.
+    run('random conquests keep the relationship lists and their counts in step', function() {
+      let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
+      let queued = [];
+      let restores = [stub(Queues, 'add', function(name, data) {
+        if (name == 'updateVassalAllyCountMultiple') queued.push(data.playerIds);
+        return true;
+      })];
+      let first = {};  // kind of problem -> the first time it happened
+      try {
+        for (let seed = 1; seed <= 200; seed++) {
+          let r = seed;
+          let rand = function(n) { r = (r * 1103515245 + 12345) % 2147483648; return r % n; };
+          let ids = _.range(6).map(function(i) {
+            return Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), username: 'p' + i,
+              is_king: true, king: null, lord: null, vassals: [], allies_above: [], allies_below: [], team: []});
+          });
+          let name = function(id) { return 'p' + ids.indexOf(id); };
+          let steps = [];
+          for (let step = 0; step < 25; step++) {
+            let w = ids[rand(ids.length)], l = ids[rand(ids.length)];
+            let winner = Players.findOne(w);
+            // you can't attack yourself or your own vassals
+            if (w == l || _.contains(winner.allies_below, l)) continue;
+            steps.push(name(w) + '>' + name(l));
+            queued = [];
+            dInit.set_lord_and_vassal(w, l);
+            queued.forEach(function(playerIds) { dInit.updateVassalAllyCountMultiple(playerIds); });
+
+            let problems = [];
+            let players = Players.find({_id: {$in: ids}}).fetch();
+            players.forEach(function(p) {
+              let above = players.filter(function(o) { return _.contains(o.allies_below, p._id); }).map(function(o) { return o._id; });
+              if (_.difference(above, p.allies_above).length || _.difference(p.allies_above, above).length) {
+                problems.push(['lists', name(p._id) + ' allies_above does not match the allies_below lists']);
+              }
+              [['num_allies_below', 'allies_below'], ['num_allies_above', 'allies_above'], ['num_vassals', 'vassals'], ['num_team', 'team']].forEach(function(f) {
+                if ((p[f[0]] || 0) != (p[f[1]] || []).length) {
+                  problems.push([f[0], name(p._id) + ' ' + f[0] + ' is ' + p[f[0]] + ', the list has ' + (p[f[1]] || []).length]);
+                }
+              });
+            });
+            problems.forEach(function(pr) {
+              first[pr[0]] = first[pr[0]] || 'seed ' + seed + ', after ' + steps.join(' ') + ': ' + pr[1];
+            });
+          }
+          Players.remove({_id: {$in: ids}});
+        }
+        equal(_.map(first, function(v, k) { return k + ': ' + v; }).join('; '), '', 'no problems');
+      } finally {
+        restoreAll(restores);
+        Alerts.remove({gameId: game._id});
+        GlobalAlerts.remove({gameId: game._id});
+        Dailystats.remove({gameId: game._id});
+        t.cleanup(game._id);
+      }
+    });
+
     // --- #3 Village income lord share (dIncome.collectVillageIncome) ---
 
     // one village at (vx, vy) owned by a vassal with numLords lords, surrounded by resource hexes

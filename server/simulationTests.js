@@ -213,13 +213,7 @@ if (Meteor.isServer) {
 
   // Invariant problems the game has today. Each is a bug: fixing one means
   // taking it out of here and out of the golden file on purpose.
-  var KNOWN_PROBLEMS = [
-    // create_lord_and_vassal (packages/dominus-init/server/relationships.js)
-    // recounts the lord, the vassal and the lord's team, but not the players
-    // under the vassal, whose allies_above just grew. The nightly rebuild
-    // (updateAllKingsAllies) puts it right.
-    /^num_allies_above counts the list: sim_dave has 1, the list has 2$/
-  ];
+  var KNOWN_PROBLEMS = [];
 
   var goldenPath = function() { return path.join(dTest.appDir(), 'tests', 'golden', 'simulation.json'); };
   var resultsDir = function() { return path.join(dTest.appDir(), '.test-results', 'simulation'); };
@@ -340,12 +334,12 @@ if (Meteor.isServer) {
         equal(unexpected.join('\n'), '', 'invariant problems');
       });
 
-      run('known bug: taking a lord leaves num_allies_above stale for the players under the vassal until the nightly rebuild', function() {
+      // was a known bug: create_lord_and_vassal didn't recount the players
+      // under the vassal, so dave was counted under one lord until the nightly rebuild
+      run('taking a lord recounts num_allies_above for the players under the vassal', function() {
         var steps = playOnce();
         var problemsAt = function(name) { return _.findWhere(steps, {step: name}).invariantProblems; };
-        equal(problemsAt('alice takes carol\'s castle and becomes dominus').join('; '),
-          'num_allies_above counts the list: sim_dave has 1, the list has 2', 'dave is under carol and alice, but counted under one');
-        equal(problemsAt('the game ends two days later').join('; '), '', 'the nightly rebuild put it right');
+        equal(problemsAt('alice takes carol\'s castle and becomes dominus').join('; '), '', 'dave is under carol and alice, and counted under both');
       });
 
       run('simulation: every step matches the golden master (tests/golden/simulation.json)', function() {
