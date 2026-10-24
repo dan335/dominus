@@ -103,7 +103,8 @@ if (Meteor.isServer) {
         test('5 sec job: moves armies and collects all three kinds of income', function() {
           var jobs = runCron('5 sec job');
           equal(JSON.stringify(names(jobs)), JSON.stringify(['collectCapitalIncome', 'collectCastleIncome', 'collectVillageIncome', 'moveArmiesJob']), 'jobs');
-          assert(_.every(jobs, function(j) { return j.uniqueId === false; }), 'none unique');
+          // one of each at a time: a slow run must not let them pile up (upgrade PR 4)
+          assert(_.every(jobs, function(j) { return j.uniqueId === 'every5sec'; }), 'each unique');
         });
 
         test('battle job: re-runs each unfinished battle of a running game once its round interval has passed', function() {

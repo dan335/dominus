@@ -12,16 +12,32 @@ Queues = {
   queueNames: [],
   settings: {
     host: 'localhost',
-    port: 6379,
-    options: {}
+    port: 6379
   }
 };
 
 if (!Meteor.settings.public.dominusIsDev) {
   Queues.settings.host = process.env.DOMINUS_REDIS_HOST;
   Queues.settings.port = process.env.DOMINUS_REDIS_PORT;
-  Queues.settings.options = {no_ready_check: true};
 }
+
+// Bull's settings for every queue.
+// maxStalledCount 0: a job whose worker stopped renewing its lock (the worker
+// died, or its event loop was blocked for longer than lockDuration) is failed,
+// not run a second time. Bull's default runs it again, and most of our jobs are
+// not safe to run twice (income, a battle round, a new player). Before Bull 4
+// such work was lost too, since Bull counted the job done when it started.
+Queues.bullSettings = {
+  maxStalledCount: 0
+};
+
+// how ioredis reaches Redis; unset values fall back to ioredis's defaults
+Queues.redisOptions = function() {
+  return {
+    host: Queues.settings.host || undefined,
+    port: Number(Queues.settings.port) || undefined
+  };
+};
 
 // Meteor.startup(function() {
 //   if (process.env.DOMINUS_WORKER == 'true') {
@@ -49,20 +65,98 @@ Queues.trackJob = function(type, duration) {
 }
 
 
-// Bull calls a job handler outside a fiber. Our handlers are wrapped in
-// Meteor.bindEnvironment, which then starts a fiber and returns to Bull as soon
-// as the handler first waits on the database, so Bull marks the job completed
-// while its work is still running and the 'completed' timing above measures
-// almost nothing. Queues.timeWork measures the work itself: it runs the handler
-// in a fiber of its own, where a bound handler runs to its end, and times it
-// until it returns, or until the promise it returns settles. Bull still gets
-// what it got before: the handler's return value if it returned without
-// waiting, otherwise undefined.
-// The totals are kept in memory and added to JobWorkStats, one doc per job
-// type and UTC day, once a minute, to set real timeouts and lock durations
-// before the Meteor upgrade.
+// Every job handler runs through Queues.runJob, so Bull counts a job as done
+// when its work is done. Our handlers are wrapped in Meteor.bindEnvironment.
+// Before Bull 4, Bull called them outside a fiber, so the wrapper started a
+// fiber and returned to Bull as soon as the handler first waited on the
+// database: Bull marked the job completed while its work was still running,
+// and a job's timeout, lock and concurrency never applied.
+//
+// runJob runs the handler in a fiber of its own and resolves once the handler
+// returns, or once the promise it returns settles. It never rejects: a handler
+// that throws is logged and its job still completes, as before (bindEnvironment
+// logs a throw as "Exception in callback of async function"; a rejected
+// promise is logged here as "Exception in job <name>"). So Bull never retries a
+// job, and Queues.add sets attempts to 1 to keep it that way: most jobs are not
+// safe to run twice once they have done part of their work.
+//
+// runJob also times the work (JobWorkStats, below) and releases the job's
+// uniqueId when the work ends, which may be after Bull gave up on the job: a
+// job that hits its timeout fails in Bull, but its work goes on, and until it
+// stops no duplicate may be queued.
 const Fiber = Npm.require('fibers');
 
+// the jobs whose work is running in this process, by Queues.runningKey
+Queues.running = {};
+
+Queues.runningKey = function(jobName, jobId) {
+  return jobName + ':' + jobId;
+};
+
+Queues.isRunning = function(jobName, jobId) {
+  return !!Queues.running[Queues.runningKey(jobName, jobId)];
+};
+
+Queues.runJob = function(jobName, handler) {
+  return function(job) {
+    return new Promise(function(resolve) {
+      const key = Queues.runningKey(jobName, job.id);
+      const uniqueId = job.data && job.data.uniqueId;
+      const start = Date.now();
+
+      const finish = function() {
+        try {
+          delete Queues.running[key];
+          Queues.recordWork(jobName, Date.now() - start);
+          if (uniqueId) {
+            Queues.removeUniqueId(jobName, uniqueId);
+          }
+        } catch (error) {
+          console.error('could not finish job', jobName, error);
+        }
+        // settle Bull's promise outside the fiber (see below)
+        setImmediate(resolve);
+      };
+
+      // Bull calls this from a promise callback. The fiber is started from a
+      // timer callback instead, and Bull's promise is settled from one: Node
+      // 14 aborts (AsyncHooks::push_async_context) when a fiber started from a
+      // promise callback switches while Bull waits on that promise.
+      setImmediate(function() { Fiber(function() {
+        Queues.running[key] = {jobName:jobName, jobId:job.id, uniqueId:uniqueId, startedAt:new Date(start)};
+        try {
+          const result = handler(job);
+          if (result && typeof result.then === 'function') {
+            Queues._waitForResult(result);
+          }
+        } catch (error) {
+          Meteor._debug('Exception in job ' + jobName, error && error.stack || error);
+        }
+        finish();
+      }).run(); });
+    });
+  };
+};
+
+// resolves once no job's work is running in this process, or after ms
+Queues.whenIdle = function(ms) {
+  const end = Date.now() + ms;
+  return new Promise(function(resolve) {
+    const check = function() {
+      if (_.isEmpty(Queues.running) || Date.now() >= end) {
+        resolve(_.isEmpty(Queues.running));
+      } else {
+        setTimeout(check, 50);
+      }
+    };
+    check();
+  });
+};
+
+
+// The work time of every job, kept in memory and added to JobWorkStats, one
+// doc per job type and UTC day, once a minute. Used to set the job timeouts,
+// lock durations and concurrency.
 Queues.workTimes = {};
 
 Queues.recordWork = function(type, duration) {
@@ -94,38 +188,20 @@ Queues.flushWorkTimes = function() {
   });
 };
 
-Queues.timeWork = function(type, handler) {
-  return function(job) {
-    const start = Date.now();
-    const done = function() {
-      Queues.recordWork(type, Date.now() - start);
-    };
-    let result;
-    const run = function() {
-      result = handler(job);
-      if (result && typeof result.then === 'function') {
-        result.then(done, done);
-      } else {
-        done();
-      }
-    };
-    // called from server code that is already in a fiber (a test), it runs
-    // there and has finished when it returns
-    if (Fiber.current) {
-      run();
-    } else {
-      Fiber(run).run();
-    }
-    return result;
-  };
-};
 
+// Bull emits 'failed' after every failed attempt. A job's uniqueId is released
+// here only when nothing else will release it:
+// - a job whose work is still running in this process (it hit its timeout,
+//   or lost its lock) keeps its id: runJob releases it when the work ends;
+// - a job that will be retried keeps its id until it finally fails (attempts
+//   are always 1 now, but the rule stays right if retries are turned on);
+// - any other failure (a job left behind by a worker that died) releases it.
+Queues.onJobFailed = function(job, error) {
+  if (!job || !job.data || !job.data.uniqueId) {
+    return;
+  }
 
-// Bull 2 emits 'failed' after every failed attempt, including attempts it will
-// retry. Only release the uniqueId once the job is in the failed set for good,
-// otherwise a duplicate can be queued while the retry is still pending.
-Queues.onJobFailed = function(job) {
-  if (!job.data.uniqueId) {
+  if ((error && error.name === 'TimeoutError') || Queues.isRunning(job.data.jobName, job.id)) {
     return;
   }
 
@@ -143,22 +219,98 @@ Queues.onJobFailed = function(job) {
 };
 
 
+// Bull and ioredis report Redis trouble as 'error' events on a queue. An
+// 'error' event without a listener throws, so every queue gets one. While Redis
+// is down every connection reports every retry, so the same message is logged
+// at most once a minute per queue.
+Queues.errorLogMs = 1000*60;
+Queues._lastErrors = {};
+
+Queues.onQueueError = function(jobName, error) {
+  const message = String(error && error.message || error);
+  const key = jobName + ' ' + message;
+  const now = Date.now();
+  if (Queues._lastErrors[key] && now - Queues._lastErrors[key] < Queues.errorLogMs) {
+    return false;
+  }
+  Queues._lastErrors[key] = now;
+  console.error('job queue ' + jobName + ' error:', error && error.stack || error);
+  return true;
+};
+
+
+// Bull 2 kept a queue's completed and failed jobs in Redis sets; Bull 3 and
+// later keep them in sorted sets under the same keys. A Bull 4 worker that
+// finds a Bull 2 set there can't finish any job of that queue (WRONGTYPE), so
+// before a worker takes jobs from a queue, and every minute after that (an old
+// worker that is still shutting down may write one again), the Bull 2 sets
+// are deleted, with the jobs they list. Those are only finished jobs, which
+// the clean-up cron would delete within hours anyway. Waiting, delayed and
+// active jobs are stored the same way in both, and are kept.
+// Resolves with the names of the sets it deleted.
+Queues.dropBull2Keys = async function(jobName) {
+  const queue = Queues[jobName];
+  const client = queue.client;
+  const dropped = [];
+  for (const state of ['completed', 'failed']) {
+    const key = queue.toKey(state);
+    if (await client.type(key) !== 'set') {
+      continue;
+    }
+    const ids = await client.smembers(key);
+    for (let i = 0; i < ids.length; i += 500) {
+      const keys = ids.slice(i, i + 500).map(function(id) { return queue.toKey(id); });
+      await client.del(keys);
+    }
+    await client.del(key);
+    dropped.push(state);
+  }
+  if (dropped.length) {
+    console.log('--- job queue ' + jobName + ': deleted the Bull 2 ' + dropped.join(' and ') + ' jobs ---');
+  }
+  return dropped;
+};
+
+
+// how many jobs of a type one worker runs at a time, when the handler doesn't
+// say (Queues.<name>.process(concurrency, handler))
+Queues.defaultConcurrency = 1;
+
+
 // create a job queue
 Queues.create = function(jobName) {
   check(jobName, String);
   var self = this;
 
-  Queues[jobName] = Queue(jobName, self.settings.port, self.settings.host, self.settings.options);
+  Queues[jobName] = new Queue(jobName, {
+    redis: self.redisOptions(),
+    settings: _.clone(self.bullSettings)
+  });
   self.queueNames = _.union(self.queueNames, jobName);
 
-  // time every handler's work (see Queues.timeWork)
+  Queues[jobName].on('error', function(error) {
+    Queues.onQueueError(jobName, error);
+  });
+
+  // run every handler through Queues.runJob. The handler itself is kept as
+  // .handler, for tests that call it directly (dTest.runJob).
   let bullProcess = Queues[jobName].process;
   Queues[jobName].process = function(concurrency, handler) {
     if (typeof concurrency === 'function') {
       handler = concurrency;
-      concurrency = 1;
+      concurrency = Queues.defaultConcurrency;
     }
-    return bullProcess.call(this, concurrency, Queues.timeWork(jobName, handler));
+    this.handler = handler;
+    this.concurrency = concurrency;
+    const queue = this;
+    // resolves when the queue closes; rejects if it can't start
+    return Queues.dropBull2Keys(jobName).catch(function(error) {
+      console.error('could not check job queue ' + jobName + ' for Bull 2 keys:', error);
+    }).then(function() {
+      return bullProcess.call(queue, concurrency, Queues.runJob(jobName, handler));
+    }).catch(function(error) {
+      console.error('job queue ' + jobName + ' stopped:', error);
+    });
   };
 
   if (process.env.DOMINUS_WORKER == 'true') {
@@ -169,13 +321,12 @@ Queues.create = function(jobName) {
 
 
     Queues[jobName].on('failed', Meteor.bindEnvironment(function(job, error) {
-      Queues.onJobFailed(job);
+      Queues.onJobFailed(job, error);
     }));
 
 
-    // A stalled job is moved back to wait and runs again, so its uniqueId must
-    // stay until that run completes or finally fails. Removing it here let a
-    // duplicate job in while the stalled one was still queued.
+    // A stalled job is failed (maxStalledCount 0), and its 'failed' event
+    // releases its uniqueId (onJobFailed). Nothing listens to 'stalled'.
 
 
     Queues[jobName].on('completed', Meteor.bindEnvironment(function(job, result) {
@@ -188,10 +339,7 @@ Queues.create = function(jobName) {
         }
       }
 
-      // remove unique job
-      if (job.data.uniqueId) {
-        Queues.removeUniqueId(job.data.jobName, job.data.uniqueId)
-      }
+      // the uniqueId was released by runJob when the work ended
 
       //job.remove();
     }));
@@ -265,11 +413,15 @@ Meteor.startup(function() {
       name: 'clean up old jobs',
       schedule: function(parser) {return parser.cron('* * * * *');},
       job: function() {
+        const logError = function(error) {
+          console.error('could not clean old jobs', error);
+        };
         Queues.queueNames.forEach(function(jobName) {
-          Queues[jobName].clean(1000*60*60*6, 'failed');
-          Queues[jobName].clean(1000*60*5, 'completed');
-          Queues[jobName].clean(1000*60*60, 'wait');
-          Queues[jobName].clean(1000*60*60, 'active');
+          Queues.dropBull2Keys(jobName).catch(logError);
+          Queues[jobName].clean(1000*60*60*6, 'failed').catch(logError);
+          Queues[jobName].clean(1000*60*5, 'completed').catch(logError);
+          Queues[jobName].clean(1000*60*60, 'wait').catch(logError);
+          Queues[jobName].clean(1000*60*60, 'active').catch(logError);
         });
       }
     });
@@ -307,7 +459,63 @@ Queues.add = function(jobName, data, options, uniqueId) {
   //   console.error('Job', jobName, 'not found.', Queues.queueNames, data, options, uniqueId);
   // }
 
-  Queues[jobName].add(data, options);
+  Queues[jobName].add(data, Queues.jobOptions(options)).catch(Meteor.bindEnvironment(function(error) {
+    console.error('could not add job', jobName, error);
+    if (uniqueId) {
+      Queues.removeUniqueId(jobName, uniqueId);
+    }
+  }));
+};
+
+
+// Bull's options for a job. Retries stay off (see Queues.runJob): many calls
+// still pass attempts and backoff from when they seemed to work, and those
+// are dropped. A job's timeout is kept: a job that runs past it fails in Bull
+// and frees its place in the queue, while its work runs on and keeps its
+// uniqueId until it ends.
+Queues.jobOptions = function(options) {
+  options = _.omit(options || {}, 'attempts', 'backoff');
+  options.attempts = 1;
+  return options;
+};
+
+
+// Queues.add for async code: resolves once Redis has the job (or the job was
+// skipped as a duplicate), with true if it was added. Stage 2 code moves to it.
+Queues.addAsync = async function(jobName, data, options, uniqueId) {
+  check(jobName, String);
+  check(data, Object);
+  check(options, Object);
+  check(uniqueId, Match.OneOf(Boolean, String));
+
+  const queue = Queues[jobName];
+
+  if (uniqueId) {
+    let added;
+    try {
+      added = await queue.client.set(Queues.getKeyString(jobName, uniqueId), '1', 'PX', Queues.uniqueIdTtlMs, 'NX');
+    } catch (error) {
+      // as in addUniqueId: a duplicate is safer than a lost job
+      console.error('could not check uniqueId', jobName, uniqueId, error);
+      added = 'OK';
+    }
+    if (added !== 'OK') {
+      return false;
+    }
+    data.uniqueId = uniqueId;
+  }
+
+  data.jobName = jobName;
+
+  try {
+    await queue.add(data, Queues.jobOptions(options));
+  } catch (error) {
+    if (uniqueId) {
+      await queue.client.del(Queues.getKeyString(jobName, uniqueId)).catch(function() {});
+    }
+    throw error;
+  }
+  return true;
 };
 
 

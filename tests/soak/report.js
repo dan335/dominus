@@ -67,12 +67,14 @@ const normalise = (line) => line
   .replace(/\d+(\.\d+)?/g, '<n>')
   .slice(0, 200);
 const exceptions = {};
-// A job handler that throws doesn't fail its Bull job today: the handlers are
+// A job handler that throws doesn't fail its Bull job: the handlers are
 // wrapped in Meteor.bindEnvironment, which catches the error, logs it as
-// "Exception in callback of async function" and lets Bull mark the job
-// completed. So a logged exception whose stack runs through the queue's
+// "Exception in callback of async function" and returns, and Queues.runJob
+// logs a rejected promise as "Exception in job <name>"; either way Bull marks
+// the job completed. So a logged exception whose stack runs through the queue's
 // handler wrapper (dominus-queue/queue.js) is a job that failed, named here by
-// the file that registered the handler.
+// the file that registered the handler, and "Exception in job <name>" names
+// its job itself.
 const jobExceptions = {};
 for (const role of ['web', 'worker']) {
   const all = lines(role + '.log');
@@ -82,7 +84,11 @@ for (const role of ['web', 'worker']) {
     exceptions[kind] = (exceptions[kind] || 0) + 1;
     const stack = [];
     for (let j = i + 1; j < all.length && j < i + 40 && /^\s+at /.test(all[j]); j++) stack.push(all[j]);
-    if (stack.some((frame) => frame.includes('packages/dominus-queue/queue.js'))) {
+    const named = /^Exception in job (\w+)/.exec(line.trim());
+    if (named) {
+      const job = named[1] + ': ' + normalise(line.trim());
+      jobExceptions[job] = (jobExceptions[job] || 0) + 1;
+    } else if (stack.some((frame) => frame.includes('packages/dominus-queue/queue.js'))) {
       const files = stack.map((frame) => /packages\/(dominus-[\w-]+\/server\/[\w.]+\.js)/.exec(frame)).filter(Boolean);
       const job = (files.length ? files[files.length - 1][1] : 'unknown job') + ': ' + normalise(line.trim());
       jobExceptions[job] = (jobExceptions[job] || 0) + 1;
@@ -198,11 +204,34 @@ check('No job failed for good', failedTotal ? 'fail' : 'pass',
 const jobKinds = Object.keys(jobExceptions);
 const jobKindsOld = (baselineFile() || {}).jobExceptions || {};
 const jobKindsNew = jobKinds.filter((k) => !jobKindsOld[k]);
-check('No job threw (caught and logged by bindEnvironment)', jobKindsNew.length ? 'fail' : jobKinds.length ? 'warn' : 'pass',
+check('No job threw', jobKindsNew.length ? 'fail' : jobKinds.length ? 'warn' : 'pass',
   jobKinds.length ? jobKinds.slice(0, 3).map((k) => jobExceptions[k] + '× ' + k).join('; ') + (jobKindsNew.length < jobKinds.length ? ' (' + (jobKinds.length - jobKindsNew.length) + ' kind(s) also in the baseline)' : '') : 'none');
 const attemptsTotal = Object.values(failedAttempts).reduce((a, b) => a + b, 0);
 check('No failed job attempts (retried or not)', attemptsTotal ? 'warn' : 'pass',
   attemptsTotal ? Object.entries(failedAttempts).map(([q, n]) => q + ' ' + n).join(', ') : 'none');
+
+// backlogs: since Bull 4 a queue runs at most its concurrency of jobs at a
+// time, so a queue whose jobs come in faster than they finish keeps a line of
+// waiting jobs. A short line now and then is normal; a long one means the
+// queue needs more concurrency (or its jobs got slower).
+const BACKLOG_WARN = 20;
+const BACKLOG_FAIL = 200;
+const backlogs = {};
+for (const s of workerSamples) {
+  for (const [queue, counts] of Object.entries(s.queues || {})) {
+    const waiting = counts.waiting !== undefined ? counts.waiting : (counts.wait || 0);
+    const b = backlogs[queue] || (backlogs[queue] = {max: 0, maxAt: null, samplesOver: 0});
+    if (waiting > b.max) {
+      b.max = waiting;
+      b.maxAt = s.t;
+    }
+    if (waiting >= BACKLOG_WARN) b.samplesOver++;
+  }
+}
+const longest = Object.entries(backlogs).filter(([, b]) => b.max >= BACKLOG_WARN).sort((a, b) => b[1].max - a[1].max);
+check('No queue backs up', longest.some(([, b]) => b.max >= BACKLOG_FAIL) ? 'fail' : longest.length ? 'warn' : 'pass',
+  longest.length ? longest.slice(0, 5).map(([q, b]) => q + ' up to ' + b.max + ' waiting (' + b.samplesOver + ' samples with ' + BACKLOG_WARN + '+)').join(', ') :
+    'no queue had ' + BACKLOG_WARN + ' or more jobs waiting at a sample');
 
 // the crons: every tick ran, and none stopped. A cron's interval is the
 // shortest gap seen between two of its ticks, so the ones that run less often
@@ -433,7 +462,7 @@ out.push('');
 fs.writeFileSync(path.join(dir, 'report.md'), out.join('\n'));
 fs.writeFileSync(path.join(dir, 'summary.json'), JSON.stringify({
   mode, image: read('image.txt').trim(), failed, minutes, checks, exceptions, jobExceptions, failedForGood, failedAttempts,
-  persistentProblems: persistent, memoryTrend, cronStats,
+  persistentProblems: persistent, memoryTrend, cronStats, backlogs,
   bots: bots && {calls, okCalls, serverErrorCount: bots.serverErrorCount, games: bots.games}
 }, null, 2));
 console.log(out.slice(0, checks.length + 6).join('\n'));
