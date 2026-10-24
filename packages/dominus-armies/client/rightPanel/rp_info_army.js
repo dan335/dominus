@@ -183,7 +183,7 @@ Template.rp_info_army.events({
 	'click #join_village_button': function(event, template) {
 		var currentData = Template.currentData();
 		if (currentData) {
-			let buildingData = dArmies.methods.joinBuilding.call({armyId:currentData._id}, (error, buildingInfo) => {
+			Meteor.call('armies.joinBuilding', {armyId:currentData._id}, (error, buildingInfo) => {
 
 				if (error) {
 					console.error(error);
@@ -205,7 +205,7 @@ Template.rp_info_army.events({
 	'click #return_to_castle_button': function(event, template) {
 		var currentData = Template.currentData();
 		if (currentData) {
-			dArmies.methods.returnToCastle.call({armyId:this._id}, (error, buildingInfo) => {
+			Meteor.call('armies.returnToCastle', {armyId:this._id}, (error, buildingInfo) => {
 				if (error) {
 					console.error(error);
 				} else {
@@ -216,7 +216,7 @@ Template.rp_info_army.events({
 	},
 
 	'click #combine_armies_button': function(event, template) {
-		dArmies.methods.combineArmies.call({gameId:Session.get('gameId'), armyId:this._id});
+		Meteor.call('armies.combineArmies', {gameId:Session.get('gameId'), armyId:this._id});
 	},
 
 	'click #split_armies_button': function(event, template) {

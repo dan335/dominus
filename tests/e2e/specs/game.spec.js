@@ -60,6 +60,63 @@ test('hire soldiers, make an army and march it to another hex', async ({ page })
   }, { timeout: 60000, intervals: [2000] }).toEqual([to.x, to.y]);
 });
 
+// the army panel's buttons that call the armies.* methods
+test('combine armies, join a village and return to the castle from the army panel', async ({ page }) => {
+  const w = server("dTest.e2e.world(['marshal'])");
+  const me = w.players.marshal;
+  const J = JSON.stringify;
+  const armyDoc = (id) => server(`dTest.e2e.findOne('Armies', ${J(id)})`);
+  const hex = server(`dTest.e2e.freeHexNear(${J(w.gameId)}, ${me.castle.x}, ${me.castle.y}, 2)`);
+  const a = server(`dTest.e2e.makeArmy(${J(me.playerId)}, {footmen: 3}, ${hex.x}, ${hex.y})`);
+  const b = server(`dTest.e2e.makeArmy(${J(me.playerId)}, {archers: 2}, ${hex.x}, ${hex.y})`);
+  const openArmy = async (id, at) => {
+    await page.goto(`/game/${w.gameId}/army/${at.x}/${at.y}/${id}`);
+    await expect(page.locator('#rp_info_army')).toBeVisible();
+  };
+
+  await signIn(page, me.username);
+  await openGame(page, w.gameId);
+
+  // two armies on one hex become one
+  await openArmy(a, hex);
+  await page.click('#combine_armies_button');
+  await expect.poll(() => armyDoc(b)).toBeFalsy();
+  expect([armyDoc(a).footmen, armyDoc(a).archers]).toEqual([3, 2]);
+  await expect(page.locator('#combine_armies_button')).toHaveCount(0);
+
+  // on one of your villages it can join the garrison
+  const village = server(`dTest.e2e.makeVillage(${J(me.playerId)}, ${hex.x}, ${hex.y})`);
+  const c = server(`dTest.e2e.makeArmy(${J(me.playerId)}, {pikemen: 4}, ${hex.x}, ${hex.y})`);
+  await openArmy(c, hex);
+  await page.click('#join_village_button');
+  await expect(page).toHaveURL(new RegExp(`/game/${w.gameId}/village/${hex.x}/${hex.y}/${village}$`));
+  await expect.poll(() => armyDoc(c)).toBeFalsy();
+  expect(server(`dTest.e2e.findOne('Villages', ${J(village)})`).pikemen).toBe(4);
+
+  // away from the castle it gets one path home, and the worker walks it
+  // there, where it joins the castle
+  const castleBefore = castleOf(me.castle._id);
+  await openArmy(a, hex);
+  await page.click('#return_to_castle_button');
+  await expect.poll(() => server(`dTest.e2e.findOne('Armypaths', {armyId: ${J(a)}, x: ${me.castle.x}, y: ${me.castle.y}})`)).toBeTruthy();
+  // off its panel: the army is gone once it arrives
+  await page.goto(`/game/${w.gameId}`);
+  await expect.poll(() => {
+    server(`dTest.e2e.hurryArmies(${J(w.gameId)})`);
+    return armyDoc(a);
+  }, { timeout: 60000, intervals: [2000] }).toBeFalsy();
+  let castle = castleOf(me.castle._id);
+  expect([castle.footmen, castle.archers]).toEqual([castleBefore.footmen + 3, castleBefore.archers + 2]);
+
+  // an army made on the castle joins it straight away
+  const d = server(`dTest.e2e.makeArmy(${J(me.playerId)}, {cavalry: 2}, ${me.castle.x}, ${me.castle.y})`);
+  await openArmy(d, me.castle);
+  await page.click('#return_to_castle_button');
+  await expect(page).toHaveURL(new RegExp(`/game/${w.gameId}/castle/${me.castle.x}/${me.castle.y}/${me.castle._id}$`));
+  await expect.poll(() => armyDoc(d)).toBeFalsy();
+  expect(castleOf(me.castle._id).cavalry).toBe(castle.cavalry + 2);
+});
+
 test('buy and sell at the market, and the price moves', async ({ page }) => {
   const w = server("dTest.e2e.world(['trader'])");
   const me = w.players.trader;

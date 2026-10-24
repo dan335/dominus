@@ -32,7 +32,7 @@ var target = function(collection, index, gameIndex) {
   });
 };
 
-// ValidatedMethods take a single object argument
+// the armies.* methods take a single object argument
 var armyInObject = function(args) {
   let params = args[0] || {};
   return {gameId: params.gameId, targets: [[Armies, params.armyId]]};
