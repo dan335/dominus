@@ -1,12 +1,11 @@
 // armies get latest last_move_at
 // prevents bug where army has been at hex for a long time
 // another army moves there then they combine
-dArmies.methods.combineArmies = new ValidatedMethod({
-  name: 'armies.combineArmies',
-  validate: null,
-  run({gameId, armyId}) {
+Meteor.methods({
+  'armies.combineArmies': function(params) {
+    check(params, {gameId: Match.Optional(String), armyId: String});
+    var armyId = params.armyId;
     var self = this;
-    check(armyId, String);
     var fields = {x:1, y:1, last_move_at:1, gameId:1};
     var army = Armies.findOne({_id:armyId, user_id:this.userId}, {fields:fields});
     if (army) {
@@ -48,17 +47,13 @@ dArmies.methods.combineArmies = new ValidatedMethod({
     } else {
       throw new Meteor.Error('Army not found.');
     }
-  }
-});
+  },
 
 
 
-dArmies.methods.joinBuilding = new ValidatedMethod({
-  name: 'armies.joinBuilding',
-  validate: new SimpleSchema({
-    armyId: { type: String }
-  }).validator(),
-  run({armyId}) {
+  'armies.joinBuilding': function(params) {
+    check(params, {armyId: String});
+    var armyId = params.armyId;
     // this.unblock();
     if (!this.isSimulation) {
       // only the owner may join their army into a building -- dArmies.joinBuilding
@@ -85,17 +80,13 @@ dArmies.methods.joinBuilding = new ValidatedMethod({
         throw new ValidationError(error);
       }
     }
-  }
-});
+  },
 
 
 
-dArmies.methods.returnToCastle = new ValidatedMethod({
-  name: 'armies.returnToCastle',
-  validate: new SimpleSchema({
-    armyId: { type: String }
-  }).validator(),
-  run({armyId}) {
+  'armies.returnToCastle': function(params) {
+    check(params, {armyId: String});
+    var armyId = params.armyId;
     // this.unblock();
 
     if (!this.isSimulation) {
@@ -141,7 +132,7 @@ dArmies.methods.returnToCastle = new ValidatedMethod({
         var buildingInfo = dArmies.joinBuilding(army._id);
         return buildingInfo;
       } else {
-        dArmies.methods.stopMoving.call({armyId: army._id});
+        Meteor.call('armies.stopMoving', {armyId: army._id});
         Meteor.call('addArmyPath', army.gameId, castle.x, castle.y, army._id);
         return {buildingId:army._id, buildingType:'army'};
       }

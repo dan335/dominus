@@ -4,7 +4,7 @@
 //   node report.js <results folder> [baseline summary.json]
 //
 // It fails on: a job that failed for good or threw, an unhandled promise rejection, a
-// web or worker restart, an invariant broken for three samples in a row (but
+// web or worker restart, a cron tick that was missed or threw, an invariant broken for three samples in a row (but
 // for the known bugs below), an internal server error or unanswered call from
 // the bots, memory that keeps growing, a monitor that stopped reporting, or a
 // soak in which the game was never played. Logged exceptions only warn, since
@@ -204,6 +204,39 @@ const attemptsTotal = Object.values(failedAttempts).reduce((a, b) => a + b, 0);
 check('No failed job attempts (retried or not)', attemptsTotal ? 'warn' : 'pass',
   attemptsTotal ? Object.entries(failedAttempts).map(([q, n]) => q + ' ' + n).join(', ') : 'none');
 
+// the crons: every tick ran, and none stopped. A cron's interval is the
+// shortest gap seen between two of its ticks, so the ones that run less often
+// than three times in the run (the midnight job) aren't judged.
+const cronStats = {};
+for (const s of workerSamples) {
+  if (!s.cron) continue;
+  for (const [name, c] of Object.entries(s.cron.crons)) {
+    const all = cronStats[name] || (cronStats[name] = {ticks: 0, errors: 0, unfinished: 0, minGapMs: null, maxGapMs: 0, maxGapAt: null});
+    all.ticks += c.ticks;
+    all.errors += c.errors;
+    all.unfinished += c.unfinished;
+    if (c.minGapMs !== null) all.minGapMs = all.minGapMs === null ? c.minGapMs : Math.min(all.minGapMs, c.minGapMs);
+    if (c.maxGapMs > all.maxGapMs) {
+      all.maxGapMs = c.maxGapMs;
+      all.maxGapAt = s.t;
+    }
+  }
+}
+const lastCron = workerSamples.filter((s) => s.cron).slice(-1)[0];
+const cronProblems = [];
+for (const [name, c] of Object.entries(cronStats)) {
+  if (c.errors) cronProblems.push(name + ': ' + c.errors + ' tick(s) threw');
+  if (c.ticks < 3 || !c.minGapMs) continue;
+  if (c.maxGapMs >= c.minGapMs * 1.5) cronProblems.push(name + ': missed ticks, ' + c.maxGapMs / 1000 + 's without one (every ' + c.minGapMs / 1000 + 's), sample ' + c.maxGapAt);
+  const since = new Date(lastCron.cron.readTo) - (lastCron.cron.lastTick[name] || 0);
+  if (since >= c.minGapMs * 2) cronProblems.push(name + ': stopped, no tick for the last ' + Math.round(since / 1000) + 's');
+}
+const cronNames = Object.keys(cronStats);
+check('Every cron ran on every tick', !lastCron ? 'fail' : cronProblems.length ? 'fail' : 'pass',
+  !lastCron ? 'no cron ticks in the samples' : cronProblems.length ? cronProblems.slice(0, 5).join('; ') :
+    cronNames.length + ' crons, ' + cronNames.reduce((n, k) => n + cronStats[k].ticks, 0) + ' ticks, none missed' +
+    (cronNames.some((k) => cronStats[k].unfinished) ? ' (some still running when read)' : ''));
+
 // invariants: a problem counts once it is there in three samples in a row
 const persistent = {};
 const streaks = {};
@@ -400,7 +433,7 @@ out.push('');
 fs.writeFileSync(path.join(dir, 'report.md'), out.join('\n'));
 fs.writeFileSync(path.join(dir, 'summary.json'), JSON.stringify({
   mode, image: read('image.txt').trim(), failed, minutes, checks, exceptions, jobExceptions, failedForGood, failedAttempts,
-  persistentProblems: persistent, memoryTrend,
+  persistentProblems: persistent, memoryTrend, cronStats,
   bots: bots && {calls, okCalls, serverErrorCount: bots.serverErrorCount, games: bots.games}
 }, null, 2));
 console.log(out.slice(0, checks.length + 6).join('\n'));

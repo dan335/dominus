@@ -16,7 +16,6 @@ Package.onUse(function(api) {
     'email',
     'ejson',
     'mongo',
-    'fongandrew:find-and-modify@0.2.1',
     'dominus-game',
     'dominus-armies'
   ]);

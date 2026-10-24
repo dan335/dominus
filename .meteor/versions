@@ -5,7 +5,6 @@ accounts-oauth@1.4.4
 accounts-password@2.4.0
 accounts-ui@1.4.2
 accounts-ui-unstyled@1.7.1
-aldeed:simple-schema@1.5.4
 allow-deny@1.1.1
 audit-argument-checks@1.0.7
 autoupdate@1.8.0
@@ -85,7 +84,6 @@ facebook-oauth@1.11.3
 facts@1.0.9
 fastclick@1.0.13
 fetch@0.1.4
-fongandrew:find-and-modify@0.2.2
 fortawesome:fontawesome@4.7.0
 forum-base@0.0.1
 forum-ui-dominus@0.0.1
@@ -106,7 +104,6 @@ less@4.0.0
 localstorage@1.2.0
 logging@1.3.4
 markdown@1.0.14
-mdg:validated-method@0.2.3
 mdg:validation-error@0.5.1
 meteor@1.11.5
 meteor-base@1.5.1
@@ -130,8 +127,8 @@ oauth2@1.3.2
 observe-sequence@1.0.19
 okgrow:analytics@0.2.3
 ordered-dict@1.1.0
-percolate:synced-cron@1.3.2
 promise@0.12.2
+quave:synced-cron@2.1.0
 random@1.2.1
 rate-limit@1.1.1
 react-fast-refresh@0.2.8

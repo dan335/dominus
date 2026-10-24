@@ -5,8 +5,9 @@
 // SOAK_SAMPLE {json}, which tests/soak/report.js reads:
 // - every process: its memory, event loop delay and DDP sessions;
 // - the worker as well: the job queues' counts, every failed attempt since the
-//   last sample, and the invariants of each running game (dTest.gameInvariants
-//   in server/lib/testRunnerSimulation.js).
+//   last sample, the cron ticks recorded since the last sample, and the
+//   invariants of each running game (dTest.gameInvariants in
+//   server/lib/testRunnerSimulation.js).
 // Every unhandled promise rejection is printed as SOAK_UNHANDLED_REJECTION.
 
 if (Meteor.isServer && process.env.DOMINUS_SOAK_MONITOR) {
@@ -37,6 +38,34 @@ if (Meteor.isServer && process.env.DOMINUS_SOAK_MONITOR) {
       });
     }
 
+    // the cron ticks SyncedCron recorded in cronHistory since the last sample.
+    // A tick is read 10 seconds after it was due, once its record is surely in.
+    var CRON_LAG_MS = 10000;
+    var cronFrom = new Date(Date.now() - CRON_LAG_MS);
+    var cronLast = {};
+    var cronTicks = function() {
+      var to = new Date(Date.now() - CRON_LAG_MS);
+      var crons = {};
+      SyncedCron._collection.find({intendedAt: {$gte: cronFrom, $lt: to}}, {
+        fields: {name: 1, intendedAt: 1, finishedAt: 1, error: 1},
+        sort: {intendedAt: 1}
+      }).forEach(function(tick) {
+        var c = crons[tick.name] || (crons[tick.name] = {ticks: 0, errors: 0, unfinished: 0, minGapMs: null, maxGapMs: 0});
+        c.ticks++;
+        if (tick.error) c.errors++;
+        if (!tick.finishedAt) c.unfinished++;
+        var at = tick.intendedAt.getTime();
+        if (cronLast[tick.name] !== undefined) {
+          var gap = at - cronLast[tick.name];
+          c.minGapMs = c.minGapMs === null ? gap : Math.min(c.minGapMs, gap);
+          c.maxGapMs = Math.max(c.maxGapMs, gap);
+        }
+        cronLast[tick.name] = at;
+      });
+      cronFrom = to;
+      return {readTo: to.toISOString(), crons: crons, lastTick: _.clone(cronLast)};
+    };
+
     var ms = function(ns) { return Math.round(ns / 1e4) / 100; };
 
     var sample = function() {
@@ -65,6 +94,7 @@ if (Meteor.isServer && process.env.DOMINUS_SOAK_MONITOR) {
         out.failedReasons = failedReasons;
         failedAttempts = {};
         failedReasons = [];
+        out.cron = cronTicks();
 
         out.games = Games.find({hasStarted: true, hasClosed: {$ne: true}}, {fields: {_id: 1, name: 1, hasEnded: 1, dominusAchieved: 1}}).map(function(game) {
           return {
