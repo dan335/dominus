@@ -120,7 +120,7 @@ Template.rp_hire_army.events({
 			button.attr('disabled', true);
 			button.html('Please Wait');
 
-			Meteor.apply('hireArmy', [Session.get('gameId'), get_selected_hiring_units(), this._id, selected.type], {}, function(error, result) {
+			dFunc.callWithCallback('hireArmy', [Session.get('gameId'), get_selected_hiring_units(), this._id, selected.type], function(error, result) {
 				if (error) {
 					$(alert).show(100);
 					$(alert).html(error.error);

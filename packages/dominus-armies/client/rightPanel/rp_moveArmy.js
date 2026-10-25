@@ -20,7 +20,7 @@ Template.rp_moveArmy.events({
     var x = parseInt(xInput.value);
     var y = parseInt(yInput.value);
 
-    Meteor.apply('addArmyPath', [Session.get('gameId'), x, y, armyId], {}, function(error, result) {
+    dFunc.callWithCallback('addArmyPath', [Session.get('gameId'), x, y, armyId], function(error, result) {
       $(button).text(buttonText);
       $(button).prop('disabled', false);
 

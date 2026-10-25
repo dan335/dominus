@@ -176,7 +176,7 @@ if (Meteor.isServer) {
           dClock.set(future);
 
           var army;
-          dTest.recordJobs(function() { army = dArmies.create(w.players[0]._id, {footmen: 2}, w.castle(0).x, w.castle(0).y); });
+          dTest.recordJobs(function() { army = dTest.settle(dArmies.create(w.players[0]._id, {footmen: 2}, w.castle(0).x, w.castle(0).y)); });
           army = Armies.findOne(army._id);
           equal(army.created_at.getTime(), future.getTime(), 'army created_at');
           equal(army.last_move_at.getTime(), future.getTime(), 'army last_move_at');

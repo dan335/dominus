@@ -1,3 +1,36 @@
+// what combining adds to the army: the other armies' soldiers, and the
+// latest last_move_at of them all
+var combinedArmy = function(army, otherArmies) {
+  var soldiers = {};
+  _s.armies.types.forEach(function(type) {
+    soldiers[type] = 0;
+  });
+
+  var latestMove = moment(new Date(army.last_move_at));
+
+  otherArmies.forEach(function(otherArmy) {
+    var otherArmyMoveAt = moment(new Date(otherArmy.last_move_at));
+    if (otherArmyMoveAt.isAfter(latestMove)) {
+      latestMove = otherArmyMoveAt;
+    }
+
+    _s.armies.types.forEach(function(type) {
+      soldiers[type] += otherArmy[type];
+    })
+  });
+
+  return {soldiers:soldiers, last_move_at:latestMove.toDate()};
+};
+
+var combineOtherFields = function() {
+  var fields = {}
+  fields.last_move_at = 1
+  _s.armies.types.forEach(function(type) {
+    fields[type] = 1
+  });
+  return fields;
+};
+
 // armies get latest last_move_at
 // prevents bug where army has been at hex for a long time
 // another army moves there then they combine
@@ -7,59 +40,55 @@ Meteor.methods({
     var armyId = params.armyId;
     var self = this;
     var fields = {x:1, y:1, last_move_at:1, gameId:1};
-    var army = Armies.findOne({_id:armyId, user_id:this.userId}, {fields:fields});
-    if (army) {
-      var soldiers = {};
-      var fields = {}
-			fields.last_move_at = 1
+    var armyFind = {_id:armyId, user_id:this.userId};
 
-      _s.armies.types.forEach(function(type) {
-				fields[type] = 1
-        soldiers[type] = 0;
-			});
-
-      var latestMove = moment(new Date(army.last_move_at));
+    if (this.isSimulation) {
+      var army = Armies.findOne(armyFind, {fields:fields});
+      if (!army) {
+        throw new Meteor.Error('Army not found.');
+      }
 
       // client copies of armies may not have gameId
       var find = {_id:{$ne:army._id}, user_id:this.userId, x:army.x, y:army.y};
-      if (!self.isSimulation) {
-        find.gameId = army.gameId;
-      }
-      var armies = Armies.find(find, {fields:fields});
-      armies.forEach(function(otherArmy) {
+      var combined = combinedArmy(army, Armies.find(find, {fields:combineOtherFields()}).fetch());
 
-        var otherArmyMoveAt = moment(new Date(otherArmy.last_move_at));
-        if (otherArmyMoveAt.isAfter(latestMove)) {
-          latestMove = otherArmyMoveAt;
-        }
-
-        _s.armies.types.forEach(function(type) {
-          soldiers[type] += otherArmy[type];
-        })
-
-        if (!self.isSimulation) {
-          dArmies.destroyArmy(otherArmy._id);
-        }
-      });
-
-      Armies.update(armyId, {$inc:soldiers, $set:{speed:null, moveTime:null, last_move_at:latestMove.toDate()}});
-      Armypaths.update({armyId:armyId}, {$set:{last_move_at:latestMove.toDate()}}, {multi:true});
-    } else {
-      throw new Meteor.Error('Army not found.');
+      // the server removes the other armies
+      Armies.update(armyId, {$inc:combined.soldiers, $set:{speed:null, moveTime:null, last_move_at:combined.last_move_at}});
+      Armypaths.update({armyId:armyId}, {$set:{last_move_at:combined.last_move_at}}, {multi:true});
+      return;
     }
+
+    return (async () => {
+      var army = await Armies.findOneAsync(armyFind, {fields:fields});
+      if (!army) {
+        throw new Meteor.Error('Army not found.');
+      }
+
+      var find = {_id:{$ne:army._id}, user_id:self.userId, x:army.x, y:army.y, gameId:army.gameId};
+      var otherArmies = await Armies.find(find, {fields:combineOtherFields()}).fetchAsync();
+      var combined = combinedArmy(army, otherArmies);
+
+      for (const otherArmy of otherArmies) {
+        await dArmies.destroyArmy(otherArmy._id);
+      }
+
+      await Armies.updateAsync(armyId, {$inc:combined.soldiers, $set:{speed:null, moveTime:null, last_move_at:combined.last_move_at}});
+      await Armypaths.updateAsync({armyId:armyId}, {$set:{last_move_at:combined.last_move_at}}, {multi:true});
+    })();
   },
+});
 
 
-
-  'armies.joinBuilding': function(params) {
-    check(params, {armyId: String});
-    var armyId = params.armyId;
-    // this.unblock();
-    if (!this.isSimulation) {
+if (Meteor.isServer) {
+  Meteor.methods({
+    'armies.joinBuilding': async function(params) {
+      check(params, {armyId: String});
+      var armyId = params.armyId;
+      // this.unblock();
       // only the owner may join their army into a building -- dArmies.joinBuilding
       // looks the army up by _id only, so without this a player could force an
       // enemy army (sitting on its own building hex) to disband into the building.
-      var ownArmy = Armies.findOne({_id:armyId, user_id:this.userId}, {fields: {_id:1}});
+      var ownArmy = await Armies.findOneAsync({_id:armyId, user_id:this.userId}, {fields: {_id:1}});
       if (!ownArmy) {
         var notOwnedError = [{
           name: 'armies.joinBuilding',
@@ -68,7 +97,7 @@ Meteor.methods({
         }];
         throw new ValidationError(notOwnedError);
       }
-      var buildingInfo = dArmies.joinBuilding(armyId);
+      var buildingInfo = await dArmies.joinBuilding(armyId);
       if (buildingInfo) {
         return buildingInfo;
       } else {
@@ -79,19 +108,17 @@ Meteor.methods({
         }];
         throw new ValidationError(error);
       }
-    }
-  },
+    },
 
 
 
-  'armies.returnToCastle': function(params) {
-    check(params, {armyId: String});
-    var armyId = params.armyId;
-    // this.unblock();
+    'armies.returnToCastle': async function(params) {
+      check(params, {armyId: String});
+      var armyId = params.armyId;
+      // this.unblock();
 
-    if (!this.isSimulation) {
       var armyOptions = {fields: {x:1, y:1, playerId:1, gameId:1}};
-      var army = Armies.findOne({_id: armyId, user_id: this.userId}, armyOptions);
+      var army = await Armies.findOneAsync({_id: armyId, user_id: this.userId}, armyOptions);
       if (!army) {
         var error = [{
           name: 'returnToCastle',
@@ -104,10 +131,10 @@ Meteor.methods({
 
       let find = {gameId:army.gameId, userId:this.userId};
       let options = {fields: {_id:1}};
-      let player = Players.findOne(find, options);
+      let player = await Players.findOneAsync(find, options);
 
       var castleOptions = {fields: {x:1, y:1}};
-      var castle = Castles.findOne({playerId:player._id}, castleOptions);
+      var castle = await Castles.findOneAsync({playerId:player._id}, castleOptions);
       if (!castle) {
         var error = [{
           name: 'returnToCastle',
@@ -129,13 +156,13 @@ Meteor.methods({
       }
 
       if (castle.x == army.x && castle.y == army.y) {
-        var buildingInfo = dArmies.joinBuilding(army._id);
+        var buildingInfo = await dArmies.joinBuilding(army._id);
         return buildingInfo;
       } else {
-        Meteor.call('armies.stopMoving', {armyId: army._id});
-        Meteor.call('addArmyPath', army.gameId, castle.x, castle.y, army._id);
+        await Meteor.callAsync('armies.stopMoving', {armyId: army._id});
+        await Meteor.callAsync('addArmyPath', army.gameId, castle.x, castle.y, army._id);
         return {buildingId:army._id, buildingType:'army'};
       }
     }
-  }
-});
+  });
+}

@@ -248,7 +248,7 @@ Meteor.methods({
 
 			// if army is there merge them
 			for (const army of await Armies.find({x:x, y:y, playerId:player._id}).fetchAsync()) {
-				if (dArmies.isStopped(army._id)) {
+				if (await dArmies.isStopped(army._id)) {
 					var soldiers = {}
 
 					_s.armies.types.forEach(function(type) {
@@ -256,7 +256,7 @@ Meteor.methods({
 					});
 
 					await Villages.updateAsync(villageId, {$inc: soldiers});
-					dArmies.destroyArmy(army._id);
+					await dArmies.destroyArmy(army._id);
 				}
 			}
 

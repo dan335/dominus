@@ -190,7 +190,8 @@ BattleJob.prototype.processBattleResults = function() {
           self.battleData.showBattle = true;
 
           dAlerts.alert_armyDestroyed(self.gameId, army.playerId, self.battleData._id, army.name);
-          dArmies.destroyArmy(army._id);
+          // async since upgrade PR 13a; this function converts in PR 14
+          Promise.await(dArmies.destroyArmy(army._id));
 
         } else {
 

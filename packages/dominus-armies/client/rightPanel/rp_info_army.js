@@ -216,7 +216,7 @@ Template.rp_info_army.events({
 	},
 
 	'click #combine_armies_button': function(event, template) {
-		Meteor.call('armies.combineArmies', {gameId:Session.get('gameId'), armyId:this._id});
+		dFunc.callAndForget('armies.combineArmies', {gameId:Session.get('gameId'), armyId:this._id});
 	},
 
 	'click #split_armies_button': function(event, template) {

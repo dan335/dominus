@@ -120,14 +120,16 @@ dInit.getNiceRelationType = function(relationType) {
 
 // TODO: are these used?
 // #TODO:140 make this check more than just armies
-dInit.isEnemyHere = function(gameId, x, y, player) {
+// server only
+dInit.isEnemyHere = async function(gameId, x, y, player) {
   check(gameId, String);
   check(x, Match.Integer);
   check(y, Match.Integer);
-  return this.isEnemyArmyHere(gameId, x, y, player);
+  return await this.isEnemyArmyHere(gameId, x, y, player);
 };
 
-dInit.isEnemyArmyHere = function(gameId, x, y, player) {
+// server only
+dInit.isEnemyArmyHere = async function(gameId, x, y, player) {
   check(gameId, String);
   check(x, Match.Integer);
   check(y, Match.Integer);
@@ -146,10 +148,10 @@ dInit.isEnemyArmyHere = function(gameId, x, y, player) {
   var isEnemyHere = false;
 
   var find = {gameId:gameId, x:x, y:y, playerId: {$ne:player._id}};
-  Armies.find(find, {fields: {_id:1, playerId:1}}).forEach(function(otherArmy) {
+  for (const otherArmy of await Armies.find(find, {fields: {_id:1, playerId:1}}).fetchAsync()) {
 
     // dominus can attack any armies
-    var otherPlayer = Players.findOne(otherArmy.playerId, {fields: {is_dominus:1}});
+    var otherPlayer = await Players.findOneAsync(otherArmy.playerId, {fields: {is_dominus:1}});
     if (player.is_dominus || otherPlayer.is_dominus) {
       isEnemyHere = true;
 
@@ -160,7 +162,7 @@ dInit.isEnemyArmyHere = function(gameId, x, y, player) {
         isEnemyHere = true;
       }
     }
-  })
+  }
 
   return isEnemyHere;
 };

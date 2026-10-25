@@ -61,7 +61,7 @@ DDPRateLimiter.addRule(armiesAtHexSubRule, 5, 5000);
 
 
 // always publish my armies
-Meteor.publish('myArmies', function(gameId) {
+Meteor.publish('myArmies', async function(gameId) {
   check(gameId, Match.OneOf(String, null));
   var self = this;
   if(self.userId) {
@@ -74,7 +74,7 @@ Meteor.publish('myArmies', function(gameId) {
 		})
 
 		var query = Armies.find({user_id: this.userId, gameId:gameId}, {fields: fields});
-		Mongo.Collection._publishCursor(query, self, 'myarmies');
+		await Mongo.Collection._publishCursor(query, self, 'myarmies');
 		return self.ready()
 	} else {
 		return self.ready()

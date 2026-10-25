@@ -70,7 +70,7 @@ Template.rp_createArmy.events({
     var instance = Template.instance();
     var data = Template.currentData();
     if (instance && data) {
-      Meteor.apply('createArmyFromBuilding', [Session.get('gameId'), selected.type, data._id, instance.selectedArmy.get()], {}, function(error, army) {
+      dFunc.callWithCallback('createArmyFromBuilding', [Session.get('gameId'), selected.type, data._id, instance.selectedArmy.get()], function(error, army) {
         $(button).attr('disabled', false);
         $(button).html(button_html);
 

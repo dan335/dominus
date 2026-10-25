@@ -128,28 +128,28 @@ Template.rp_info_army_path.helpers({
 Template.rp_info_army_paths.events({
   'click .removeArmyPathButton': function(event, template) {
     var path = this;
-    Meteor.call('removeArmyPath', this._id);
+    dFunc.callAndForget('removeArmyPath', this._id);
   },
 
   'click .upArmyPathButton': function(event, template) {
     var path = this;
-    Meteor.call('decreasePathIndex', path._id);
+    dFunc.callAndForget('decreasePathIndex', path._id);
   },
 
   'click .downArmyPathButton': function(event, template) {
     var path = this;
-    Meteor.call('increasePathIndex', path._id);
+    dFunc.callAndForget('increasePathIndex', path._id);
   },
 
   'click #pauseMovementButton': function(event, template) {
     event.preventDefault();
     var army = Template.currentData();
-    Meteor.call('pauseMovement', army._id);
+    dFunc.callAndForget('pauseMovement', army._id);
   },
 
   'click #resumeMovementButton': function(event, template) {
     event.preventDefault();
     var army = Template.currentData();
-    Meteor.call('resumeMovement', army._id);
+    dFunc.callAndForget('resumeMovement', army._id);
   },
 });

@@ -16,7 +16,7 @@ dVillages.finishBuildingVillage = async function(villageId) {
     armyOptions.fields[type] = 1;
   })
   for (const army of await Armies.find({x:village.x, y:village.y, playerId: village.playerId}, armyOptions).fetchAsync()) {
-    if (dArmies.isStopped(army._id)) {
+    if (await dArmies.isStopped(army._id)) {
 
       var inc = {};
       _s.armies.types.forEach(function(type) {
@@ -24,7 +24,7 @@ dVillages.finishBuildingVillage = async function(villageId) {
       })
 
       await Villages.updateAsync(villageId, {$inc:inc})
-      dArmies.destroyArmy(army._id);
+      await dArmies.destroyArmy(army._id);
     }
   }
 

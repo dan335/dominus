@@ -55,7 +55,7 @@ Tinytest.add('villages.buildAndDestroy', function(test) {
   });
   soldiers.footmen = 1;
 
-  dArmies.create(player._id, soldiers, hex.x, hex.y);
+  Promise.await(dArmies.create(player._id, soldiers, hex.x, hex.y));
   test.equal(Armies.find({gameId:gameId, x:hex.x, y:hex.y}).count(), 1, 'army at hex');
 
   Meteor.call('buildVillage', gameId, hex.x, hex.y);

@@ -145,7 +145,7 @@ if (Meteor.isServer) {
     // an army for a player at x,y, made the way the game makes one
     makeArmy: function(playerId, soldiers, x, y) {
       refuseInProduction();
-      var army = dArmies.create(playerId, dTest.soldierCounts(soldiers), x, y);
+      var army = dTest.settle(dArmies.create(playerId, dTest.soldierCounts(soldiers), x, y));
       if (!army) throw new Error('could not make the army');
       return army._id;
     },
@@ -173,7 +173,13 @@ if (Meteor.isServer) {
     sendArmy: function(armyId, x, y) {
       refuseInProduction();
       var army = Armies.findOne(armyId);
-      return Meteor.server.method_handlers.addArmyPath.call({userId: army.user_id, isSimulation: false}, army.gameId, x, y, armyId);
+      return dTest.settle(Meteor.server.method_handlers.addArmyPath.call({userId: army.user_id, isSimulation: false}, army.gameId, x, y, armyId));
+    },
+
+    // an army's paths, in order
+    paths: function(armyId) {
+      refuseInProduction();
+      return Armypaths.find({armyId: armyId}, {sort: {index: 1}}).fetch();
     },
 
     // Makes the game's armies due to move on, so the worker moves them within
