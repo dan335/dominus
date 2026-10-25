@@ -110,6 +110,7 @@ packages/dominus-<feature>/
 
 - **Meteor Methods**: RPC calls defined in `*Methods.js` files, validated with `check()`, rate-limited via DDPRateLimiter
 - **Method policy**: every method a client can call must be listed in `server/methodPolicy.js` as `public`, `user` or `game`. `server/methodGate.js` enforces it on every client call and refuses unlisted methods. `game` methods require the caller to have a `Players` doc in the game that owns the documents being acted on, which is what keeps spectators from changing anything. `server/spectatorTests.js` fails if a method is missing from the policy or its attack table.
+- **Browser errors**: `client/errorReporter.js` sends the page's uncaught errors, unhandled rejections and the exceptions Meteor logs (autoruns, helpers, method callbacks, through `Meteor._debug`) to `reportClientError` (`server/clientErrors.js`), which logs each as one `Client error: {json}` line and keeps the last 20 in `ClientErrors.recent`. Each distinct error is sent once per page load, at most 20 per page, and 5 a minute per connection.
 - **Spectating**: anyone (even logged out) can open `/game/:id`; without a `Players` doc in that game they spectate. The client keeps this in `Session 'gameViewMode'` and only sets `Session 'playerId'` for players.
 - **Pub/Sub**: Server publishes via `Meteor.publish()`, clients subscribe with `Meteor.subscribe()`
 - **Routing**: SimpleRouter (`danimal:simplerouter`) maps URLs to Blaze templates via `Template.dynamic`

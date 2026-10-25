@@ -96,6 +96,9 @@ MethodPolicy = {
   addPostView: PUBLIC,
   forumMarkAllRead: PUBLIC,
 
+  // errors from the browser, only logged (server/clientErrors.js)
+  reportClientError: PUBLIC,
+
 
   // --- user: account, store, signups, admin, forum ---
   changeMainUsername: USER,
