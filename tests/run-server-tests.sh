@@ -5,6 +5,7 @@
 #
 #   tests/run-server-tests.sh [output-dir]      default: .test-results
 #   RUNS=3 tests/run-server-tests.sh            run the suites 3 times in a row
+#   SUITE=march tests/run-server-tests.sh       only the suites whose name contains it
 #   COVERAGE=1 tests/run-server-tests.sh        also report server line coverage
 #                                               (tests/coverage-report.py, needs npx)
 #                                               and write coverage-map.md, every
@@ -88,7 +89,7 @@ fi
 i=1
 while [ $i -le $RUNS ]; do
     echo "Run $i of $RUNS..."
-    echo "JSON.stringify(Meteor.call('runAllTests'))" | meteor shell $SUPERUSER > "$OUT/run-$i.txt" 2>&1 || true
+    echo "JSON.stringify(Meteor.call('runAllTests', $(node -e 'console.log(JSON.stringify(process.argv[1] || ""))' "$SUITE")))" | meteor shell $SUPERUSER > "$OUT/run-$i.txt" 2>&1 || true
     python3 - "$OUT/run-$i.txt" "$i" >> "$REPORT" <<'PY' || STATUS=1
 import json, re, sys
 text = open(sys.argv[1]).read()

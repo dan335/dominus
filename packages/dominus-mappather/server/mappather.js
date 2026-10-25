@@ -11,17 +11,16 @@
 // }
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.pathToHex.process(4, Meteor.bindEnvironment(function(job) {
-    Mappather.pathToHex(job.data.path);
-    return Promise.resolve();
-  }));
+  Queues.pathToHex.process(4, async function(job) {
+    await Mappather.pathToHex(job.data.path);
+  });
 }
 
 
-Mappather.pathToHex = function(path) {
+Mappather.pathToHex = async function(path) {
 
-  var nodes = Hexes.find({countryId: {$in:path.countryIds}}, {fields: {x:1, y:1, hasBuilding:1, countryId:1}});
-  if (!nodes.count()) {
+  var nodes = await Hexes.find({countryId: {$in:path.countryIds}}, {fields: {x:1, y:1, hasBuilding:1, countryId:1}}).fetchAsync();
+  if (!nodes.length) {
     console.error('No nodes found in pathToHex', path);
     return false;
   }
@@ -29,19 +28,19 @@ Mappather.pathToHex = function(path) {
   let fromX = null;
   let fromY = null;
   if (path.index == 0) {
-    let army = Armies.findOne(path.armyId, {fields: {x:1, y:1}});
+    let army = await Armies.findOneAsync(path.armyId, {fields: {x:1, y:1}});
     if (!army) {
       //console.error('No army found in pathToHex', path);
-      Armypaths.remove(path._id);
+      await Armypaths.removeAsync(path._id);
       return false;
     }
     fromX = army.x;
     fromY = army.y;
   } else {
-    const lastPath = Armypaths.findOne({armyId:path.armyId, index:path.index-1}, {fields: {x:1, y:1}});
+    const lastPath = await Armypaths.findOneAsync({armyId:path.armyId, index:path.index-1}, {fields: {x:1, y:1}});
     if (!lastPath) {
       // indexes are wrong, re-index
-      Queues.add('fixPathIndexes', {armyId:path.armyId}, {delay:500, timeout:1000*60}, false);
+      await Queues.addAsyncOrLog('fixPathIndexes', {armyId:path.armyId}, {delay:500, timeout:1000*60}, false);
       return false;
     }
     fromX = lastPath.x;
@@ -50,12 +49,12 @@ Mappather.pathToHex = function(path) {
 
   //console.time('getPath '+path.countryIds.length);
   let distance = 0;
-  let hexes = Mappather.getPath(fromX, fromY, path.x, path.y, nodes.fetch());
+  let hexes = Mappather.getPath(fromX, fromY, path.x, path.y, nodes);
 
   if (!hexes) {
     // path not found
     // remove because it errors endlessly
-    Armypaths.remove(path._id);
+    await Armypaths.removeAsync(path._id);
     return false;
     //hexes = null;
     //distance = 0;
@@ -63,7 +62,7 @@ Mappather.pathToHex = function(path) {
 
   //console.timeEnd('getPath '+path.countryIds.length);
   distance = hexes.length;
-  Armypaths.update(path._id, {$set: {hexes:hexes, distance:distance, dirtyMoveTotals:true}});
+  await Armypaths.updateAsync(path._id, {$set: {hexes:hexes, distance:distance, dirtyMoveTotals:true}});
 }
 
 

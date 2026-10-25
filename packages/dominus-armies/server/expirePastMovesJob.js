@@ -1,24 +1,23 @@
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.expirePastMoves.process(Meteor.bindEnvironment(function(job) {
-    dArmies.expirePastMoves();
-    return Promise.resolve();
-  }));
+  Queues.expirePastMoves.process(async function(job) {
+    await dArmies.expirePastMoves();
+  });
 }
 
 
-dArmies.expirePastMoves = function() {
+dArmies.expirePastMoves = async function() {
   var cutoff = moment(dClock.now()).subtract(_s.armies.pastMovesMsLimit, 'ms').toDate();
   var find = {"pastMoves.moveDate": {$lt:cutoff}};
   var options = {fields:{pastMoves:1}};
-  Armies.find(find, options).forEach(function(army) {
+  for (const army of await Armies.find(find, options).fetchAsync()) {
     var numPastMoves = army.pastMoves.length;
     var pastMoves = _.reject(army.pastMoves, function(pm) {
       return moment(new Date(pm.moveDate)).isBefore(moment(cutoff));
     });
     if (pastMoves.length != numPastMoves) {
-      Armies.update(army._id, {$set:{pastMoves:pastMoves}});
+      await Armies.updateAsync(army._id, {$set:{pastMoves:pastMoves}});
     }
-  })
+  }
 }
