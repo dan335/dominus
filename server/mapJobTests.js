@@ -7,18 +7,175 @@
 //
 // bakeCountry runs with Mapbaker.createJpgImage replaced (it needs a headless
 // browser) and Mapbaker.uploadToS3 replaced, so nothing reaches S3 even if
-// the settings say to serve bakes from it.
+// the settings say to serve bakes from it. The tests of those helpers replace
+// S3 (Mapbaker.knox), svgexport and fetch (Mapbaker.fetch).
 //
 // They run as part of runAllTests (server/lib/testRunner.js), so the
 // same rule applies: only against a local development database.
 
 if (Meteor.isServer) {
 
+  var fs = Npm.require('fs');
+  var os = Npm.require('os');
+  var path = Npm.require('path');
+
   Meteor.startup(function() {
     dTest.addSuite('jobs: map and minimap (server/mapJobTests.js)', function(run, t) {
       var assert = t.assert;
       var equal = t.equal;
       var runJob = dTest.runJob;
+
+      // --- the mapbaker's S3, JPG and image check helpers, with S3, the
+      // headless browser and the network replaced ---
+
+      var replaced = [];
+      var replace = function(obj, key, value) {
+        var original = obj[key];
+        obj[key] = value;
+        replaced.push(function() { obj[key] = original; });
+      };
+      var putBack = function() {
+        while (replaced.length) replaced.pop()();
+      };
+      var quietErrors = function() {
+        var errors = [];
+        replace(console, 'error', function() { errors.push(_.map(arguments, function(a) { return a instanceof Error ? a.message : String(a); }).join(' ')); });
+        return errors;
+      };
+      var answer = function(status) {
+        return Promise.resolve({status: status, arrayBuffer: function() { return Promise.resolve(new ArrayBuffer(0)); }});
+      };
+      var tempFile = function(content) {
+        var file = path.join(os.tmpdir(), 'dominus-map-test-' + Random.id(6) + '.jpg');
+        fs.writeFileSync(file, content);
+        return file;
+      };
+
+      run('imageExists: true for a 200, false for a 404 or a network error, and true without asking in development', function() {
+        var urls = [];
+        try {
+          var errors = quietErrors();
+          replace(process.env, 'NODE_ENV', 'production');
+          replace(Mapbaker, 'fetch', function(url) {
+            urls.push(url);
+            if (/gone/.test(url)) return answer(404);
+            if (/down/.test(url)) return Promise.reject(new Error('connect ECONNREFUSED'));
+            return answer(200);
+          });
+          equal(dTest.settle(Mapbaker.imageExists('https://bakes.example.invalid/a.jpg')), true, '200');
+          equal(dTest.settle(Mapbaker.imageExists('https://bakes.example.invalid/gone.jpg')), false, '404');
+          equal(dTest.settle(Mapbaker.imageExists('https://down.example.invalid/a.jpg')), false, 'network error');
+          equal(errors.length, 2, 'the two failures logged');
+          assert(/404/.test(errors[0]), 'with the status: ' + errors[0]);
+          process.env.NODE_ENV = 'development';
+          equal(dTest.settle(Mapbaker.imageExists('https://bakes.example.invalid/dev.jpg')), true, 'development');
+          equal(urls.length, 3, 'development asks nothing');
+          assert(dTest.throws(function() { return Mapbaker.imageExists(5); }), 'a url that is not a string is refused');
+        } finally {
+          putBack();
+        }
+      });
+
+      run('uploadToS3: puts the file with its size and a year\'s caching, then checks it is there', function() {
+        var file = tempFile('jpeg bytes');
+        var puts = [];
+        var image = {gameId: 'mapGame', filename: 'mapCountry'};
+        var url = Meteor.settings.public.s3.url + Meteor.settings.public.s3.bakePath + 'mapGame/mapCountry.jpg';
+        var putResult = {statusCode: 200};
+        var exists = true;
+        try {
+          var errors = quietErrors();
+          replace(Mapbaker, 'knox', {putFile: function(from, to, headers, callback) {
+            puts.push({from: from, to: to, headers: headers});
+            setTimeout(function() { putResult.error ? callback(putResult.error) : callback(null, putResult); }, 5);
+          }});
+          replace(Mapbaker, 'imageExists', async function(u) { return u == url && exists; });
+
+          equal(dTest.settle(Mapbaker.uploadToS3(file, image)), url, 'the image\'s url');
+          equal(puts[0].from, file, 'the file');
+          equal(puts[0].to, Meteor.settings.public.s3.bakePath + 'mapGame/mapCountry.jpg', 'under the game\'s bakes');
+          equal(puts[0].headers['Content-Length'], 10, 'its size');
+          equal(puts[0].headers['Content-Type'], 'image/jpg', 'a jpg');
+          equal(puts[0].headers['Cache-Control'], 'max-age=31557600', 'cached for a year');
+
+          exists = false;
+          equal(dTest.settle(Mapbaker.uploadToS3(file, image)), false, 'not there after the put');
+          exists = true;
+          putResult = {statusCode: 403};
+          equal(dTest.settle(Mapbaker.uploadToS3(file, image)), false, 'a 403');
+          putResult = {error: new Error('socket hang up')};
+          equal(dTest.settle(Mapbaker.uploadToS3(file, image)), false, 'a put that fails');
+          var before = puts.length;
+          equal(dTest.settle(Mapbaker.uploadToS3(file + '.missing', image)), false, 'a missing file');
+          equal(dTest.settle(Mapbaker.uploadToS3(os.tmpdir(), image)), false, 'a folder');
+          equal(puts.length, before, 'neither is put');
+          equal(errors.length, 5, 'each failure logged');
+        } finally {
+          putBack();
+          fs.unlinkSync(file);
+        }
+      });
+
+      run('createJpgImage: the JPG when svgexport makes it, false when it fails or makes nothing', function() {
+        var out = tempFile('');
+        fs.unlinkSync(out);
+        var renders = [];
+        try {
+          var errors = quietErrors();
+          replace(Mapbaker, 'svgexport', {render: function(list, callback) {
+            renders.push(list);
+            var output = list[0].output;
+            setTimeout(function() {
+              if (/fail/.test(list[0].input)) return callback(new Error('phantomjs died'));
+              if (!/nothing/.test(list[0].input)) fs.writeFileSync(output.split(' ')[0], 'jpg');
+              callback(null);
+            }, 5);
+          }});
+          equal(dTest.settle(Mapbaker.createJpgImage('in.svg', out, 'jpg', '90%')), out, 'the JPG');
+          equal(renders[0][0].output, out + ' jpg 90%', 'with its type and quality');
+          equal((fs.statSync(out).mode & 0o777).toString(8), '755', 'readable by all');
+          fs.unlinkSync(out);
+          equal(dTest.settle(Mapbaker.createJpgImage('fail.svg', out, 'jpg', '90%')), false, 'svgexport fails');
+          equal(dTest.settle(Mapbaker.createJpgImage('nothing.svg', out, 'jpg', '90%')), false, 'no file made');
+          equal(errors.length, 2, 'the failure logged');
+        } finally {
+          putBack();
+          if (fs.existsSync(out)) fs.unlinkSync(out);
+        }
+      });
+
+      run('deleteS3BakesForGame: deletes every file under the game\'s bakes, and gives false when S3 fails', function() {
+        var listed = [];
+        var deleted = [];
+        var fail = {};
+        try {
+          var errors = quietErrors();
+          replace(Mapbaker, 'knox', {
+            list: function(opts, callback) {
+              listed.push(opts.prefix);
+              setTimeout(function() {
+                fail.list ? callback(new Error('list failed')) : callback(null, {Contents: [{Key: opts.prefix + 'a.jpg'}, {Key: opts.prefix + 'b.jpg'}]});
+              }, 5);
+            },
+            deleteMultiple: function(keys, callback) {
+              deleted.push(keys);
+              setTimeout(function() { fail.delete ? callback(new Error('delete failed')) : callback(null, {statusCode: 200}); }, 5);
+            }
+          });
+          equal(dTest.settle(Mapbaker.deleteS3BakesForGame('mapGame')), true, 'deleted');
+          equal(listed[0], 'bakes/mapGame/', 'the game\'s bakes');
+          equal(JSON.stringify(deleted[0]), JSON.stringify(['bakes/mapGame/a.jpg', 'bakes/mapGame/b.jpg']), 'each file');
+          fail.delete = true;
+          equal(dTest.settle(Mapbaker.deleteS3BakesForGame('mapGame')), false, 'the delete fails');
+          fail.list = true;
+          equal(dTest.settle(Mapbaker.deleteS3BakesForGame('mapGame')), false, 'the list fails');
+          equal(deleted.length, 2, 'nothing deleted when the list fails');
+          equal(errors.length, 2, 'each failure logged');
+          assert(dTest.throws(function() { return Mapbaker.deleteS3BakesForGame(5); }), 'a game id that is not a string is refused');
+        } finally {
+          putBack();
+        }
+      });
 
       if (process.env.DOMINUS_WORKER != 'true') {
         run('map jobs: need the worker', function() { return 'skip'; });
@@ -60,7 +217,7 @@ if (Meteor.isServer) {
           var bake = Mapbaker.bakeCountry;
           Mapbaker.createJpgImage = function(inFile, outFile) { made.push({inFile: inFile, outFile: outFile}); return outFile; };
           Mapbaker.uploadToS3 = function(file) { uploads.push(file); return 'https://example.invalid/' + file; };
-          Mapbaker.bakeCountry = function(countryId) { baked = bake.apply(this, arguments); return baked; };
+          Mapbaker.bakeCountry = async function(countryId) { baked = await bake.apply(this, arguments); return baked; };
           var jobs;
           try {
             jobs = dTest.recordJobs(function() {

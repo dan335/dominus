@@ -1,0 +1,1244 @@
+{
+ "about": "What the map test (server/mapTests.js) left behind after each step. Recorded from the code before the mapmaker, minimap and mapbaker became async; see that file before recording it again.",
+ "seed": "dominus map",
+ "startAt": "2026-01-26T09:00:00.000Z",
+ "at": {
+  "added": [
+   "udjcoQeG59mwP8SEA",
+   "Sb4aT3FPXxENLqpoi",
+   "YEkzz4DFDCiidcjqP",
+   "bDT6yhh2mLsWNh66z"
+  ],
+  "grown": "Sb4aT3FPXxENLqpoi",
+  "grownBy": "Sb4aT3FPXxENLqpoi",
+  "spots": [
+   {
+    "x": 11,
+    "y": 6,
+    "countryId": "YEkzz4DFDCiidcjqP"
+   },
+   {
+    "x": 4,
+    "y": 0,
+    "countryId": "udjcoQeG59mwP8SEA"
+   },
+   {
+    "x": 10,
+    "y": 14,
+    "countryId": "bDT6yhh2mLsWNh66z"
+   }
+  ],
+  "nearBeforeRemove": 257,
+  "outside": null,
+  "water": [
+   2,
+   3,
+   3,
+   1,
+   4,
+   3
+  ],
+  "bakes": [
+   {
+    "images": [
+     {
+      "gameId": "J8Fq6SwBdeDpZtBTm",
+      "countryId": "Sb4aT3FPXxENLqpoi",
+      "minX": -16,
+      "minY": -8,
+      "maxX": 9,
+      "maxY": 29,
+      "filename": "Sb4aT3FPXxENLqpoi",
+      "posX": -1500,
+      "posY": -691,
+      "width": 2370,
+      "height": 2510,
+      "hasCoords": false
+     },
+     {
+      "gameId": "J8Fq6SwBdeDpZtBTm",
+      "countryId": "Sb4aT3FPXxENLqpoi",
+      "minX": -16,
+      "minY": -8,
+      "maxX": 9,
+      "maxY": 29,
+      "filename": "Sb4aT3FPXxENLqpoi_withcoords",
+      "posX": -1500,
+      "posY": -691,
+      "width": 2370,
+      "height": 2510,
+      "hasCoords": true
+     }
+    ],
+    "svgs": [
+     {
+      "bytes": 122748,
+      "sha1": "4e81c609840333b7259c9a0d67c0b5f904a4eba3"
+     },
+     {
+      "bytes": 156762,
+      "sha1": "45a44b8f887a34fb74a22c02f8769392c0c08ca9"
+     }
+    ]
+   },
+   {
+    "images": [
+     {
+      "gameId": "J8Fq6SwBdeDpZtBTm",
+      "countryId": "YEkzz4DFDCiidcjqP",
+      "minX": 6,
+      "minY": -6,
+      "maxX": 22,
+      "maxY": 13,
+      "filename": "YEkzz4DFDCiidcjqP",
+      "posX": 480,
+      "posY": 109,
+      "width": 1560,
+      "height": 1383,
+      "hasCoords": false
+     },
+     {
+      "gameId": "J8Fq6SwBdeDpZtBTm",
+      "countryId": "YEkzz4DFDCiidcjqP",
+      "minX": 6,
+      "minY": -6,
+      "maxX": 22,
+      "maxY": 13,
+      "filename": "YEkzz4DFDCiidcjqP_withcoords",
+      "posX": 480,
+      "posY": 109,
+      "width": 1560,
+      "height": 1383,
+      "hasCoords": true
+     }
+    ],
+    "svgs": [
+     {
+      "bytes": 63308,
+      "sha1": "95076c4a56278e45d326235b2d6e7400ba059c56"
+     },
+     {
+      "bytes": 80839,
+      "sha1": "410a88c71c1bededd778fe3bc40b278a1d618ae6"
+     }
+    ]
+   },
+   {
+    "images": [
+     {
+      "gameId": "J8Fq6SwBdeDpZtBTm",
+      "countryId": "bDT6yhh2mLsWNh66z",
+      "minX": 5,
+      "minY": -3,
+      "maxX": 31,
+      "maxY": 23,
+      "filename": "bDT6yhh2mLsWNh66z",
+      "posX": 390,
+      "posY": 655,
+      "width": 2460,
+      "height": 1565,
+      "hasCoords": false
+     },
+     {
+      "gameId": "J8Fq6SwBdeDpZtBTm",
+      "countryId": "bDT6yhh2mLsWNh66z",
+      "minX": 5,
+      "minY": -3,
+      "maxX": 31,
+      "maxY": 23,
+      "filename": "bDT6yhh2mLsWNh66z_withcoords",
+      "posX": 390,
+      "posY": 655,
+      "width": 2460,
+      "height": 1565,
+      "hasCoords": true
+     }
+    ],
+    "svgs": [
+     {
+      "bytes": 109407,
+      "sha1": "b110a965691e088746cd17df4fa177037e0df4fa"
+     },
+     {
+      "bytes": 139838,
+      "sha1": "e41f59243771910472e37ef555d03fd7e8ce3728"
+     }
+    ]
+   },
+   {
+    "images": [
+     {
+      "gameId": "J8Fq6SwBdeDpZtBTm",
+      "countryId": "udjcoQeG59mwP8SEA",
+      "minX": -9,
+      "minY": -10,
+      "maxX": 12,
+      "maxY": 12,
+      "filename": "udjcoQeG59mwP8SEA",
+      "posX": -870,
+      "posY": -582,
+      "width": 2010,
+      "height": 1419,
+      "hasCoords": false
+     },
+     {
+      "gameId": "J8Fq6SwBdeDpZtBTm",
+      "countryId": "udjcoQeG59mwP8SEA",
+      "minX": -9,
+      "minY": -10,
+      "maxX": 12,
+      "maxY": 12,
+      "filename": "udjcoQeG59mwP8SEA_withcoords",
+      "posX": -870,
+      "posY": -582,
+      "width": 2010,
+      "height": 1419,
+      "hasCoords": true
+     }
+    ],
+    "svgs": [
+     {
+      "bytes": 106532,
+      "sha1": "8bc102ffec101c7491ae1126918d379d7e1c22e5"
+     },
+     {
+      "bytes": 135845,
+      "sha1": "d1abfae6c54d703c05102396a2b0602eee1f1227"
+     }
+    ]
+   }
+  ]
+ },
+ "steps": [
+  {
+   "step": "four countries",
+   "time": "2026-01-26T09:00:00.000Z",
+   "facts": {
+    "countries": [
+     {
+      "_id": "Sb4aT3FPXxENLqpoi",
+      "borders": 57,
+      "extents": {
+       "maxX": 9,
+       "maxY": 21,
+       "maxZ": -7,
+       "minX": -9,
+       "minY": 7,
+       "minZ": -21
+      },
+      "hexDocs": 127,
+      "hexes": 127,
+      "neighbors": [
+       "YEkzz4DFDCiidcjqP",
+       "bDT6yhh2mLsWNh66z",
+       "udjcoQeG59mwP8SEA"
+      ],
+      "paths": null
+     },
+     {
+      "_id": "YEkzz4DFDCiidcjqP",
+      "borders": 65,
+      "extents": {
+       "maxX": 22,
+       "maxY": 13,
+       "maxZ": -9,
+       "minX": 6,
+       "minY": -6,
+       "minZ": -28
+      },
+      "hexDocs": 171,
+      "hexes": 171,
+      "neighbors": [
+       "Sb4aT3FPXxENLqpoi",
+       "bDT6yhh2mLsWNh66z",
+       "udjcoQeG59mwP8SEA"
+      ],
+      "paths": null
+     },
+     {
+      "_id": "bDT6yhh2mLsWNh66z",
+      "borders": 95,
+      "extents": {
+       "maxX": 31,
+       "maxY": 23,
+       "maxZ": -20,
+       "minX": 5,
+       "minY": -3,
+       "minZ": -40
+      },
+      "hexDocs": 294,
+      "hexes": 294,
+      "neighbors": [
+       "Sb4aT3FPXxENLqpoi",
+       "YEkzz4DFDCiidcjqP"
+      ],
+      "paths": null
+     },
+     {
+      "_id": "udjcoQeG59mwP8SEA",
+      "borders": 75,
+      "extents": {
+       "maxX": 12,
+       "maxY": 12,
+       "maxZ": 8,
+       "minX": -9,
+       "minY": -10,
+       "minZ": -13
+      },
+      "hexDocs": 286,
+      "hexes": 286,
+      "neighbors": [
+       "Sb4aT3FPXxENLqpoi",
+       "YEkzz4DFDCiidcjqP"
+      ],
+      "paths": null
+     }
+    ],
+    "hexes": 878,
+    "nearBuilding": 0,
+    "withBuilding": 0
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {}
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "castles": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "hexes": {
+     "count": 878,
+     "hash": "3a81701a64341847"
+    },
+    "countries": {
+     "count": 4,
+     "hash": "b4580dbc774e1512"
+    },
+    "rooms": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "globalalerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markethistory": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "battles2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamestats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "games": {
+     "count": 1,
+     "hash": "62c592b2968a5a8d"
+    },
+    "rounds": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    }
+   }
+  },
+  {
+   "step": "king of the hill grows the first country",
+   "time": "2026-01-26T09:00:00.000Z",
+   "facts": {
+    "countries": [
+     {
+      "_id": "Sb4aT3FPXxENLqpoi",
+      "borders": 105,
+      "extents": {
+       "maxX": 9,
+       "maxY": 29,
+       "maxZ": 11,
+       "minX": -16,
+       "minY": -8,
+       "minZ": -25
+      },
+      "hexDocs": 327,
+      "hexes": 327,
+      "neighbors": [
+       "YEkzz4DFDCiidcjqP",
+       "bDT6yhh2mLsWNh66z",
+       "udjcoQeG59mwP8SEA"
+      ],
+      "paths": null
+     },
+     {
+      "_id": "YEkzz4DFDCiidcjqP",
+      "borders": 65,
+      "extents": {
+       "maxX": 22,
+       "maxY": 13,
+       "maxZ": -9,
+       "minX": 6,
+       "minY": -6,
+       "minZ": -28
+      },
+      "hexDocs": 171,
+      "hexes": 171,
+      "neighbors": [
+       "Sb4aT3FPXxENLqpoi",
+       "bDT6yhh2mLsWNh66z",
+       "udjcoQeG59mwP8SEA"
+      ],
+      "paths": null
+     },
+     {
+      "_id": "bDT6yhh2mLsWNh66z",
+      "borders": 95,
+      "extents": {
+       "maxX": 31,
+       "maxY": 23,
+       "maxZ": -20,
+       "minX": 5,
+       "minY": -3,
+       "minZ": -40
+      },
+      "hexDocs": 294,
+      "hexes": 294,
+      "neighbors": [
+       "Sb4aT3FPXxENLqpoi",
+       "YEkzz4DFDCiidcjqP"
+      ],
+      "paths": null
+     },
+     {
+      "_id": "udjcoQeG59mwP8SEA",
+      "borders": 75,
+      "extents": {
+       "maxX": 12,
+       "maxY": 12,
+       "maxZ": 8,
+       "minX": -9,
+       "minY": -10,
+       "minZ": -13
+      },
+      "hexDocs": 286,
+      "hexes": 286,
+      "neighbors": [
+       "Sb4aT3FPXxENLqpoi",
+       "YEkzz4DFDCiidcjqP"
+      ],
+      "paths": null
+     }
+    ],
+    "hexes": 1078,
+    "nearBuilding": 0,
+    "withBuilding": 0
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {}
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "castles": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "hexes": {
+     "count": 1078,
+     "hash": "4cd813027daa142e"
+    },
+    "countries": {
+     "count": 4,
+     "hash": "83b4a8b528e8a394"
+    },
+    "rooms": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "globalalerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markethistory": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "battles2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamestats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "games": {
+     "count": 1,
+     "hash": "62c592b2968a5a8d"
+    },
+    "rounds": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    }
+   }
+  },
+  {
+   "step": "castle spots, with buildings on two and one taken away",
+   "time": "2026-01-26T09:00:00.000Z",
+   "facts": {
+    "countries": [
+     {
+      "_id": "Sb4aT3FPXxENLqpoi",
+      "borders": 105,
+      "extents": {
+       "maxX": 9,
+       "maxY": 29,
+       "maxZ": 11,
+       "minX": -16,
+       "minY": -8,
+       "minZ": -25
+      },
+      "hexDocs": 327,
+      "hexes": 327,
+      "neighbors": [
+       "YEkzz4DFDCiidcjqP",
+       "bDT6yhh2mLsWNh66z",
+       "udjcoQeG59mwP8SEA"
+      ],
+      "paths": null
+     },
+     {
+      "_id": "YEkzz4DFDCiidcjqP",
+      "borders": 65,
+      "extents": {
+       "maxX": 22,
+       "maxY": 13,
+       "maxZ": -9,
+       "minX": 6,
+       "minY": -6,
+       "minZ": -28
+      },
+      "hexDocs": 171,
+      "hexes": 171,
+      "neighbors": [
+       "Sb4aT3FPXxENLqpoi",
+       "bDT6yhh2mLsWNh66z",
+       "udjcoQeG59mwP8SEA"
+      ],
+      "paths": null
+     },
+     {
+      "_id": "bDT6yhh2mLsWNh66z",
+      "borders": 95,
+      "extents": {
+       "maxX": 31,
+       "maxY": 23,
+       "maxZ": -20,
+       "minX": 5,
+       "minY": -3,
+       "minZ": -40
+      },
+      "hexDocs": 294,
+      "hexes": 294,
+      "neighbors": [
+       "Sb4aT3FPXxENLqpoi",
+       "YEkzz4DFDCiidcjqP"
+      ],
+      "paths": null
+     },
+     {
+      "_id": "udjcoQeG59mwP8SEA",
+      "borders": 75,
+      "extents": {
+       "maxX": 12,
+       "maxY": 12,
+       "maxZ": 8,
+       "minX": -9,
+       "minY": -10,
+       "minZ": -13
+      },
+      "hexDocs": 286,
+      "hexes": 286,
+      "neighbors": [
+       "Sb4aT3FPXxENLqpoi",
+       "YEkzz4DFDCiidcjqP"
+      ],
+      "paths": null
+     }
+    ],
+    "hexes": 1078,
+    "nearBuilding": 182,
+    "withBuilding": 2
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {}
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "castles": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 2,
+     "hash": "01e2ca7e339a1f58"
+    },
+    "hexes": {
+     "count": 1078,
+     "hash": "2cdda690c6943e23"
+    },
+    "countries": {
+     "count": 4,
+     "hash": "15a894888b2117dc"
+    },
+    "rooms": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "globalalerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markethistory": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "battles2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamestats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "games": {
+     "count": 1,
+     "hash": "62c592b2968a5a8d"
+    },
+    "rounds": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    }
+   }
+  },
+  {
+   "step": "the countries' masks and the minimap",
+   "time": "2026-01-26T09:00:00.000Z",
+   "facts": {
+    "countries": [
+     {
+      "_id": "Sb4aT3FPXxENLqpoi",
+      "borders": 105,
+      "extents": {
+       "maxX": 9,
+       "maxY": 29,
+       "maxZ": 11,
+       "minX": -16,
+       "minY": -8,
+       "minZ": -25
+      },
+      "hexDocs": 327,
+      "hexes": 327,
+      "neighbors": [
+       "YEkzz4DFDCiidcjqP",
+       "bDT6yhh2mLsWNh66z",
+       "udjcoQeG59mwP8SEA"
+      ],
+      "paths": [
+       180,
+       46
+      ]
+     },
+     {
+      "_id": "YEkzz4DFDCiidcjqP",
+      "borders": 65,
+      "extents": {
+       "maxX": 22,
+       "maxY": 13,
+       "maxZ": -9,
+       "minX": 6,
+       "minY": -6,
+       "minZ": -28
+      },
+      "hexDocs": 171,
+      "hexes": 171,
+      "neighbors": [
+       "Sb4aT3FPXxENLqpoi",
+       "bDT6yhh2mLsWNh66z",
+       "udjcoQeG59mwP8SEA"
+      ],
+      "paths": [
+       140
+      ]
+     },
+     {
+      "_id": "bDT6yhh2mLsWNh66z",
+      "borders": 95,
+      "extents": {
+       "maxX": 31,
+       "maxY": 23,
+       "maxZ": -20,
+       "minX": 5,
+       "minY": -3,
+       "minZ": -40
+      },
+      "hexDocs": 294,
+      "hexes": 294,
+      "neighbors": [
+       "Sb4aT3FPXxENLqpoi",
+       "YEkzz4DFDCiidcjqP"
+      ],
+      "paths": [
+       202
+      ]
+     },
+     {
+      "_id": "udjcoQeG59mwP8SEA",
+      "borders": 75,
+      "extents": {
+       "maxX": 12,
+       "maxY": 12,
+       "maxZ": 8,
+       "minX": -9,
+       "minY": -10,
+       "minZ": -13
+      },
+      "hexDocs": 286,
+      "hexes": 286,
+      "neighbors": [
+       "Sb4aT3FPXxENLqpoi",
+       "YEkzz4DFDCiidcjqP"
+      ],
+      "paths": [
+       168
+      ]
+     }
+    ],
+    "hexes": 1078,
+    "nearBuilding": 182,
+    "withBuilding": 2
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {
+     "generateGameMinimap": 4
+    },
+    "ran": {}
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "castles": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 2,
+     "hash": "01e2ca7e339a1f58"
+    },
+    "hexes": {
+     "count": 1078,
+     "hash": "2cdda690c6943e23"
+    },
+    "countries": {
+     "count": 4,
+     "hash": "c610a83d11222405"
+    },
+    "rooms": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "globalalerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markethistory": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "battles2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamestats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "games": {
+     "count": 1,
+     "hash": "348d2868591919a4"
+    },
+    "rounds": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    }
+   }
+  },
+  {
+   "step": "each country baked to SVG",
+   "time": "2026-01-26T09:00:00.000Z",
+   "facts": {
+    "countries": [
+     {
+      "_id": "Sb4aT3FPXxENLqpoi",
+      "borders": 105,
+      "extents": {
+       "maxX": 9,
+       "maxY": 29,
+       "maxZ": 11,
+       "minX": -16,
+       "minY": -8,
+       "minZ": -25
+      },
+      "hexDocs": 327,
+      "hexes": 327,
+      "neighbors": [
+       "YEkzz4DFDCiidcjqP",
+       "bDT6yhh2mLsWNh66z",
+       "udjcoQeG59mwP8SEA"
+      ],
+      "paths": [
+       180,
+       46
+      ]
+     },
+     {
+      "_id": "YEkzz4DFDCiidcjqP",
+      "borders": 65,
+      "extents": {
+       "maxX": 22,
+       "maxY": 13,
+       "maxZ": -9,
+       "minX": 6,
+       "minY": -6,
+       "minZ": -28
+      },
+      "hexDocs": 171,
+      "hexes": 171,
+      "neighbors": [
+       "Sb4aT3FPXxENLqpoi",
+       "bDT6yhh2mLsWNh66z",
+       "udjcoQeG59mwP8SEA"
+      ],
+      "paths": [
+       140
+      ]
+     },
+     {
+      "_id": "bDT6yhh2mLsWNh66z",
+      "borders": 95,
+      "extents": {
+       "maxX": 31,
+       "maxY": 23,
+       "maxZ": -20,
+       "minX": 5,
+       "minY": -3,
+       "minZ": -40
+      },
+      "hexDocs": 294,
+      "hexes": 294,
+      "neighbors": [
+       "Sb4aT3FPXxENLqpoi",
+       "YEkzz4DFDCiidcjqP"
+      ],
+      "paths": [
+       202
+      ]
+     },
+     {
+      "_id": "udjcoQeG59mwP8SEA",
+      "borders": 75,
+      "extents": {
+       "maxX": 12,
+       "maxY": 12,
+       "maxZ": 8,
+       "minX": -9,
+       "minY": -10,
+       "minZ": -13
+      },
+      "hexDocs": 286,
+      "hexes": 286,
+      "neighbors": [
+       "Sb4aT3FPXxENLqpoi",
+       "YEkzz4DFDCiidcjqP"
+      ],
+      "paths": [
+       168
+      ]
+     }
+    ],
+    "hexes": 1078,
+    "nearBuilding": 182,
+    "withBuilding": 2
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {}
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "castles": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 2,
+     "hash": "01e2ca7e339a1f58"
+    },
+    "hexes": {
+     "count": 1078,
+     "hash": "2cdda690c6943e23"
+    },
+    "countries": {
+     "count": 4,
+     "hash": "c610a83d11222405"
+    },
+    "rooms": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "globalalerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markethistory": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "battles2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamestats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "games": {
+     "count": 1,
+     "hash": "348d2868591919a4"
+    },
+    "rounds": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    }
+   }
+  }
+ ]
+}

@@ -67,7 +67,7 @@ if (Meteor.isServer) {
     try {
       _s.mapmaker.minHexesInCountry = 100;
       _s.mapmaker.maxHexesInCountry = 100;
-      Mapmaker.addCountry(gameId, true);
+      dTest.settle(Mapmaker.addCountry(gameId, true));
     } finally {
       _.extend(_s.mapmaker, sizes);
     }
@@ -148,7 +148,7 @@ if (Meteor.isServer) {
         let game = _createTestGame();
         let user = _createTestUser();
         Gamesignups.insert({gameId: game._id, userId: user._id, username: user.username, createdAt: new Date(), usedToken: false});
-        Mapmaker.eraseMap(game._id);
+        dTest.settle(Mapmaker.eraseMap(game._id));
         _addTestCountry(game._id);
 
         dTest.settle(dManager.startGame(game, true));
@@ -178,7 +178,7 @@ if (Meteor.isServer) {
       run('createPlayer correct starting resources', function() {
         let game = _createTestGame({hasStarted: true});
         let user = _createTestUser();
-        Mapmaker.eraseMap(game._id);
+        dTest.settle(Mapmaker.eraseMap(game._id));
         _addTestCountry(game._id);
 
         let playerId = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
@@ -198,7 +198,7 @@ if (Meteor.isServer) {
       run('createPlayer crazyFast boosted resources', function() {
         let game = _createTestGame({hasStarted: true, isCrazyFast: true});
         let user = _createTestUser();
-        Mapmaker.eraseMap(game._id);
+        dTest.settle(Mapmaker.eraseMap(game._id));
         _addTestCountry(game._id);
 
         let playerId = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
@@ -218,7 +218,7 @@ if (Meteor.isServer) {
       run('createPlayer rejects duplicate', function() {
         let game = _createTestGame({hasStarted: true});
         let user = _createTestUser();
-        Mapmaker.eraseMap(game._id);
+        dTest.settle(Mapmaker.eraseMap(game._id));
         _addTestCountry(game._id);
 
         let id1 = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
@@ -242,7 +242,7 @@ if (Meteor.isServer) {
       run('createPlayer creates castle at valid hex', function() {
         let game = _createTestGame({hasStarted: true});
         let user = _createTestUser();
-        Mapmaker.eraseMap(game._id);
+        dTest.settle(Mapmaker.eraseMap(game._id));
         _addTestCountry(game._id);
 
         let playerId = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));

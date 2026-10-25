@@ -240,7 +240,7 @@ Meteor.methods({
 			}
 			var income = villageIncome(gameId, hexes);
 
-			var countryId = Mapmaker.coordsToCountryId(gameId, x, y);
+			var countryId = await Mapmaker.coordsToCountryId(gameId, x, y);
 
 			var villageId = await Villages.insertAsync(newVillage(gameId, self.userId, player, x, y, name, income, countryId));
 
@@ -260,7 +260,7 @@ Meteor.methods({
 				}
 			}
 
-			Mapmaker.buildingAdded(gameId, x, y);
+			await Mapmaker.buildingAdded(gameId, x, y);
 
 			return villageId;
 		})();

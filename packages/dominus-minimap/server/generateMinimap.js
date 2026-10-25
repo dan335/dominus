@@ -4,12 +4,11 @@ Minimap.imageSavePathMinimap = 'minimap/';
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.generateAllMinimaps.process(Meteor.bindEnvironment(function(job) {
-    Games.find({hasStarted:true, hasClosed:false}).forEach(function(game) {
-      Queues.add('generateGameMinimap', {gameId:game._id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, game._id);
-    });
-    return Promise.resolve();
-  }));
+  Queues.generateAllMinimaps.process(async function(job) {
+    for (const game of await Games.find({hasStarted:true, hasClosed:false}).fetchAsync()) {
+      await Queues.addAsyncOrLog('generateGameMinimap', {gameId:game._id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, game._id);
+    }
+  });
 }
 
 
@@ -18,25 +17,23 @@ if (process.env.DOMINUS_WORKER == 'true') {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.generateGameMinimap.process(Meteor.bindEnvironment(function(job) {
-    Minimap.updateMapSizeSetting(job.data.gameId);
-    var res = Minimap.generateMinimap(job.data.gameId);
-    if (res) {
-      return Promise.resolve();
-    } else {
-      return Promise.reject(new Error(res));
+  Queues.generateGameMinimap.process(async function(job) {
+    await Minimap.updateMapSizeSetting(job.data.gameId);
+    var res = await Minimap.generateMinimap(job.data.gameId);
+    if (!res) {
+      throw new Error(res);
     }
-  }));
+  });
 }
 
 
-Minimap.generateMinimap = function(gameId) {
+Minimap.generateMinimap = async function(gameId) {
   check(gameId, String);
   var self = this;
 
   var simplify = Npm.require('simplify-js');
 
-  var game = Games.findOne(gameId, {fields: {map_size:1}});
+  var game = await Games.findOneAsync(gameId, {fields: {map_size:1}});
   if (!game) {
     console.error('No game found in generateMinimap', gameId);
     return false;
@@ -48,7 +45,7 @@ Minimap.generateMinimap = function(gameId) {
 
   var svg = [];
 
-  Countries.find({gameId:gameId}, {fields: {paths:1}}).forEach(function(country) {
+  for (const country of await Countries.find({gameId:gameId}, {fields: {paths:1}}).fetchAsync()) {
     let countrySvg = [];
 
     if (country.paths) {
@@ -72,8 +69,8 @@ Minimap.generateMinimap = function(gameId) {
     }
 
     svg.push({country:countrySvg});
-  });
+  }
 
-  Games.update(gameId, {$set: {minimap: svg}});
+  await Games.updateAsync(gameId, {$set: {minimap: svg}});
   return true;
 }

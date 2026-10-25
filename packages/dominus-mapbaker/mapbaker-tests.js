@@ -1,7 +1,7 @@
 Tinytest.add('mapbaker.findTopAndBottomHexesInImage', function(test) {
   let gameId = 'testgamemapbaker';
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
 
   var country = {
     hexes: []
@@ -40,7 +40,7 @@ Tinytest.add('mapbaker.findTopAndBottomHexesInImage', function(test) {
 Tinytest.add('mapbaker.findTopLeftHexInImage', function(test) {
   let gameId = 'testgamemapbaker2';
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
 
   var country = {
     hexes: []

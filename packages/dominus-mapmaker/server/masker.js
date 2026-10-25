@@ -12,25 +12,23 @@
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.createCountryMask.process(Meteor.bindEnvironment(function(job) {
+  Queues.createCountryMask.process(async function(job) {
     var countryId = job.data.countryId;
 
     var find = {_id:countryId};
     var options = {fields:{hexes:1, gameId:1}};
-    var country = Countries.findOne(find, options);
+    var country = await Countries.findOneAsync(find, options);
 
     if (country) {
       var countrymasker = new Countrymasker(country.hexes);
       country.paths = countrymasker.startMasker();
-      Countries.update(country._id, {$set:{paths:country.paths}});
+      await Countries.updateAsync(country._id, {$set:{paths:country.paths}});
 
-      Queues.add('generateGameMinimap', {gameId:country.gameId}, {backoff:{type:'fixed', delay:30000}, attempts:10, delay:0, timeout:1000*60*5}, country.gameId);
+      await Queues.addAsyncOrLog('generateGameMinimap', {gameId:country.gameId}, {backoff:{type:'fixed', delay:30000}, attempts:10, delay:0, timeout:1000*60*5}, country.gameId);
     } else {
       console.error('no country found in createMinimapBg addJob');
     }
-
-    return Promise.resolve();
-  }));
+  });
 }
 
 

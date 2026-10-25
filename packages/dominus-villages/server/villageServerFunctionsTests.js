@@ -19,10 +19,10 @@ Tinytest.add('villages.buildAndDestroy', function(test) {
   Armies.remove({});
   Players.remove({});
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   _s.mapmaker.minHexesInCountry = 100;
   _s.mapmaker.maxHexesInCountry = 100;
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
 
   var hex = Hexes.findOne({type:'grain', hasBuilding:false});
 

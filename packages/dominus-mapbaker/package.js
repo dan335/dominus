@@ -14,6 +14,7 @@ Package.onUse(function(api) {
     'dominus-settings',
     'danimal:hx@1.0.9',
     'classcraft:knox@0.9.11',
+    'fetch',
     'dominus-minimap',
     'ejson'
   ]);

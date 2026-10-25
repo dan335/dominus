@@ -1,13 +1,13 @@
 Mapmaker = {
   // for king of the hill
   // add hexes to country
-  addToCountry: function(gameId, countryId, isTest) {
+  addToCountry: async function(gameId, countryId, isTest) {
     check(gameId, String);
     check(isTest, Boolean);
 
     var self = this;
 
-    let country = Countries.findOne(countryId);
+    let country = await Countries.findOneAsync(countryId);
     if (!country) {
       console.error('No country found in addToCountry');
       return false;
@@ -16,10 +16,10 @@ Mapmaker = {
     var maxTries = 200;
     var found = false;
 		while (!found && maxTries > 0) {
-			var coords = this.findStartHexForNewCountry(gameId);
+			var coords = await this.findStartHexForNewCountry(gameId);
 			if (coords) {
         found = true;
-        var data = this.createHexesFrom(gameId, coords.x, coords.y, 200, country.hexes);
+        var data = await this.createHexesFrom(gameId, coords.x, coords.y, 200, country.hexes);
         country.hexes = data.hexes;
         country.minX = Math.min(country.minX, data.minX);
         country.maxX = Math.max(country.maxX, data.maxX);
@@ -37,16 +37,16 @@ Mapmaker = {
 		}
 
     country = this.findBorders(country);
-    this.updateCountry(country);
-    this.findCountryNeighbors(gameId, country._id);
+    await this.updateCountry(country);
+    await this.findCountryNeighbors(gameId, country._id);
 
     if (!isTest) {
-      Queues.add('createCountryMask', {countryId:country._id}, {backoff:{type:'fixed', delay:30000}, attempts:10, delay:0, timeout:1000*60*5}, country._id);
-      Queues.add('bakeCountry', {countryId:country._id}, {backoff:{type:'fixed', delay:30000}, attempts:10, delay:0, timeout:1000*60*5}, country._id);
+      await Queues.addAsyncOrLog('createCountryMask', {countryId:country._id}, {backoff:{type:'fixed', delay:30000}, attempts:10, delay:0, timeout:1000*60*5}, country._id);
+      await Queues.addAsyncOrLog('bakeCountry', {countryId:country._id}, {backoff:{type:'fixed', delay:30000}, attempts:10, delay:0, timeout:1000*60*5}, country._id);
 
 			// alert
-      var numHexes = Hexes.find({gameId: gameId}).count();
-      var numCountries = Countries.find({gameId: gameId}).count();
+      var numHexes = await Hexes.find({gameId: gameId}).countAsync();
+      var numCountries = await Countries.find({gameId: gameId}).countAsync();
       // find country center x,y for alert
       var x = Math.round(country.minX + (country.maxX - country.minX)/2);
       var y = Math.round(country.minY + (country.maxY - country.minY)/2);
@@ -58,7 +58,7 @@ Mapmaker = {
   },
 
 
-  addCountry: function(gameId, isTest) {
+  addCountry: async function(gameId, isTest) {
 		check(gameId, String);
 		check(isTest, Boolean);
 
@@ -67,9 +67,9 @@ Mapmaker = {
 		var maxTries = 200;
 		var country = null;
 		while (!country && maxTries > 0) {
-			var coords = this.findStartHexForNewCountry(gameId);
+			var coords = await this.findStartHexForNewCountry(gameId);
 			if (coords) {
-				country = this.createCountryHexes(gameId, coords.x, coords.y);
+				country = await this.createCountryHexes(gameId, coords.x, coords.y);
 			}
 			maxTries--;
 		}
@@ -81,16 +81,16 @@ Mapmaker = {
 
 		country._id = dRandom.id();
 		country = this.findBorders(country);
-    this.saveCountry(country);
-    this.findCountryNeighbors(gameId, country._id);
+    await this.saveCountry(country);
+    await this.findCountryNeighbors(gameId, country._id);
 
 		if (!isTest) {
-      Queues.add('createCountryMask', {countryId:country._id}, {backoff:{type:'fixed', delay:30000}, attempts:10, delay:0, timeout:1000*60*5}, country._id);
-      Queues.add('bakeCountry', {countryId:country._id}, {backoff:{type:'fixed', delay:30000}, attempts:10, delay:0, timeout:1000*60*5}, country._id);
+      await Queues.addAsyncOrLog('createCountryMask', {countryId:country._id}, {backoff:{type:'fixed', delay:30000}, attempts:10, delay:0, timeout:1000*60*5}, country._id);
+      await Queues.addAsyncOrLog('bakeCountry', {countryId:country._id}, {backoff:{type:'fixed', delay:30000}, attempts:10, delay:0, timeout:1000*60*5}, country._id);
 
 			// alert
-      var numHexes = Hexes.find({gameId: gameId}).count();
-      var numCountries = Countries.find({gameId: gameId}).count();
+      var numHexes = await Hexes.find({gameId: gameId}).countAsync();
+      var numCountries = await Countries.find({gameId: gameId}).countAsync();
       // find country center x,y for alert
       var x = Math.round(country.minX + (country.maxX - country.minX)/2);
       var y = Math.round(country.minY + (country.maxY - country.minY)/2);
@@ -103,7 +103,7 @@ Mapmaker = {
 
   // try to create country
   // returns country or false if fails
-  createCountryHexes: function(gameId, x, y) {
+  createCountryHexes: async function(gameId, x, y) {
     check(x, Match.Integer);
     check(y, Match.Integer);
 		check(gameId, String);
@@ -125,7 +125,7 @@ Mapmaker = {
     let maxHexes = _gs.mapmaker(gameId, 'maxHexesInCountry');
 
     country.numHexes = Math.floor(dRandom.fraction() * (maxHexes - minHexes + 1) + minHexes);
-    var data = this.createHexesFrom(gameId, x, y, country.numHexes, []);
+    var data = await this.createHexesFrom(gameId, x, y, country.numHexes, []);
     country.hexes = data.hexes;
     country.minX = data.minX;
     country.maxX = data.maxX;
@@ -146,13 +146,11 @@ Mapmaker = {
 
   // update country instead of inserting
   // add hexes to country
-  updateCountry: function(country) {
+  updateCountry: async function(country) {
     check(country._id, String);
 
-    Hexes.remove({countryId:country._id});
+    await Hexes.removeAsync({countryId:country._id});
 
-    let fut = Npm.require('fibers/future');
-    let future = new fut();
     let bulk = Hexes.rawCollection().initializeUnorderedBulkOp();
 		let doBulk = false;
 
@@ -165,17 +163,10 @@ Mapmaker = {
     })
 
 		if (doBulk) {
-			bulk.execute({}, function(error, result) {
-	      if (error) {
-	        console.error(error);
-	      }
-	      future.return(result);
-	    })
-
-	    var result = future.wait();
+			await executeBulk(bulk);
 		}
 
-		Countries.update(country._id, country);
+		await Countries.updateAsync(country._id, country);
 
     return true;
   },
@@ -184,11 +175,9 @@ Mapmaker = {
 
   // give complete country object
   // save to Countries and Hexes using bulk insert
-  saveCountry: function(country) {
+  saveCountry: async function(country) {
 		check(country._id, String);
 
-    let fut = Npm.require('fibers/future');
-    let future = new fut();
     let bulk = Hexes.rawCollection().initializeUnorderedBulkOp();
 		let doBulk = false;
 
@@ -201,17 +190,10 @@ Mapmaker = {
     })
 
 		if (doBulk) {
-			bulk.execute({}, function(error, result) {
-	      if (error) {
-	        console.error(error);
-	      }
-	      future.return(result);
-	    })
-
-	    var result = future.wait();
+			await executeBulk(bulk);
 		}
 
-		Countries.insert(country);
+		await Countries.insertAsync(country);
 
     return true;
   },
@@ -220,7 +202,7 @@ Mapmaker = {
 
 
   // called from both addCountry and addToCountry
-  createHexesFrom: function(gameId, x, y, numHexes, existingHexes) {
+  createHexesFrom: async function(gameId, x, y, numHexes, existingHexes) {
     check(gameId, String);
     check(x, validNumber);
     check(y, validNumber);
@@ -228,7 +210,7 @@ Mapmaker = {
     check(existingHexes, Array);
 
     // create first hex
-    var hex = this.createHexData(gameId, x, y, existingHexes);
+    var hex = await this.createHexData(gameId, x, y, existingHexes);
 
     var minX = x;
     var maxX = x;
@@ -267,7 +249,7 @@ Mapmaker = {
               var coord = Hx.getNeighbor(hexToCheck.x, hexToCheck.y, direction);
 
               // try to create new hex
-              var newHex = this.createHexData(gameId, coord.x, coord.y, existingHexes);
+              var newHex = await this.createHexData(gameId, coord.x, coord.y, existingHexes);
 
               if (newHex) {
                 existingHexes.push(newHex);
@@ -329,7 +311,7 @@ Mapmaker = {
 
   // try to create a hex
   // return false or the hex object that was created
-  createHexData: function(gameId, x, y, hexes) {
+  createHexData: async function(gameId, x, y, hexes) {
 		check(gameId, String);
 
     // is there already a hex there in this country?
@@ -344,14 +326,14 @@ Mapmaker = {
     }
 
     // is there already a hex here?
-    if (Hexes.find({gameId:gameId, x:x, y:y}).count()) {
+    if (await Hexes.find({gameId:gameId, x:x, y:y}).countAsync()) {
       //console.error('already hex here', x, y);
       return false;
     }
 
     // make sure no other country has this hex
     // shouldn't be needed
-    if (Countries.find({gameId:gameId, hexes: {$elemMatch: {x:x, y:y}}}).count()) {
+    if (await Countries.find({gameId:gameId, hexes: {$elemMatch: {x:x, y:y}}}).countAsync()) {
       //console.error('hex is already in another country', x, y);
       return false;
     }
@@ -410,12 +392,12 @@ Mapmaker = {
   },
 
 
-  coordsToCountryId: function(gameId, x, y) {
+  coordsToCountryId: async function(gameId, x, y) {
 		check(gameId, String);
 		check(x, Match.Integer);
 		check(y, Match.Integer);
 
-		var country = Countries.findOne({gameId:gameId, hexes: {$elemMatch: {x:x, y:y}}}, {fields:{_id:1}});
+		var country = await Countries.findOneAsync({gameId:gameId, hexes: {$elemMatch: {x:x, y:y}}}, {fields:{_id:1}});
 
 		if (country) {
       return country._id;
@@ -425,14 +407,10 @@ Mapmaker = {
   },
 
 
-  buildingAdded: function(gameId, x, y) {
+  buildingAdded: async function(gameId, x, y) {
     check(x, Match.Integer);
     check(y, Match.Integer);
 		check(gameId, String);
-
-		var fut = Npm.require('fibers/future');
-    var futureHexes = new fut();
-    var futureCountries = new fut();
 
     var hexesBulk = Hexes.rawCollection().initializeUnorderedBulkOp();
 		var countriesBulk = Countries.rawCollection().initializeUnorderedBulkOp();
@@ -441,21 +419,8 @@ Mapmaker = {
 		hexesBulk = ret.hexesBulk;
 		countriesBulk = ret.countriesBulk;
 
-    hexesBulk.execute({}, function(error, result) {
-	    if (error) {
-	      console.error(error);
-	    }
-	    futureHexes.return(result);
-	  });
-	  futureHexes.wait();
-
-    countriesBulk.execute({}, function(error, result) {
-	    if (error) {
-	      console.error(error);
-	    }
-	    futureCountries.return(result);
-	  });
-	  futureCountries.wait();
+    await executeBulk(hexesBulk);
+    await executeBulk(countriesBulk);
   },
 
 
@@ -474,14 +439,11 @@ Mapmaker = {
 	},
 
 
-  buildingRemoved: function(gameId, x, y) {
+  buildingRemoved: async function(gameId, x, y) {
     check(x, Match.Integer);
     check(y, Match.Integer);
 		check(gameId, String);
 
-		var fut = Npm.require('fibers/future');
-    var futureHexes = new fut();
-    var futureCountries = new fut();
     var hexesBulk = Hexes.rawCollection().initializeOrderedBulkOp();
 		var countriesBulk = Countries.rawCollection().initializeOrderedBulkOp();
 
@@ -495,25 +457,25 @@ Mapmaker = {
     })
 
 		// re-add buildings in this country and neighbors
-		var countryId = Mapmaker.coordsToCountryId(gameId, x, y);
-		var country = Countries.findOne(countryId, {fields:{neighbors:1}});
+		var countryId = await Mapmaker.coordsToCountryId(gameId, x, y);
+		var country = await Countries.findOneAsync(countryId, {fields:{neighbors:1}});
 		var countryIds = _.union(country.neighbors, [countryId]);
 		var find = {countryId: {$in:countryIds}};
 		var options = {fields:{x:1, y:1}};
 
 		var coordsToDo = [];
 
-		Castles.find(find, options).forEach(function(building) {
+		for (const building of await Castles.find(find, options).fetchAsync()) {
 			coordsToDo.push({x:building.x, y:building.y});
-		});
+		}
 
-		Villages.find(find, options).forEach(function(building) {
+		for (const building of await Villages.find(find, options).fetchAsync()) {
 			coordsToDo.push({x:building.x, y:building.y});
-		});
+		}
 
-		Capitals.find(find, options).forEach(function(building) {
+		for (const building of await Capitals.find(find, options).fetchAsync()) {
 			coordsToDo.push({x:building.x, y:building.y});
-		});
+		}
 
 		coordsToDo.forEach(function(coords) {
 			var ret = Mapmaker._buildingAddedBulk(gameId, hexesBulk, countriesBulk, coords.x, coords.y);
@@ -522,30 +484,17 @@ Mapmaker = {
 		})
 
 		// run bulk operations
-		hexesBulk.execute({}, function(error, result) {
-	    if (error) {
-	      console.error(error);
-	    }
-	    futureHexes.return(result);
-	  });
-	  futureHexes.wait();
-
-    countriesBulk.execute({}, function(error, result) {
-	    if (error) {
-	      console.error(error);
-	    }
-	    futureCountries.return(result);
-	  });
-	  futureCountries.wait();
+    await executeBulk(hexesBulk);
+    await executeBulk(countriesBulk);
   },
 
 
-  findHexForCastle: function(gameId) {
+  findHexForCastle: async function(gameId) {
 		check(gameId, String);
 
     var tries = 0;
     var query = {gameId:gameId, isBorder:false, type:'grain', hasBuilding:false, nearbyBuildings:false};
-    var num = Hexes.find(query).count();
+    var num = await Hexes.find(query).countAsync();
     var maxTries = num * 6;
 
 		if (!num) {
@@ -557,26 +506,26 @@ Mapmaker = {
 
       var randNum = Math.floor(dRandom.fraction() * num);
 
-      var hex =  Hexes.findOne(query, {skip:randNum, limit:1});
+      var hex =  await Hexes.findOneAsync(query, {skip:randNum, limit:1});
 
       if (!hex) {
         return false;
       }
 
-      if (Armies.find({gameId:gameId, x:hex.x, y:hex.y}).count()) {
+      if (await Armies.find({gameId:gameId, x:hex.x, y:hex.y}).countAsync()) {
         skip = true;
       }
 
 			// shouldn't be needed but just to make sure
-			if (Castles.find({gameId:gameId, x:hex.x, y:hex.y}).count()) {
+			if (await Castles.find({gameId:gameId, x:hex.x, y:hex.y}).countAsync()) {
 				skip = true;
 			}
 
-			if (Villages.find({gameId:gameId, x:hex.x, y:hex.y}).count()) {
+			if (await Villages.find({gameId:gameId, x:hex.x, y:hex.y}).countAsync()) {
 				skip = true;
 			}
 
-			if (Capitals.find({gameId:gameId, x:hex.x, y:hex.y}).count()) {
+			if (await Capitals.find({gameId:gameId, x:hex.x, y:hex.y}).countAsync()) {
 				skip = true;
 			}
 
@@ -606,30 +555,30 @@ Mapmaker = {
   },
 
 
-	findCountryNeighbors: function(gameId, countryId) {
+	findCountryNeighbors: async function(gameId, countryId) {
 		check(countryId, String);
 		check(gameId, String);
 
     var self = this;
 
     var neighbors = [];
-    var hexes = Hexes.find({isBorder:true, countryId:countryId});
-    hexes.forEach(function(hex) {
+    var hexes = await Hexes.find({isBorder:true, countryId:countryId}).fetchAsync();
+    for (const hex of hexes) {
       for (var d=0; d<6; d++) {
         var testCoords = Hx.getNeighbor(hex.x, hex.y, d);
         var fields = {countryId:1};
-        var h = Hexes.findOne({gameId:gameId, x:testCoords.x, y:testCoords.y}, {fields:fields});
+        var h = await Hexes.findOneAsync({gameId:gameId, x:testCoords.x, y:testCoords.y}, {fields:fields});
         if (h && h.countryId != countryId) {
           neighbors = _.union(neighbors, h.countryId);
         }
       }
-    });
+    }
 
-		Countries.update(countryId, {$set:{neighbors:neighbors}});
+		await Countries.updateAsync(countryId, {$set:{neighbors:neighbors}});
 
-		neighbors.forEach(function(neighbor) {
-			Countries.update(neighbor, {$addToSet: {neighbors:countryId}});
-		})
+		for (const neighbor of neighbors) {
+			await Countries.updateAsync(neighbor, {$addToSet: {neighbors:countryId}});
+		}
 
 	},
 
@@ -638,12 +587,12 @@ Mapmaker = {
   // find a random border hex
   // get coordinates at random direction that does not already have a hex
   // if no hexes then return 0,0
-  findStartHexForNewCountry: function(gameId) {
+  findStartHexForNewCountry: async function(gameId) {
 		check(gameId, String);
 
     var found = false;
 
-    num = Hexes.find({gameId:gameId, isBorder:true}).count();
+    num = await Hexes.find({gameId:gameId, isBorder:true}).countAsync();
 
     if (!num) {
       return {x:0, y:0};
@@ -655,7 +604,7 @@ Mapmaker = {
     while (!found && tries < maxTries) {
       var randNum = Math.floor(dRandom.fraction() * num);
       var find = {isBorder:true, gameId:gameId};
-      var hex =  Hexes.findOne(find, {skip:randNum, limit:1});
+      var hex =  await Hexes.findOneAsync(find, {skip:randNum, limit:1});
       if (!hex || typeof hex.x === 'undefined' || typeof hex.y === 'undefined') {
         console.error('no hex found in findStartHexForNewCountry')
         return false;
@@ -667,8 +616,8 @@ Mapmaker = {
         if (!coords) {
           var testCoords = Hx.getNeighbor(hex.x, hex.y, parseInt(dir));
           //console.log(dir+' - '+EJSON.stringify(testCoords))
-          if (!Hexes.find({gameId:gameId, x:testCoords.x, y:testCoords.y}).count()) {
-            if (!Countries.find({gameId:gameId, hexes: {$elemMatch: {x:testCoords.x, y:testCoords.y}}}).count()) {
+          if (!await Hexes.find({gameId:gameId, x:testCoords.x, y:testCoords.y}).countAsync()) {
+            if (!await Countries.find({gameId:gameId, hexes: {$elemMatch: {x:testCoords.x, y:testCoords.y}}}).countAsync()) {
               coords = testCoords;
             }
           }
@@ -773,26 +722,36 @@ Mapmaker = {
 
 
 	// only for testing
-  eraseMap: function(gameId) {
+  eraseMap: async function(gameId) {
 		check(gameId, String);
 
-    Hexes.remove({gameId:gameId});
-    Countries.remove({gameId:gameId});
-		CountriesTemp.remove({gameId:gameId});
-    Capitals.remove({gameId:gameId});
-    Castles.remove({gameId:gameId});
-    Villages.remove({gameId:gameId});
-    Armies.remove({gameId:gameId});
-		Armypaths.remove({gameId:gameId});
-		Markers.remove({gameId:gameId});
-		MarkerGroups.remove({gameId:gameId});
-    Players.remove({gameId:gameId});
+    await Hexes.removeAsync({gameId:gameId});
+    await Countries.removeAsync({gameId:gameId});
+		await CountriesTemp.removeAsync({gameId:gameId});
+    await Capitals.removeAsync({gameId:gameId});
+    await Castles.removeAsync({gameId:gameId});
+    await Villages.removeAsync({gameId:gameId});
+    await Armies.removeAsync({gameId:gameId});
+		await Armypaths.removeAsync({gameId:gameId});
+		await Markers.removeAsync({gameId:gameId});
+		await MarkerGroups.removeAsync({gameId:gameId});
+    await Players.removeAsync({gameId:gameId});
   }
 
 }
 
 
 
+
+
+// runs a bulk op and logs a failure, as its callback did
+var executeBulk = async function(bulk) {
+  try {
+    await bulk.execute();
+  } catch (error) {
+    console.error(error);
+  }
+};
 
 
 // same thing as _.lpad()

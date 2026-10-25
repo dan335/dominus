@@ -77,7 +77,7 @@ if (Meteor.isServer) {
         Dailystats.remove({gameId: w.gameId});
         Villages.find({gameId: w.gameId}).forEach(function(v) {
           Villages.remove(v._id);
-          Mapmaker.buildingRemoved(w.gameId, v.x, v.y);
+          dTest.settle(Mapmaker.buildingRemoved(w.gameId, v.x, v.y));
         });
         restoreRelations();
       });
@@ -477,10 +477,10 @@ if (Meteor.isServer) {
         var sizes = _.pick(_s.mapmaker, 'minHexesInCountry', 'maxHexesInCountry');
         try {
           Gamesignups.insert({gameId: game._id, userId: user._id, username: user.username, createdAt: new Date(), usedToken: false});
-          Mapmaker.eraseMap(game._id);
+          dTest.settle(Mapmaker.eraseMap(game._id));
           _s.mapmaker.minHexesInCountry = 100;
           _s.mapmaker.maxHexesInCountry = 100;
-          Mapmaker.addCountry(game._id, true);
+          dTest.settle(Mapmaker.addCountry(game._id, true));
           _.extend(_s.mapmaker, sizes);
 
           var jobs = dTest.recordJobs(function() {

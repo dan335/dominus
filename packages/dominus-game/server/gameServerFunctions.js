@@ -94,7 +94,7 @@ dGame.deleteGameAccount = async function(playerId) {
 
 	// if user doesn't have a castle then x,y will not be set
 	if (player.gameId && _.isNumber(player.x) && _.isNumber(player.y)) {
-		Mapmaker.buildingRemoved(player.gameId, player.x, player.y);
+		await Mapmaker.buildingRemoved(player.gameId, player.x, player.y);
 	}
 
 	await Players.removeAsync({_id:player._id});

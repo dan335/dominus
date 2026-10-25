@@ -646,7 +646,7 @@ if (Meteor.isServer) {
 
     // runs the job with every side effect stubbed and returns what it tried to do
     function runBakeJob(opts) {
-      let calls = {chmod: [], jpg: [], s3: [], queued: [], result: null};
+      let calls = {chmod: [], jpg: [], s3: [], queued: [], result: null, returnsPromise: false};
       let restores = [
         stub(Mapbaker, 'bakeCountry', function() { return opts.data; }),
         stub(Mapbaker, 'fs', {
@@ -660,7 +660,12 @@ if (Meteor.isServer) {
         stubEnv('DOMINUS_TEST', 'false')
       ];
       try {
-        calls.result = Mapbaker.processBakeCountryJob({data: {countryId: 'bf_c'}});
+        // Bull needs a promise; the job is async now, and it finishes before
+        // the stubs are put back
+        let job = function() { return Mapbaker.processBakeCountryJob({data: {countryId: 'bf_c'}}); };
+        let returned = job();
+        calls.returnsPromise = dTest.isPromise(returned);
+        calls.result = dTest.settle(returned);
       } finally {
         restoreAll(restores);
       }
@@ -669,7 +674,7 @@ if (Meteor.isServer) {
 
     run('bakeCountry job: no data from bakeCountry resolves and does nothing else', function() {
       let c = runBakeJob({data: false});
-      assert(c.result && typeof c.result.then === 'function', 'returns a promise');
+      assert(c.returnsPromise, 'returns a promise');
       equal(c.chmod.length, 0, 'no chmod');
       equal(c.jpg.length, 0, 'no jpg');
       equal(c.queued.length, 0, 'no finishImage');
@@ -677,7 +682,7 @@ if (Meteor.isServer) {
 
     run('bakeCountry job: missing svg resolves and does nothing else', function() {
       let c = runBakeJob({data: bakeData(), svgExists: false});
-      assert(c.result && typeof c.result.then === 'function', 'returns a promise');
+      assert(c.returnsPromise, 'returns a promise');
       equal(c.chmod.length, 0, 'no chmod');
       equal(c.jpg.length, 0, 'no jpg');
       equal(c.queued.length, 0, 'no finishImage');
@@ -685,7 +690,7 @@ if (Meteor.isServer) {
 
     run('bakeCountry job: failed jpg resolves without uploading or finishing', function() {
       let c = runBakeJob({data: bakeData(), svgExists: true, jpgOk: false, s3: true, s3Ok: true});
-      assert(c.result && typeof c.result.then === 'function', 'returns a promise');
+      assert(c.returnsPromise, 'returns a promise');
       equal(c.chmod.length, 2, 'both svgs chmodded');
       equal(c.s3.length, 0, 'no upload');
       equal(c.queued.length, 0, 'no finishImage');
@@ -695,7 +700,7 @@ if (Meteor.isServer) {
       [{s3: false}, {s3: true, s3Ok: true}, {s3: true, s3Ok: false}].forEach(function(o) {
         let c = runBakeJob(_.extend({data: bakeData(), svgExists: true, jpgOk: true}, o));
         let label = ' (s3 ' + o.s3 + ', upload ok ' + o.s3Ok + ')';
-        assert(c.result && typeof c.result.then === 'function', 'returns a promise' + label);
+        assert(c.returnsPromise, 'returns a promise' + label);
         equal(c.chmod.length, 2, 'both svgs chmodded' + label);
         equal(c.jpg.length, 2, 'two jpgs' + label);
         equal(c.s3.length, o.s3 ? 2 : 0, 'uploads' + label);

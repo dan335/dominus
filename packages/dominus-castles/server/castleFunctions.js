@@ -33,7 +33,7 @@ dCastles.create = async function(gameId, user_id, isTest) {
   var countryId = null;
 
   // find a spot for castle
-  var coords = Mapmaker.findHexForCastle(gameId);
+  var coords = await Mapmaker.findHexForCastle(gameId);
 
   // expand map if no room for castle
   if (!coords) {
@@ -43,34 +43,34 @@ dCastles.create = async function(gameId, user_id, isTest) {
       var country = await Countries.findOneAsync({gameId:gameId});
 
       if (country) {
-        var result = Mapmaker.addToCountry(gameId, country._id, isTest);
+        var result = await Mapmaker.addToCountry(gameId, country._id, isTest);
       } else {
-        countryId = Mapmaker.addCountry(gameId, false);
+        countryId = await Mapmaker.addCountry(gameId, false);
 
         // create capital if country was added
         if (countryId) {
           var capital = await dCapitals.createCapital(gameId, countryId);
           if (capital) {
-            Mapmaker.buildingAdded(gameId, capital.x, capital.y);
+            await Mapmaker.buildingAdded(gameId, capital.x, capital.y);
           }
         }
       }
 
     } else {
 
-      countryId = Mapmaker.addCountry(gameId, isTest);
+      countryId = await Mapmaker.addCountry(gameId, isTest);
 
       // create capital if country was added
       if (countryId) {
         var capital = await dCapitals.createCapital(gameId, countryId);
         if (capital) {
-          Mapmaker.buildingAdded(gameId, capital.x, capital.y);
+          await Mapmaker.buildingAdded(gameId, capital.x, capital.y);
         }
       }
 
     }
 
-    coords = Mapmaker.findHexForCastle(gameId);
+    coords = await Mapmaker.findHexForCastle(gameId);
   }
 
   if (!coords) {
@@ -88,7 +88,7 @@ dCastles.create = async function(gameId, user_id, isTest) {
     user_id: user._id,
     username: player.username,
     image: _s.castles.startingImage,
-    countryId: Mapmaker.coordsToCountryId(gameId, coords.x,coords.y),
+    countryId: await Mapmaker.coordsToCountryId(gameId, coords.x,coords.y),
     male: user.male
   }
 
@@ -105,7 +105,7 @@ dCastles.create = async function(gameId, user_id, isTest) {
 
   await Players.updateAsync(player._id, {$set: {x:coords.x, y:coords.y, castle_id:castle._id}});
 
-  Mapmaker.buildingAdded(gameId, coords.x, coords.y);
+  await Mapmaker.buildingAdded(gameId, coords.x, coords.y);
 
   return castle._id;
 }

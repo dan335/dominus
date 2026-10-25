@@ -22,7 +22,6 @@ fastclick@1.0.13
 d3js:d3
 mrgalaxy:stripe
 wizonesolutions:underscore-string
-http@1.4.1
 dominus-minimap
 dominus-mapbaker
 dominus-tree
@@ -87,3 +86,4 @@ dominus-rankings
 dominus-battles
 facebook-config-ui@1.0.3
 google-config-ui@1.0.3
+fetch

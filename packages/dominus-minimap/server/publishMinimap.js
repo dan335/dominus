@@ -1,4 +1,4 @@
-Meteor.publish('user_buildings_for_minimap', function(playerId) {
+Meteor.publish('user_buildings_for_minimap', async function(playerId) {
 	check(playerId, Match.OneOf(String, null));
 	var self = this;
 	var fields = {playerId:1, name:1, x:1, y:1};
@@ -10,13 +10,13 @@ Meteor.publish('user_buildings_for_minimap', function(playerId) {
 	let find = {playerId:playerId};
 
 	var curVillages = Villages.find(find, {fields: fields})
-	Mongo.Collection._publishCursor(curVillages, self, 'left_panel_villages')
+	await Mongo.Collection._publishCursor(curVillages, self, 'left_panel_villages')
 
 	var curCastle = Castles.find(find, {fields: fields})
-	Mongo.Collection._publishCursor(curCastle, self, 'left_panel_castle')
+	await Mongo.Collection._publishCursor(curCastle, self, 'left_panel_castle')
 
 	var curCapitals = Capitals.find(find, {fields: fields});
-	Mongo.Collection._publishCursor(curCapitals, self, 'left_panel_capitals');
+	await Mongo.Collection._publishCursor(curCapitals, self, 'left_panel_capitals');
 
 	return self.ready();
 });
