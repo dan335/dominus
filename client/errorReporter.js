@@ -93,9 +93,10 @@
       return;
     }
     if (typeof first !== 'string' || first.indexOf('Exception') !== 0) return;
-    // a method the browser refused before asking the server, as the server
-    // would: not a bug
-    if (first.indexOf('Exception while simulating the effect of invoking') === 0 && second && second.errorType === 'Meteor.Error') return;
+    // a method the browser refused before asking the server (its own error,
+    // or check() refusing the arguments), as the server would: not a bug
+    if (first.indexOf('Exception while simulating the effect of invoking') === 0 && second &&
+        (second.errorType === 'Meteor.Error' || second.errorType === 'Match.Error')) return;
     if (second === undefined) {
       pending = first;
       setTimeout(flushPending, 0);

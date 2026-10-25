@@ -82,6 +82,8 @@ test('errors from other sites, refused simulations and logs Meteor was told to h
     window.dispatchEvent(new ErrorEvent('error', { message: 'Script error.', filename: '' }));
     // a method the browser refuses before asking the server
     Meteor.call('addOrEditGame', 'E2E refused', '', 10, '2099-01-05 10:00', false, false, false, false, false, false, null, () => {});
+    // and one whose arguments check() refuses
+    Meteor.call('addOrEditGame', 'E2E refused', '', 'ten', '2099-01-05 10:00', false, false, false, false, false, false, null, () => {});
     Meteor._suppress_log(1);
     Meteor._debug('Exception in E2E suppressed:', new Error('E2E suppressed'));
     // and one that is reported, so the poll below knows the others had time
@@ -92,5 +94,6 @@ test('errors from other sites, refused simulations and logs Meteor was told to h
   expect(reports('E2E from evaluate')).toEqual([]);
   expect(reports('E2E suppressed')).toEqual([]);
   expect(reports('addOrEditGame')).toEqual([]);
+  expect(reports('Match error')).toEqual([]);
   expect(server("ClientErrors.recent.filter((r) => r.message == 'Script error.').length")).toBe(0);
 });
