@@ -1,7 +1,7 @@
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.checkForGameStart.process(Meteor.bindEnvironment(function(job) {
+  Queues.checkForGameStart.process(async function(job) {
     // findAndModify no longer works, mongo 3.2?
     // maybe only works if game is found, if result is empty doesn't work
     // let game = Games.findAndModify({
@@ -14,12 +14,12 @@ if (process.env.DOMINUS_WORKER == 'true') {
     //   console.log(game)
     //   startGame(game);
     // }
-    let game = Games.findOne({hasStarted:false, isStarting:false, startAt:{$lte:dClock.now()}});
+    let game = await Games.findOneAsync({hasStarted:false, isStarting:false, startAt:{$lte:dClock.now()}});
 
     if (game) {
-      Games.update(game._id, {$set: {isStarting:true}});
+      await Games.updateAsync(game._id, {$set: {isStarting:true}});
       try {
-        dManager.startGame(game);
+        await dManager.startGame(game);
       } catch (e) {
         // startGame only sets hasStarted:true at the very end, and nothing
         // else ever resets isStarting. If it throws partway (a createPlayer /
@@ -29,47 +29,44 @@ if (process.env.DOMINUS_WORKER == 'true') {
         // game exists -- so the whole auto-game rotation halts. Reset
         // isStarting so the job can retry.
         console.error('startGame failed, resetting isStarting', game._id, e);
-        Games.update(game._id, {$set: {isStarting:false}});
+        await Games.updateAsync(game._id, {$set: {isStarting:false}});
         throw e;
       }
     }
-    return Promise.resolve();
-  }));
+  });
 }
 
 
 
 
-dManager.startGame = function(game, isTest) {
+dManager.startGame = async function(game, isTest) {
   check(game.name, String);
 
   console.log('--- starting game '+ game.name +' ---');
 
-  // async since upgrade PR 10; this function converts in PR 15
-  Promise.await(dMarket.createMarket(game._id));
+  await dMarket.createMarket(game._id);
 
   // get players who signed up
-  let signups = Gamesignups.find({gameId:game._id}).fetch();
+  let signups = await Gamesignups.find({gameId:game._id}).fetchAsync();
 
   // randomize order
   dFunc.shuffleArray(signups);
 
   // createPlayer creates player, castles, countries
-  signups.forEach(function(signup) {
+  for (const signup of signups) {
     let makePro = false;
     if (signup.usedToken) {
       makePro = true;
     }
-    // async since upgrade PR 11; this function converts in PR 15
-    let playerId = Promise.await(dCastles.createPlayer(game._id, signup.userId, signup.username, makePro));
+    let playerId = await dCastles.createPlayer(game._id, signup.userId, signup.username, makePro);
     if (playerId && !isTest) {
-      Queues.add('initDailystatsForNewUser', {attempts:10, backoff:{type:'fixed', delay:3000}, playerId:playerId, userId:signup.userId, gameId:game._id}, {delay:0, timeout:1000*60*5}, playerId);
+      await Queues.addAsyncOrLog('initDailystatsForNewUser', {attempts:10, backoff:{type:'fixed', delay:3000}, playerId:playerId, userId:signup.userId, gameId:game._id}, {delay:0, timeout:1000*60*5}, playerId);
     }
-  });
+  }
 
   if (!isTest) {
-    Queues.add('setupEveryoneChatroom', {gameId:game._id}, {attempts:10, backoff:{type:'fixed', delay:3000}, delay:0, timeout:1000*60*5}, game._id);
-    Queues.add('generateTree', {gameId:game._id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, game._id);
+    await Queues.addAsyncOrLog('setupEveryoneChatroom', {gameId:game._id}, {attempts:10, backoff:{type:'fixed', delay:3000}, delay:0, timeout:1000*60*5}, game._id);
+    await Queues.addAsyncOrLog('generateTree', {gameId:game._id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, game._id);
   }
 
   // start game
@@ -78,16 +75,16 @@ dManager.startGame = function(game, isTest) {
     startedAt: dClock.now(),
     taxesCollected: 0
   };
-  Games.update(game._id, {$set:update});
+  await Games.updateAsync(game._id, {$set:update});
 
   if (!isTest) {
     // send email to players
-    signups.forEach(function(signup) {
-      Queues.add('sendGameStartedEmail', {gameName:game.name, gameId:game._id, userId:signup.userId}, {delay:0, timeout:1000*60*5}, false);
-    });
+    for (const signup of signups) {
+      await Queues.addAsyncOrLog('sendGameStartedEmail', {gameName:game.name, gameId:game._id, userId:signup.userId}, {delay:0, timeout:1000*60*5}, false);
+    }
   }
 
-  Gamesignups.remove({gameId:game._id});
+  await Gamesignups.removeAsync({gameId:game._id});
 }
 
 
@@ -96,18 +93,17 @@ dManager.startGame = function(game, isTest) {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.sendGameStartedEmail.process(Meteor.bindEnvironment(function(job) {
-    sendGameStartedEmail(job.data.gameId, job.data.gameName, job.data.userId);
-    return Promise.resolve();
-  }));
+  Queues.sendGameStartedEmail.process(async function(job) {
+    await sendGameStartedEmail(job.data.gameId, job.data.gameName, job.data.userId);
+  });
 }
 
-var sendGameStartedEmail = function(gameId, gameName, userId) {
+var sendGameStartedEmail = async function(gameId, gameName, userId) {
   check(gameId, String);
   check(gameName, String);
   check(userId, String);
 
-  let user = Meteor.users.findOne(userId);
+  let user = await Meteor.users.findOneAsync(userId);
   let email = AccountsEmail.extract(user);
 
   if (user && email) {
@@ -134,6 +130,6 @@ var sendGameStartedEmail = function(gameId, gameName, userId) {
       html: html
     }
 
-    Email.send(options);
+    await Email.sendAsync(options);
   }
 }

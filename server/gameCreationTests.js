@@ -151,7 +151,7 @@ if (Meteor.isServer) {
         Mapmaker.eraseMap(game._id);
         _addTestCountry(game._id);
 
-        dManager.startGame(game, true);
+        dTest.settle(dManager.startGame(game, true));
 
         let g = Games.findOne(game._id);
         _testAssert(g.hasStarted === true, 'hasStarted');
@@ -165,7 +165,7 @@ if (Meteor.isServer) {
 
       run('startGame with zero signups works', function() {
         let game = _createTestGame();
-        dManager.startGame(game, true);
+        dTest.settle(dManager.startGame(game, true));
         let g = Games.findOne(game._id);
         _testAssert(g.hasStarted === true, 'hasStarted');
         _testEqual(Market.find({gameId: game._id}).count(), _s.market.types.length, 'market created');
@@ -320,7 +320,7 @@ if (Meteor.isServer) {
 
       run('createNextGame creates game with correct fields', function() {
         Games.remove({});
-        let gameId = dManager.createNextGame();
+        let gameId = dTest.settle(dManager.createNextGame());
         _testAssert(!!gameId, 'gameId returned');
         let g = Games.findOne(gameId);
         _testEqual(g.name, 'Game 1', 'name');
@@ -346,7 +346,7 @@ if (Meteor.isServer) {
 
       run('createNextGame names first game "Game 1"', function() {
         Games.remove({});
-        let gameId = dManager.createNextGame();
+        let gameId = dTest.settle(dManager.createNextGame());
         _testEqual(Games.findOne(gameId).name, 'Game 1', 'first game name');
         Games.remove(gameId);
       });
@@ -355,7 +355,7 @@ if (Meteor.isServer) {
         Games.remove({});
         // insert a "Game 3" as if it existed before
         let oldId = Games.insert({name: 'Game 3', createdAt: new Date(), hasStarted: true, hasClosed: true});
-        let gameId = dManager.createNextGame();
+        let gameId = dTest.settle(dManager.createNextGame());
         _testEqual(Games.findOne(gameId).name, 'Game 4', 'sequential name');
         Games.remove(gameId);
         Games.remove(oldId);
@@ -364,7 +364,7 @@ if (Meteor.isServer) {
       run('createNextGame handles non-standard previous name', function() {
         Games.remove({});
         let oldId = Games.insert({name: 'My Custom Game', createdAt: new Date(), hasStarted: true, hasClosed: true});
-        let gameId = dManager.createNextGame();
+        let gameId = dTest.settle(dManager.createNextGame());
         _testEqual(Games.findOne(gameId).name, 'Game 1', 'fallback to Game 1');
         Games.remove(gameId);
         Games.remove(oldId);
@@ -372,8 +372,8 @@ if (Meteor.isServer) {
 
       run('createNextGame does not create duplicate', function() {
         Games.remove({});
-        let id1 = dManager.createNextGame();
-        let id2 = dManager.createNextGame();
+        let id1 = dTest.settle(dManager.createNextGame());
+        let id2 = dTest.settle(dManager.createNextGame());
         _testAssert(!!id1, 'first creates');
         _testAssert(!id2, 'second returns null');
         _testEqual(Games.find({hasStarted: false, hasClosed: false}).count(), 1, 'only one pending');
@@ -382,7 +382,7 @@ if (Meteor.isServer) {
 
       run('createNextGame startAt is ~72 hours in future', function() {
         Games.remove({});
-        let gameId = dManager.createNextGame();
+        let gameId = dTest.settle(dManager.createNextGame());
         let g = Games.findOne(gameId);
         let diff = g.startAt.getTime() - new Date().getTime();
         let hours = diff / (1000 * 60 * 60);
@@ -395,7 +395,7 @@ if (Meteor.isServer) {
         let id1 = Games.insert({name: 'Game 5', createdAt: new Date('2020-01-01'), hasStarted: true, hasClosed: true});
         let id2 = Games.insert({name: 'Game 2', createdAt: new Date('2021-01-01'), hasStarted: true, hasClosed: true});
         let id3 = Games.insert({name: 'Game 10', createdAt: new Date('2019-01-01'), hasStarted: true, hasClosed: true});
-        let gameId = dManager.createNextGame();
+        let gameId = dTest.settle(dManager.createNextGame());
         _testEqual(Games.findOne(gameId).name, 'Game 11', 'picks highest N + 1');
         Games.remove(gameId);
         Games.remove(id1);
@@ -414,7 +414,7 @@ if (Meteor.isServer) {
         let p1 = Players.insert({gameId: game._id, userId: user1._id, username: user1.username, is_king: true, king: null, castle_id: 'c1', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
         let p2 = Players.insert({gameId: game._id, userId: user2._id, username: user2.username, is_king: false, king: p1, castle_id: 'c2', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
 
-        dManager.checkForDominus(game._id);
+        dTest.settle(dManager.checkForDominus(game._id));
 
         // verify new game was created
         let newGame = Games.findOne({hasStarted: false, hasClosed: false, _id: {$ne: game._id}});
@@ -439,15 +439,15 @@ if (Meteor.isServer) {
         let p2 = Players.insert({gameId: game._id, userId: user2._id, username: user2.username, is_king: false, king: p1, castle_id: 'c2', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
 
         // first dominus
-        dManager.checkForDominus(game._id);
+        dTest.settle(dManager.checkForDominus(game._id));
         let count1 = Games.find({hasStarted: false, hasClosed: false, _id: {$ne: game._id}}).count();
         _testEqual(count1, 1, 'one pending game after first dominus');
 
         // simulate losing dominus then re-achieving
         Players.update(p2, {$set: {is_king: true, king: null}});
-        dManager.checkForDominus(game._id); // no dominus now
+        dTest.settle(dManager.checkForDominus(game._id)); // no dominus now
         Players.update(p2, {$set: {is_king: false, king: p1}});
-        dManager.checkForDominus(game._id); // dominus again
+        dTest.settle(dManager.checkForDominus(game._id)); // dominus again
 
         let count2 = Games.find({hasStarted: false, hasClosed: false, _id: {$ne: game._id}}).count();
         _testEqual(count2, 1, 'still only one pending game');
@@ -460,7 +460,7 @@ if (Meteor.isServer) {
 
       run('auto-created game compatible with checkForGameStart', function() {
         Games.remove({});
-        let gameId = dManager.createNextGame();
+        let gameId = dTest.settle(dManager.createNextGame());
         let g = Games.findOne(gameId);
         // checkForGameStart query: {hasStarted:false, isStarting:false, startAt:{$lte:new Date()}}
         _testEqual(g.hasStarted, false, 'hasStarted false');
@@ -498,7 +498,7 @@ if (Meteor.isServer) {
         let p2 = Players.insert({gameId: game._id, userId: user2._id, username: user2.username, is_king: false, king: p1, lord: p1, castle_id: 'c2', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
 
         // establish dominus
-        dManager.checkForDominus(game._id);
+        dTest.settle(dManager.checkForDominus(game._id));
         _testAssert(Players.findOne(p1, {fields:{is_dominus:1}}).is_dominus === true, 'p1 is dominus');
         Alerts.remove({gameId: game._id});
         GlobalAlerts.remove({gameId: game._id});
@@ -506,7 +506,7 @@ if (Meteor.isServer) {
         // simulate the mid-rebuild window: is_king:false committed for everyone
         // (relation_finder set it and hasn't restored is_king:true yet)
         Players.update({gameId: game._id}, {$set: {is_king: false}}, {multi: true});
-        dManager.checkForDominus(game._id);
+        dTest.settle(dManager.checkForDominus(game._id));
 
         // fix: a transient no-king read is ignored -> dominus preserved, no alert
         _testAssert(Players.findOne(p1, {fields:{is_dominus:1}}).is_dominus === true, 'dominus preserved during no-king window');
@@ -538,14 +538,14 @@ if (Meteor.isServer) {
         let p3 = Players.insert({gameId: game._id, userId: user3._id, username: user3.username, is_king: false, king: p1, lord: p1, castle_id: 'c3', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
 
         // establish dominus
-        dManager.checkForDominus(game._id);
+        dTest.settle(dManager.checkForDominus(game._id));
         _testAssert(Players.findOne(p1, {fields:{is_dominus:1}}).is_dominus === true, 'p1 is dominus');
         Alerts.remove({gameId: game._id});
         GlobalAlerts.remove({gameId: game._id});
 
         // simulate midnight: rebuild relationships then check dominus
         dTest.settle(dInit.rebuildRelationships(game._id));
-        dManager.checkForDominus(game._id);
+        dTest.settle(dManager.checkForDominus(game._id));
 
         // dominus should be unchanged, no false alerts
         _testAssert(Players.findOne(p1, {fields:{is_dominus:1}}).is_dominus === true, 'p1 still dominus after rebuild');

@@ -1,14 +1,14 @@
 
-dManager.createNextGame = function() {
+dManager.createNextGame = async function() {
   // don't create if there's already a pending game
-  let pendingGame = Games.findOne({hasStarted: false, hasClosed: false});
+  let pendingGame = await Games.findOneAsync({hasStarted: false, hasClosed: false});
   if (pendingGame) {
     return null;
   }
 
   // determine game number from highest existing "Game N" name
   let num = 1;
-  let games = Games.find({name: /^Game \d+$/}, {fields: {name: 1}, sort: {createdAt: -1}}).fetch();
+  let games = await Games.find({name: /^Game \d+$/}, {fields: {name: 1}, sort: {createdAt: -1}}).fetchAsync();
   games.forEach(function(g) {
     let match = g.name.match(/^Game (\d+)$/);
     if (match) {
@@ -47,7 +47,7 @@ dManager.createNextGame = function() {
     minimap: null
   };
 
-  let gameId = Games.insert(data);
+  let gameId = await Games.insertAsync(data);
   _gs.cacheGame(_.extend({_id:gameId}, data));
   console.log('--- auto-created next game: ' + data.name + ' (starts ' + moment(data.startAt).format('YYYY-MM-DD HH:mm') + ' UTC) ---');
   return gameId;

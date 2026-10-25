@@ -367,6 +367,7 @@ if (Meteor.isServer) {
       });
 
       replace(Email, 'send', function(options) { sim.emails.push(_.pick(options, 'to', 'subject')); });
+      replace(Email, 'sendAsync', async function(options) { sim.emails.push(_.pick(options, 'to', 'subject')); });
       replace(Mapbaker, 'deleteS3BakesForGame', function() {});
 
       // The nightly relationship rebuild (updateAllKingsAllies) pauses the

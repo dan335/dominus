@@ -188,6 +188,23 @@ if (Meteor.isServer) {
       refuseInProduction();
       var past = moment().subtract(1, 'hour').toDate();
       return Armypaths.update({gameId: gameId}, {$set: {last_move_at: past}}, {multi: true});
+    },
+
+    // sets fields on an E2E game, e.g. {endDate: ...}
+    setGame: function(gameId, fields) {
+      refuseInProduction();
+      if (!/^E2E /.test((Games.findOne(gameId, {fields: {name: 1}}) || {}).name)) throw new Error('not an E2E game: ' + gameId);
+      return Games.update(gameId, {$set: fields});
+    },
+
+    // runs a cron's body now, e.g. '1 min job', so the worker takes the jobs
+    // it adds within a few seconds instead of at the next tick
+    runCron: function(name) {
+      refuseInProduction();
+      var entry = SyncedCron._entries[name];
+      if (!entry) throw new Error('no cron named ' + name);
+      dTest.settle(entry.job());
+      return true;
     }
   };
 }

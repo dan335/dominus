@@ -57,7 +57,7 @@ dInit.updateAllKingsAlliesJob = async function(gameId) {
 				// update allies for game
 				await dInit.rebuildRelationships(id);
 
-				dManager.checkForDominus(id);
+				await dManager.checkForDominus(id);
 
 				await Queues.addAsyncOrLog('cleanupAllKingChatrooms', {gameId:id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, id);
 			} catch (error) {

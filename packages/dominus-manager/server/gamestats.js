@@ -2,20 +2,19 @@
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.gamestats_job.process(Meteor.bindEnvironment(function(job) {
-    gamestatsJob(job.data.gameId);
-    return Promise.resolve();
-  }));
+  Queues.gamestats_job.process(async function(job) {
+    await gamestatsJob(job.data.gameId);
+  });
 }
 
 
-gamestatsJob = function(gameId) {
+gamestatsJob = async function(gameId) {
 	let stat = {
 		created_at: dClock.now(),
 		gameId: gameId
 	};
 
-	stat.num_users = Players.find({gameId:gameId}).count();
+	stat.num_users = await Players.find({gameId:gameId}).countAsync();
 
 	// soldier worth
 	// worth of soldiers
@@ -25,12 +24,12 @@ gamestatsJob = function(gameId) {
 		emptyArmy[type] = 0
 	})
 
-	_s.armies.types.forEach(function(type) {
+	for (const type of _s.armies.types) {
 		var army = EJSON.clone(emptyArmy)
 		army[type] = 1
-		stat.soldierWorth[type] = dArmies.worth(gameId, army)
-	})
+		stat.soldierWorth[type] = await dArmies.worthAsync(gameId, army)
+	}
 
 	let find = {gameId:gameId, created_at: {$gte: _s.init.gamestatsBegin(), $lt: _s.init.gamestatsEnd()}};
-	Gamestats.upsert(find, stat);
+	await Gamestats.upsertAsync(find, stat);
 }

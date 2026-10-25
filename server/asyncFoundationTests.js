@@ -139,7 +139,7 @@ if (Meteor.isServer) {
       run('settings cache: dManager.createNextGame caches the game it makes', function() {
         Games.remove({});
         var gameId = null;
-        var cached = cachedWhile(function() { gameId = dManager.createNextGame(); });
+        var cached = cachedWhile(function() { gameId = dTest.settle(dManager.createNextGame()); });
         try {
           assert(gameId, 'a game was made');
           equal(cached.length, 1, 'one game cached');
@@ -249,6 +249,33 @@ if (Meteor.isServer) {
             }
           }
           assert(refused >= 1, 'some are refused (' + refused + ')');
+        } finally {
+          w.cleanup();
+        }
+      });
+
+      // upgrade PR 15: the gamestats job uses worthAsync
+      run('dArmies: worthAsync gives what worth gives, and refuses what it refuses', async function() {
+        var w = dTest.buildGameWorld({players: 1});
+        try {
+          var cases = [{}, {footmen: 1}, {footmen: 3, archers: 2, pikemen: 1, cavalry: 4, catapults: 1}];
+          _s.armies.types.forEach(function(type) { var s = {}; s[type] = 1; cases.push(s); });
+          for (var soldiers of cases) {
+            equal(await dArmies.worthAsync(w.gameId, _.clone(soldiers)), dArmies.worth(w.gameId, _.clone(soldiers)), JSON.stringify(soldiers));
+          }
+          assert(dArmies.worth(w.gameId, {footmen: 1}) > 0, 'a soldier is worth something');
+          var refused = 0;
+          for (var bad of [[w.gameId, {footmen: 1.5}], [w.gameId, {archers: 'x'}], [1, {footmen: 1}]]) {
+            var syncError = null, asyncError = null;
+            try { dArmies.worth.apply(null, _.clone(bad)); } catch (e) { syncError = e; }
+            try { await dArmies.worthAsync.apply(null, _.clone(bad)); } catch (e) { asyncError = e; }
+            equal(!!asyncError, !!syncError, JSON.stringify(bad) + ' refused by both or neither');
+            if (syncError) {
+              refused++;
+              equal(asyncError.message, syncError.message, JSON.stringify(bad) + ' with the same error');
+            }
+          }
+          equal(refused, 3, 'all three refused');
         } finally {
           w.cleanup();
         }

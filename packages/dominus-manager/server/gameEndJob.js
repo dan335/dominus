@@ -3,51 +3,56 @@
 // record ranking in player
 // send alert
 // set closeDate
-const Future = Npm.require('fibers/future');
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.checkForGameEnd.process(Meteor.bindEnvironment(function(job) {
-    checkForGameEnd();
-    return Promise.resolve();
-  }));
+  Queues.checkForGameEnd.process(async function(job) {
+    await checkForGameEnd();
+  });
 }
+
+
+var executeBulk = async function(bulk) {
+  try {
+    await bulk.execute();
+  } catch (error) {
+    console.error(error);
+  }
+};
 
 
 // when someone becomes dominus gameEndDate is set
 // set closeDate to date when game will be erased
-var checkForGameEnd = function() {
+var checkForGameEnd = async function() {
 
   // let game = Games.findAndModify({
   //     query: {hasStarted:true, hasEnded:false, hasClosed:false, endDate: {$lte: new Date()}},
   //     update: {$set:{hasEnded:true, endDate:new Date()}}
   // });
 
-  let game = Games.findOne({hasStarted:true, hasEnded:false, hasClosed:false, endDate: {$lte: dClock.now()}});
+  let game = await Games.findOneAsync({hasStarted:true, hasEnded:false, hasClosed:false, endDate: {$lte: dClock.now()}});
 
   if (game) {
-    Games.update(game._id, {$set:{hasEnded:true, endDate:dClock.now()}});
+    await Games.updateAsync(game._id, {$set:{hasEnded:true, endDate:dClock.now()}});
     
     // wait a couple seconds for jobs to finish
     // jobs should stop queueing when hasEnded is set to true
-		let future = new Future();
-		Meteor.setTimeout(function() {
-			future.return(true);
-		}, 1000*3);
-		future.wait();
+		await new Promise(function(resolve) {
+			Meteor.setTimeout(resolve, 1000*3);
+		});
 
-    let winningPlayer = Players.findOne({gameId:game._id, is_dominus:true});
+    let winningPlayer = await Players.findOneAsync({gameId:game._id, is_dominus:true});
 
     // if nobody is currently dominus see who was last dominus
     if (!winningPlayer) {
-      winningPlayer = Players.findOne(game.lastDominusPlayerId);
+      winningPlayer = await Players.findOneAsync(game.lastDominusPlayerId);
     }
 
     if (winningPlayer) {
 
-      Players.update({gameId:game._id}, {$set: {gameIsOver:true, wonGame:false}}, {multi:true});
-      Players.update(winningPlayer._id, {$set: {wonGame:true}});
+      await Players.updateAsync({gameId:game._id}, {$set: {gameIsOver:true, wonGame:false}}, {multi:true});
+      await Players.updateAsync(winningPlayer._id, {$set: {wonGame:true}});
 
-      let winningUser = Meteor.users.findOne(winningPlayer.userId);
+      let winningUser = await Meteor.users.findOneAsync(winningPlayer.userId);
       let winnerEmail = AccountsEmail.extract(winningUser);
 
       let winnerData = {
@@ -63,15 +68,14 @@ var checkForGameEnd = function() {
       // closeDate is when the game will be erased
       let closeDate = moment(dClock.now()).add(3, 'days').toDate();
 
-      Games.update(game._id, {$set: {winningPlayer:winnerData, closeDate:closeDate}});
+      await Games.updateAsync(game._id, {$set: {winningPlayer:winnerData, closeDate:closeDate}});
 
       dAlerts.gAlert_gameOver(game._id, winningPlayer._id);
-      // async since upgrade PR 7; this job converts in PR 15
-      Promise.await(dGraphs.updateIncomeRank(game._id));
-      Promise.await(dGraphs.updateVassalRank(game._id));
-      updatePlayersWithRank(game._id);
-      updateGameWithResults(game._id);
-      Queues.add('updateOverallPlayerRankings', {}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*10}, false);
+      await dGraphs.updateIncomeRank(game._id);
+      await dGraphs.updateVassalRank(game._id);
+      await updatePlayersWithRank(game._id);
+      await updateGameWithResults(game._id);
+      await Queues.addAsyncOrLog('updateOverallPlayerRankings', {}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*10}, false);
 
     } else {
       // No resolvable winner: the recorded dominus (is_dominus, and the
@@ -83,7 +87,7 @@ var checkForGameEnd = function() {
       // Instead, revert hasEnded and cancel the stale countdown so play can
       // continue; a future real dominus will restart the countdown.
       console.error('game endDate reached but no winning player found; clearing stale countdown', game._id)
-      Games.update(game._id, {$set: {hasEnded:false, endDate:null, lastDominusPlayerId:null}});
+      await Games.updateAsync(game._id, {$set: {hasEnded:false, endDate:null, lastDominusPlayerId:null}});
     }
   }
 };
@@ -91,32 +95,28 @@ var checkForGameEnd = function() {
 
 
 // sets rankByIncome and rankByVassals in player
-var updatePlayersWithRank = function(gameId) {
+var updatePlayersWithRank = async function(gameId) {
   var bulk = Players.rawCollection().initializeUnorderedBulkOp();
 	var hasBulkOp = false;
 
-  Players.find({gameId:gameId}).forEach(function(player) {
+  for (const player of await Players.find({gameId:gameId}).fetchAsync()) {
     let options = {fields: {incomeRank:1, vassalRank:1}, sort: {updated_at:-1}};
-    let dailystats = Dailystats.findOne({playerId:player._id}, options);
+    let dailystats = await Dailystats.findOneAsync({playerId:player._id}, options);
     if (dailystats) {
       let set = {rankByIncome:dailystats.incomeRank, rankByVassals:dailystats.vassalRank};
       bulk.find({_id:player._id}).updateOne({$set:set});
       hasBulkOp = true;
     }
-  })
+  }
 
   if (hasBulkOp) {
-		bulk.execute({}, function(error, result) {
-	    if (error) {
-	      console.error(error);
-	    }
-	  });
+		await executeBulk(bulk);
 	}
 }
 
 
 
-var updateGameWithResults = function(gameId) {
+var updateGameWithResults = async function(gameId) {
   let results = {};
 
   // num vassals
@@ -125,7 +125,7 @@ var updateGameWithResults = function(gameId) {
   let sort = {num_allies_below:-1};
   let fields = {userId:1, username:1, num_allies_below:1};
   let limit = 10;
-  Players.find({gameId:gameId}, {sort:sort, fields:fields, limit:limit}).forEach(function(player) {
+  (await Players.find({gameId:gameId}, {sort:sort, fields:fields, limit:limit}).fetchAsync()).forEach(function(player) {
       let data = {
           username:player.username,
           userId:player.userId,
@@ -143,7 +143,7 @@ var updateGameWithResults = function(gameId) {
   sort = {income: -1};
   fields = {userId:1, username:1, income:1};
   limit = 10;
-  Players.find({gameId:gameId}, {sort:sort, fields:fields, limit:limit}).forEach(function(player) {
+  (await Players.find({gameId:gameId}, {sort:sort, fields:fields, limit:limit}).fetchAsync()).forEach(function(player) {
       let data = {
           username:player.username,
           rank:rank,
@@ -161,7 +161,7 @@ var updateGameWithResults = function(gameId) {
   sort = {losses_worth: -1};
   fields = {userId:1, username:1, losses_worth:1, losses_num:1};
   limit = 10;
-  Players.find({gameId:gameId}, {sort:sort, fields:fields, limit:limit}).forEach(function(player) {
+  (await Players.find({gameId:gameId}, {sort:sort, fields:fields, limit:limit}).fetchAsync()).forEach(function(player) {
       var data = {
           username:player.username,
           rank:rank,
@@ -181,7 +181,7 @@ var updateGameWithResults = function(gameId) {
   sort = {"income.worth": -1};
   fields = {user_id:1, playerId:1, username:1, "income.worth":1};
   limit = 10;
-  Villages.find(find, {sort:sort, fields:fields, limit:limit}).forEach(function(village) {
+  (await Villages.find(find, {sort:sort, fields:fields, limit:limit}).fetchAsync()).forEach(function(village) {
 
       let data = {
           username:village.username,
@@ -195,5 +195,5 @@ var updateGameWithResults = function(gameId) {
       rank++;
   });
 
-  Games.update(gameId, {$set: {results:results}});
+  await Games.updateAsync(gameId, {$set: {results:results}});
 }
