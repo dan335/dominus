@@ -1,9 +1,9 @@
-Meteor.publish('gamesForControl', function() {
+Meteor.publish('gamesForControl', async function() {
   if (!this.userId) {
     return this.ready();
   }
 
-  var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
+  var user = await Meteor.users.findOneAsync(this.userId, {fields:{admin:1, moderator:1}});
   if (!user) {
     return this.ready();
   }
@@ -25,13 +25,13 @@ DDPRateLimiter.addRule(gamesForControlSubRule, 5, 5000);
 
 
 
-Meteor.publish('gameForControl', function(gameId) {
+Meteor.publish('gameForControl', async function(gameId) {
   check(gameId, Match.OneOf(String, null));
   if (!this.userId) {
     return this.ready();
   }
 
-  var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
+  var user = await Meteor.users.findOneAsync(this.userId, {fields:{admin:1, moderator:1}});
   if (!user) {
     return this.ready();
   }

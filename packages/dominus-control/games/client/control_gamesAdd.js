@@ -26,10 +26,9 @@ Template.control_gamesAdd.events({
     var isKingOfHill = template.$('#isKingOfHillCheckbox').is(':checked');
     var isNoLargeResources = template.$('#isNoLargeResourcesCheckbox').is(':checked');
 
-    Meteor.apply(
+    dFunc.callWithCallback(
       'addOrEditGame',
       [name.value, desc.value, Number(maxPlayers.value), date.value+' '+time.value, isRelaxed, isSpeed, isCrazyFast, isProOnly, isKingOfHill, isNoLargeResources, null],
-      {},
       function(error, result) {
         if (error) {
 

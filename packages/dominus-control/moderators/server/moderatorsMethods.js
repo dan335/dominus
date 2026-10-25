@@ -1,9 +1,9 @@
 Meteor.methods({
-  addMod: function(userId) {
+  addMod: async function(userId) {
     check(userId, String);
-    let user = Meteor.users.findOne(this.userId, {fields: {admin:1}});
+    let user = await Meteor.users.findOneAsync(this.userId, {fields: {admin:1}});
     if (user && user.admin) {
-      Meteor.users.update(userId, {$set: {moderator:true}});
+      await Meteor.users.updateAsync(userId, {$set: {moderator:true}});
     }
   }
 });

@@ -1,3 +1,76 @@
+// These methods run on the client too. Each stays a plain function: the
+// simulation is sync and the server's part is async (see "Async conversion"
+// in CLAUDE.md).
+
+var moderatorFields = {fields:{admin:1, moderator:1}};
+
+var checkModerator = function(user) {
+  if (user) {
+    if (!user.admin && !user.moderator) {
+      throw new Meteor.Error('control.games.addGame', 'Must be admin or moderator.');
+    }
+  } else {
+    throw new Meteor.Error('control.games.addGame', 'Must be admin or moderator.');
+  }
+};
+
+// a game's settings from the form, or an error
+var gameData = function(name, desc, maxPlayers, startAtTimeString, isRelaxed, isSpeed, isCrazyFast, isProOnly, isKingOfHill, isNoLargeResources) {
+  // 2015-12-23 16:20
+  if (!startAtTimeString.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)) {
+    throw new Meteor.Error('control.games.addGame', 'startAtTimeString wrong format.');
+  }
+
+  var startAt = moment.utc(startAtTimeString, 'YYYY-MM-DD HH:mm');
+  if (!startAt.isValid) {
+    throw new Meteor.Error('control.games.addGame', 'Start date not valid.');
+  }
+
+  if (name.length < 2) {
+    throw new Meteor.Error('control.games.addGame', 'Name empty.');
+  }
+
+  return {
+    name: name,
+    desc: desc,
+    maxPlayers: maxPlayers,
+    startAt: startAt.toDate(),
+    isRelaxed: isRelaxed,
+    isSpeed: isSpeed,
+    isCrazyFast: isCrazyFast,
+    isProOnly: isProOnly,
+    isKingOfHill: isKingOfHill,
+    isNoLargeResources: isNoLargeResources
+  };
+};
+
+// the fields a new game starts with
+var newGameData = function(data) {
+  data.createdAt = new Date();
+  data.hasEnded = false;  // is game over, somone has won
+  data.hasStarted = false;
+  data.isStarting = false;  // true while gameStart job is working
+  data.hasClosed = false;
+  data.closeDate = null;
+  data.endDate = null;  // set when someone becomes dominus, game ends at this time
+  data.lastDominusPlayerId = null;  // playerId of previous dominus
+  data.taxesCollected = 0;
+  data.tree = null; // contains cached tree
+  data.map_size = null;
+  data.minimapBgPath = null;
+  data.numPlayers = 0;
+  data.dominusAchieved = false;   // close registration after dominus
+  data.minimap = null;
+  return data;
+};
+
+// everything a game has, removed with it
+var gameCollections = function() {
+  return [Alerts, Armies, Armypaths, Battles2, Capitals, Castles, Countries, CountriesTemp, Dailystats, Gamestats,
+    Gamesignups, GlobalAlerts, Hexes, Market, Markers, MarkerGroups, Markethistory, Players, Recentchats, Rooms,
+    Roomchats, Rounds, Recentchats, Villages];
+};
+
 Meteor.methods({
 
   // pass in gameId if editing
@@ -17,110 +90,59 @@ Meteor.methods({
     check(isKingOfHill, Boolean);
     check(isNoLargeResources, Boolean);
 
-    var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
-    if (user) {
-      if (!user.admin && !user.moderator) {
-        throw new Meteor.Error('control.games.addGame', 'Must be admin or moderator.');
+    var args = [name, desc, maxPlayers, startAtTimeString, isRelaxed, isSpeed, isCrazyFast, isProOnly, isKingOfHill, isNoLargeResources];
+
+    if (this.isSimulation) {
+      checkModerator(Meteor.users.findOne(this.userId, moderatorFields));
+      var data = gameData.apply(null, args);
+      if (gameId) {
+        Games.update(gameId, {$set: data});
+      } else {
+        Games.insert(newGameData(data));
       }
-    } else {
-      throw new Meteor.Error('control.games.addGame', 'Must be admin or moderator.');
+      return;
     }
 
-    // 2015-12-23 16:20
-    if (!startAtTimeString.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)) {
-      throw new Meteor.Error('control.games.addGame', 'startAtTimeString wrong format.');
-    }
+    return (async () => {
+      checkModerator(await Meteor.users.findOneAsync(this.userId, moderatorFields));
+      var data = gameData.apply(null, args);
 
-    var startAt = moment.utc(startAtTimeString, 'YYYY-MM-DD HH:mm');
-    if (!startAt.isValid) {
-      throw new Meteor.Error('control.games.addGame', 'Start date not valid.');
-    }
+      if (gameId) {
 
-    if (name.length < 2) {
-      throw new Meteor.Error('control.games.addGame', 'Name empty.');
-    }
+        await Games.updateAsync(gameId, {$set: data});
+        return gameId;
 
-    var data = {
-      name: name,
-      desc: desc,
-      maxPlayers: maxPlayers,
-      startAt: startAt.toDate(),
-      isRelaxed: isRelaxed,
-      isSpeed: isSpeed,
-      isCrazyFast: isCrazyFast,
-      isProOnly: isProOnly,
-      isKingOfHill: isKingOfHill,
-      isNoLargeResources: isNoLargeResources
-    };
+      } else {
 
-    if (gameId) {
-
-      Games.update(gameId, {$set: data});
-      return gameId;
-
-    } else {
-
-      data.createdAt = new Date();
-      data.hasEnded = false;  // is game over, somone has won
-      data.hasStarted = false;
-      data.isStarting = false;  // true while gameStart job is working
-      data.hasClosed = false;
-      data.closeDate = null;
-      data.endDate = null;  // set when someone becomes dominus, game ends at this time
-      data.lastDominusPlayerId = null;  // playerId of previous dominus
-      data.taxesCollected = 0;
-      data.tree = null; // contains cached tree
-      data.map_size = null;
-      data.minimapBgPath = null;
-      data.numPlayers = 0;
-      data.dominusAchieved = false;   // close registration after dominus
-      data.minimap = null;
-      let gameId = Games.insert(data);
-      if (Meteor.isServer) {
+        newGameData(data);
+        let gameId = await Games.insertAsync(data);
         _gs.cacheGame(_.extend({_id:gameId}, data));
+        return gameId;
       }
-      return gameId;
-    }
+    })();
   },
 
   removeGame: function(gameId) {
     check(gameId, String);
 
-    var user = Meteor.users.findOne(this.userId, {fields:{admin:1, moderator:1}});
-    if (user) {
-      if (!user.admin && !user.moderator) {
-        throw new Meteor.Error('control.games.addGame', 'Must be admin or moderator.');
-      }
-    } else {
-      throw new Meteor.Error('control.games.addGame', 'Must be admin or moderator.');
+    if (this.isSimulation) {
+      checkModerator(Meteor.users.findOne(this.userId, moderatorFields));
+      Games.remove(gameId);
+      gameCollections().forEach(function(collection) {
+        collection.remove({gameId:gameId});
+      });
+      return;
     }
 
-    Games.remove(gameId);
+    return (async () => {
+      checkModerator(await Meteor.users.findOneAsync(this.userId, moderatorFields));
 
-    Alerts.remove({gameId:gameId});
-    Armies.remove({gameId:gameId});
-    Armypaths.remove({gameId:gameId});
-    Battles2.remove({gameId:gameId});
-    Capitals.remove({gameId:gameId});
-    Castles.remove({gameId:gameId});
-    Countries.remove({gameId:gameId});
-    CountriesTemp.remove({gameId:gameId});
-    Dailystats.remove({gameId:gameId});
-    Gamestats.remove({gameId:gameId});
-    Gamesignups.remove({gameId:gameId});
-    GlobalAlerts.remove({gameId:gameId});
-    Hexes.remove({gameId:gameId});
-    Market.remove({gameId:gameId});
-    Markers.remove({gameId:gameId});
-    MarkerGroups.remove({gameId:gameId});
-    Markethistory.remove({gameId:gameId});
-    Players.remove({gameId:gameId});
-    Recentchats.remove({gameId:gameId});
-    Rooms.remove({gameId:gameId});
-    Roomchats.remove({gameId:gameId});
-    Rounds.remove({gameId:gameId});
-    Recentchats.remove({gameId:gameId});
-    Villages.remove({gameId:gameId});
+      await Games.removeAsync(gameId);
+
+      for (const collection of gameCollections()) {
+        await collection.removeAsync({gameId:gameId});
+      }
+    })();
   }
 });
 

@@ -61,7 +61,7 @@ Template.landingGameSignup.events({
     $(button).attr('disabled', true);
 		$(button).html('<i class="fa fa-refresh fa-spin"></i> Please Wait');
 
-    Meteor.apply('signupForGame', [Meteor.userId(), Session.get('gameId'), username.value], {}, function(error, result) {
+    dFunc.callWithCallback('signupForGame', [Meteor.userId(), Session.get('gameId'), username.value], function(error, result) {
       if (error) {
         $(alert).show();
         $(alert).html(error.error);
@@ -73,7 +73,7 @@ Template.landingGameSignup.events({
 
   'click #gameRemoveSignUpButton': function(event, template) {
     event.preventDefault();
-    Meteor.apply('cancelSignupForGame', [Meteor.userId(), Session.get('gameId')], {}, function(error, result) {
+    dFunc.callWithCallback('cancelSignupForGame', [Meteor.userId(), Session.get('gameId')], function(error, result) {
       if (error) {
 
       }

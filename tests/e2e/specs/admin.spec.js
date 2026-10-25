@@ -9,7 +9,7 @@ test.afterAll(() => { server('dTest.e2e.reset()'); });
 
 const queueSettings = () => server("_.pick(dTest.e2e.findOne('Settings', {}) || {}, 'isPaused', 'manualPause')");
 
-test('an admin adds a game, it is listed as starting soon, and removes it again', async ({ page }) => {
+test('an admin adds a game, it is listed as starting soon, edits it and removes it again', async ({ page }) => {
   server("dTest.e2e.user('boss', {admin: true})");
   await signIn(page, 'e2e_boss');
   await page.goto('/control/games');
@@ -35,10 +35,25 @@ test('an admin adds a game, it is listed as starting soon, and removes it again'
   await expect(soon).toContainText('Games Starting Soon');
   await expect(soon.locator('.landingGameContainer', { hasText: 'E2E made by an admin' })).toBeVisible();
 
+  // edit it: the form starts with what the game has
   await page.goto('/control/games');
-  await row.locator('#removeGameButton').click();
-  await expect(row).toHaveCount(0);
-  expect(server("dTest.e2e.findOne('Games', {name: 'E2E made by an admin'})")).toBeFalsy();
+  await row.locator('#editGameButton').click();
+  await expect(page).toHaveURL(new RegExp('/control/gamesEdit/' + game._id + '$'));
+  await expect(page.locator('#nameInput')).toHaveValue('E2E made by an admin');
+  await expect(page.locator('#maxPlayers')).toHaveValue('12');
+  await expect(page.locator('#isSpeedCheckbox')).toBeChecked();
+  await page.fill('#nameInput', 'E2E edited by an admin');
+  await page.fill('#maxPlayers', '20');
+  await page.click('#saveGameButton');
+  await expect(page).toHaveURL(/\/control\/games$/);
+  const edited = page.locator('tr', { hasText: 'E2E edited by an admin' });
+  await expect(edited).toContainText('0 / 20');
+  const after = server(`dTest.e2e.findOne('Games', ${JSON.stringify(game._id)})`);
+  expect([after.name, after.maxPlayers, after.isSpeed, after.startAt]).toEqual(['E2E edited by an admin', 20, true, game.startAt]);
+
+  await edited.locator('#removeGameButton').click();
+  await expect(edited).toHaveCount(0);
+  expect(server(`dTest.e2e.findOne('Games', ${JSON.stringify(game._id)})`)).toBeFalsy();
 });
 
 test('an admin pauses the job queue and unpauses it', async ({ page }) => {

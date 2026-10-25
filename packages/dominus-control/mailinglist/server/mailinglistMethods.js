@@ -3,18 +3,18 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 
 Meteor.methods({
-  sendToMailingList: function(templateName) {
+  sendToMailingList: async function(templateName) {
     check(templateName, String);
     if (!this.userId) {
       throw new Meteor.Error('Not admin.');
     }
 
-    var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
+    var user = await Meteor.users.findOneAsync(this.userId, {fields:{admin:1}});
     if (!user || !user.admin) {
       throw new Meteor.Error('control.games.addGame', 'Must be admin.');
     }
 
-    Queues.add('sendToMailingList', {templateName:templateName}, {delay:0, timeout:1000*60*5}, false);
+    await Queues.addAsyncOrLog('sendToMailingList', {templateName:templateName}, {delay:0, timeout:1000*60*5}, false);
   },
 
 
@@ -71,11 +71,11 @@ Meteor.methods({
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.sendToMailingList.process(Meteor.bindEnvironment(function(job) {
+  Queues.sendToMailingList.process(async function(job) {
 
     check(job.data.templateName, String);
 
-    let list = MailingList.find().map(function(person) {
+    let list = (await MailingList.find().fetchAsync()).map(function(person) {
       //return {"email": person.email, "name": person.name};
       return person.email;
     })
@@ -116,9 +116,7 @@ if (process.env.DOMINUS_WORKER == 'true') {
     });
 
     console.log('Sent '+job.data.templateName+' to '+howMany+' people.');
-
-    return Promise.resolve();
-  }));
+  });
 }
 
 
@@ -128,18 +126,16 @@ if (process.env.DOMINUS_WORKER == 'true') {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.addToMailingList.process(Meteor.bindEnvironment(function(job) {
+  Queues.addToMailingList.process(async function(job) {
 
     check(job.data.name, String);
     check(job.data.email, String);
 
-    MailingList.upsert({email:job.data.email}, {$setOnInsert: {
+    await MailingList.upsertAsync({email:job.data.email}, {$setOnInsert: {
       email: job.data.email,
       name: job.data.name,
       skip: false,
       added: new Date()
     }});
-
-    return Promise.resolve();
-  }));
+  });
 }
