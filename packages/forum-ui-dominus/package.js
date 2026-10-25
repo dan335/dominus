@@ -11,6 +11,7 @@ Package.onUse(function(api) {
   api.use([
     'ecmascript',
     'forum-base',
+    'dominus-init', // dFunc
     'templating',
     'less',
     'danimal:simplerouter@1.0.0',

@@ -36,7 +36,7 @@ Template.forumNewTopic.events({
     $(button).prop('disabled', true);
     $(alert).hide();
 
-    Meteor.apply('forumNewTopic', [title, tag, text], {}, function(error, result) {
+    dFunc.callWithCallback('forumNewTopic', [title, tag, text], function(error, result) {
       $(button).text(buttonText);
       $(button).prop('disabled', false);
 

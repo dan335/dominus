@@ -49,6 +49,50 @@ test('start a topic, reply to it, and another reader sees the reply arrive', asy
   expect([topic.numPosts, topic.lastPostUsername]).toEqual([2, 'e2e_reader']);
 });
 
+test('a moderator locks, pins and deletes a topic from its page, and the page changes before the server does', async ({ page, newPage }) => {
+  server("dTest.e2e.user('moderator', {admin: true})");
+  server("dTest.e2e.user('viewer')");
+  await signIn(page, 'e2e_moderator');
+  const topicId = await newTopic(page, 'E2E a topic to moderate', 'Please behave.');
+  const topic = () => server(`dTest.e2e.findOne('Forumtopics', ${JSON.stringify(topicId)})`);
+  await page.goto('/forum/topic/' + topicId);
+  await expect(page.locator('body')).toContainText('Please behave.');
+
+  // someone else opening it counts a view (its writer has read it already)
+  const viewer = await newPage();
+  await signIn(viewer, 'e2e_viewer');
+  await viewer.goto('/forum/topic/' + topicId);
+  await expect(viewer.locator('body')).toContainText('Please behave.');
+  await expect.poll(() => topic().numViews).toBe(1);
+  await expect(viewer.locator('#lockTopicButton')).toHaveCount(0);
+
+  // lock: the reply box goes, unlock: it comes back
+  await page.click('#lockTopicButton');
+  await expect(page.locator('#newPostTextarea')).toHaveCount(0);
+  await expect.poll(() => topic().isLocked).toBe(true);
+  await page.click('#unlockTopicButton');
+  await expect(page.locator('#newPostTextarea')).toBeVisible();
+  await expect.poll(() => topic().isLocked).toBe(false);
+
+  // with the server cut off the page still changes at once (the simulation),
+  // and the server catches up when the page reconnects
+  await page.evaluate(() => Meteor.disconnect());
+  await page.click('#lockTopicButton');
+  await page.click('#pinTopicButton');
+  await expect(page.locator('#newPostTextarea')).toHaveCount(0);
+  expect([topic().isLocked, topic().isPinned]).toEqual([false, undefined]);
+  await page.evaluate(() => Meteor.reconnect());
+  await expect.poll(() => [topic().isLocked, topic().isPinned]).toEqual([true, true]);
+  await page.click('#unpinTopicButton');
+  await expect.poll(() => topic().isPinned).toBe(false);
+
+  // delete goes back to the list, without the topic
+  await page.click('#deleteTopicButton');
+  await expect(page).toHaveURL(/\/forum$/);
+  await expect.poll(() => topic()).toBeFalsy();
+  await expect(page.locator('#forumTopicTable')).not.toContainText('E2E a topic to moderate');
+});
+
 test('signed out, the forum asks you to sign in, and replying is refused', async ({ page }) => {
   server("dTest.e2e.user('poster')");
   await signIn(page, 'e2e_poster');

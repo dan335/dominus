@@ -43,7 +43,8 @@ dGame.deleteGameAccount = function(playerId) {
 		// is user owner?
 		// give owner to someone else
 		if (room.owner == playerId) {
-			dChat.removeOwnerFromRoom(player.gameId, room._id);
+			// async since upgrade PR 8; this function converts in PR 11
+			Promise.await(dChat.removeOwnerFromRoom(player.gameId, room._id));
 		}
 	});
 

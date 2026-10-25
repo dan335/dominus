@@ -531,6 +531,16 @@ Queues.addAsync = async function(jobName, data, options, uniqueId) {
 };
 
 
+// Queues.addAsync for callers that carry on when a job can't be added, as
+// every Queues.add caller did: it logs the error and resolves with false.
+Queues.addAsyncOrLog = function(jobName, data, options, uniqueId) {
+  return Queues.addAsync(jobName, data, options, uniqueId).catch(function(error) {
+    console.error('could not add job', jobName, error);
+    return false;
+  });
+};
+
+
 
 Meteor.startup(function() {
   Queues.resetQueueStats.process(Meteor.bindEnvironment(function(job) {

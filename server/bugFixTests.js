@@ -449,7 +449,7 @@ if (Meteor.isServer) {
       try {
         let king = Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), is_king: true});
         let roomId = roomFixture(game._id, {type: 'king', owner: king, members: [king]});
-        dChat.destroyKingChatroom(king);
+        dTest.settle(dChat.destroyKingChatroom(king));
         equal(Rooms.find(roomId).count(), 0, 'king room deleted');
         assert(waitFor(function() { return Recentchats.find({room_id: roomId}).count() === 0; }),
           'recentchat of the king room is removed');
@@ -468,9 +468,10 @@ if (Meteor.isServer) {
       let handle = null;
       try {
         let rooms = [roomFixture(gameId), roomFixture(gameId), roomFixture(gameId)];
-        handle = Rooms.find({gameId: gameId}, {fields: {_id: 1}}).observe({
-          removed: function(room) { Recentchats.remove({room_id: room._id}); }
-        });
+        // as packages/dominus-chat/server/recentChats.js does
+        handle = dTest.settle(Rooms.find({gameId: gameId}, {fields: {_id: 1}}).observeAsync({
+          removed: function(room) { void Recentchats.removeAsync({room_id: room._id}); }
+        }));
         Meteor._sleepForMs(2000);
         equal(Recentchats.find({room_id: {$in: rooms}}).count(), 3, 'all recentchats still there');
       } finally {

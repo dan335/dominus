@@ -61,6 +61,10 @@ if (Meteor.isServer) {
       return state;
     }
 
+    // A timer can fire a millisecond or two before Date.now() has moved on by
+    // its whole delay, so a 600ms sleep can be timed as 599ms.
+    var SLACK = 5;
+
     run('job timing: a fiber-bound handler\'s promise resolves when its work is done, and the work is timed', function() {
       var name = type();
       var finished = false;
@@ -85,7 +89,7 @@ if (Meteor.isServer) {
       assert(!Queues.isRunning(name, 'a'), 'no longer listed as running');
       var times = Queues.workTimes[name];
       equal(times.count, 1, 'timed once');
-      assert(times.max >= 400 && times.max < 5000, 'for as long as the work took (' + times.max + 'ms)');
+      assert(times.max >= 400 - SLACK && times.max < 5000, 'for as long as the work took (' + times.max + 'ms)');
       delete Queues.workTimes[name];
     });
 
@@ -100,7 +104,7 @@ if (Meteor.isServer) {
       equal(finished, false, 'the caller is not held up');
       dTest.settle(promise);
       assert(finished, 'the work is done when the promise resolves');
-      assert(Queues.workTimes[name] && Queues.workTimes[name].max >= 200, 'and timed');
+      assert(Queues.workTimes[name] && Queues.workTimes[name].max >= 200 - SLACK, 'and timed');
       delete Queues.workTimes[name];
     });
 
@@ -117,7 +121,7 @@ if (Meteor.isServer) {
       resolve('a result');
       assert(waitFor(function() { return state.done; }, 5000), 'resolves once it resolves');
       equal(state.value, undefined, 'Bull stores no result');
-      assert(Queues.workTimes[name].max >= 200, 'timed, including the time it was pending');
+      assert(Queues.workTimes[name].max >= 200 - SLACK, 'timed, including the time it was pending');
       delete Queues.workTimes[name];
 
       // a rejected promise and a thrown error: logged, and Bull counts the job
@@ -181,7 +185,7 @@ if (Meteor.isServer) {
       dTest.settle(Queues.jobTimingTestQueue.add({}));
       assert(waitFor(function() { return Queues.workTimes.jobTimingTestQueue; }, 10000), 'the job was timed');
       assert(timingQueueDone, 'after its work finished');
-      assert(Queues.workTimes.jobTimingTestQueue.max >= 600, 'for the time its work took (' + Queues.workTimes.jobTimingTestQueue.max + 'ms)');
+      assert(Queues.workTimes.jobTimingTestQueue.max >= 600 - SLACK, 'for the time its work took (' + Queues.workTimes.jobTimingTestQueue.max + 'ms)');
       delete Queues.workTimes.jobTimingTestQueue;
     });
 

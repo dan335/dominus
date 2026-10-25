@@ -3,12 +3,12 @@
 var memberDataFields =  {_id:1, username:1, x:1, y:1, castle_id:1};
 
 // owner is null in everyone chat
-dChat.createChatroom = function(gameId, name, type, owner, members, memberData) {
+dChat.createChatroom = async function(gameId, name, type, owner, members, memberData) {
 	check(gameId, String);
 	check(name, String);
 	check(type, String);
 
-	var id = Rooms.insert({
+	var id = await Rooms.insertAsync({
 		gameId: gameId,
 		name: name,
 		type: type,
@@ -24,23 +24,23 @@ dChat.createChatroom = function(gameId, name, type, owner, members, memberData) 
 
 // call this function when the owner deletes their account or leaves chatroom
 // give owner to someone else or delete room if there are no members
-dChat.removeOwnerFromRoom = function(room_id) {
+dChat.removeOwnerFromRoom = async function(room_id) {
 	check(room_id, String)
 
-	var room = Rooms.findOne(room_id)
+	var room = await Rooms.findOneAsync(room_id)
 	if (room) {
 		var owner = room.owner
 		if (owner) {
 			if (room.type == 'king') {
 				// if king leaves game then kill the king chatroom
-				Roomchats.remove({room_id:room._id})
-				Rooms.remove(room._id)
-				Queues.add('cleanupAllKingChatrooms', {gameId:room.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, room.gameId);
+				await Roomchats.removeAsync({room_id:room._id})
+				await Rooms.removeAsync(room._id)
+				await Queues.addAsyncOrLog('cleanupAllKingChatrooms', {gameId:room.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, room.gameId);
 			} else {
-				Rooms.update(room_id, {$pull: {members:owner, memberData:{_id:owner}, admins:owner}})
+				await Rooms.updateAsync(room_id, {$pull: {members:owner, memberData:{_id:owner}, admins:owner}})
 
 				// get room again because we pulled from admins and members
-				var room2 = Rooms.findOne(room._id)
+				var room2 = await Rooms.findOneAsync(room._id)
 				if (room2) {
 					// are there admins?
 					if (room2.admins.length > 0) {
@@ -48,16 +48,16 @@ dChat.removeOwnerFromRoom = function(room_id) {
 						// find admin with highest income
 						var highest = -1
 						var highest_id = null
-						room2.admins.forEach(function(member) {
-							let player = Players.findOne(member, {fields: {income:1}})
+						for (const member of room2.admins) {
+							let player = await Players.findOneAsync(member, {fields: {income:1}})
 							if (player && player.income > highest) {
 								highest_id = player._id
 								highest = player.income
 							}
-						})
+						}
 
 						if (highest_id) {
-							Rooms.update(room2._id, {
+							await Rooms.updateAsync(room2._id, {
 								$set:{owner:highest_id},
 								$pull:{admins:highest_id}
 							})
@@ -75,16 +75,16 @@ dChat.removeOwnerFromRoom = function(room_id) {
 							// find member with highest income
 							var highest = -1
 							var highest_id = null
-							room2.members.forEach(function(member) {
-								let player = Players.findOne(member, {fields: {income:1}});
+							for (const member of room2.members) {
+								let player = await Players.findOneAsync(member, {fields: {income:1}});
 								if (player && player.income > highest) {
 									highest_id = player._id
 									highest = player.income
 								}
-							})
+							}
 
 							if (highest_id) {
-								Rooms.update(room2._id, {
+								await Rooms.updateAsync(room2._id, {
 									$set:{owner:highest_id}
 								})
 
@@ -96,7 +96,7 @@ dChat.removeOwnerFromRoom = function(room_id) {
 						} else {
 							// owner is the only member
 							// delete room
-							Rooms.remove(room2._id)
+							await Rooms.removeAsync(room2._id)
 						}
 					}
 				}
@@ -112,23 +112,22 @@ dChat.removeOwnerFromRoom = function(room_id) {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.updateKingChatroom.process(Meteor.bindEnvironment(function(job) {
-		dChat.updateKingChatroom(job.data.gameId, job.data.playerId);
-    return Promise.resolve();
-  }));
+  Queues.updateKingChatroom.process(async function(job) {
+		await dChat.updateKingChatroom(job.data.gameId, job.data.playerId);
+  });
 }
 
 
 
 // create or update members in king's chatroom
-dChat.updateKingChatroom = function(gameId, playerId) {
+dChat.updateKingChatroom = async function(gameId, playerId) {
 	check(playerId, String);
 	check(gameId, String);
 
-	let player = Players.findOne(playerId, {fields: {gameId:1, king:1}});
+	let player = await Players.findOneAsync(playerId, {fields: {gameId:1, king:1}});
 	if (player && player.king) {
 		let fields = {allies_below:1, username:1};
-		let king = Players.findOne(player.king, {fields: fields});
+		let king = await Players.findOneAsync(player.king, {fields: fields});
 		if (king) {
 			if (king.allies_below) {
 				var members = _.union(king.allies_below, [king._id])
@@ -137,24 +136,24 @@ dChat.updateKingChatroom = function(gameId, playerId) {
 			}
 
 			if (members.length > 1) {
-				var memberData = Players.find({_id:{$in:members}}, {fields:memberDataFields}).fetch();
+				var memberData = await Players.find({_id:{$in:members}}, {fields:memberDataFields}).fetchAsync();
 
 				// does king already have a chatroom
-				var room = Rooms.findOne({owner:king._id, type:'king'})
+				var room = await Rooms.findOneAsync({owner:king._id, type:'king'})
 				if (room) {
 					// king already has a room
-					Rooms.update(room._id, {$set: {members:members, memberData:memberData}})
+					await Rooms.updateAsync(room._id, {$set: {members:members, memberData:memberData}})
 				} else {
 					// create a room for king
-					dChat.createChatroom(gameId, 'King '+king.username+' and Vassals', 'king', king._id, members, memberData)
+					await dChat.createChatroom(gameId, 'King '+king.username+' and Vassals', 'king', king._id, members, memberData)
 					dAlerts.alert_newKingChatroom(player.gameId, king._id)
 				}
 			} else {
 				// destroy room if there is one
-				var room = Rooms.findOne({gameId:gameId, owner:king._id, type:'king'})
+				var room = await Rooms.findOneAsync({gameId:gameId, owner:king._id, type:'king'})
 				if (room) {
 					// king already has a room
-					dChat.destroyKingChatroom(king._id)
+					await dChat.destroyKingChatroom(king._id)
 				}
 			}
 		}
@@ -165,23 +164,22 @@ dChat.updateKingChatroom = function(gameId, playerId) {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.destroyKingChatroom.process(Meteor.bindEnvironment(function(job) {
-		dChat.destroyKingChatroom(job.data.king_id);
-    return Promise.resolve();
-  }));
+  Queues.destroyKingChatroom.process(async function(job) {
+		await dChat.destroyKingChatroom(job.data.king_id);
+  });
 }
 
 // run when someone is no longer a king
-dChat.destroyKingChatroom = function(king_id) {
+dChat.destroyKingChatroom = async function(king_id) {
 	check(king_id, String)
 
-	var player = Players.findOne(king_id, {fields: {_id:1}})
+	var player = await Players.findOneAsync(king_id, {fields: {_id:1}})
 	if (player) {
 
-		Rooms.find({owner:player._id, type:'king'}).forEach(function(room) {
-			Roomchats.remove({room_id:room._id});
-			Rooms.remove(room._id);
-		})
+		for (const room of await Rooms.find({owner:player._id, type:'king'}).fetchAsync()) {
+			await Roomchats.removeAsync({room_id:room._id});
+			await Rooms.removeAsync(room._id);
+		}
 	}
 }
 
@@ -189,29 +187,28 @@ dChat.destroyKingChatroom = function(king_id) {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.setupEveryoneChatroom.process(Meteor.bindEnvironment(function(job) {
-		dChat.setupEveryoneChatroom(job.data.gameId);
-    return Promise.resolve();
-  }));
+  Queues.setupEveryoneChatroom.process(async function(job) {
+		await dChat.setupEveryoneChatroom(job.data.gameId);
+  });
 }
 
 
-dChat.setupEveryoneChatroom = function(gameId) {
+dChat.setupEveryoneChatroom = async function(gameId) {
 	check(gameId, String);
 
 	var members = [];
 	var memberData = [];
 	var fields = {_id:1, username:1, x:1, y:1, castle_id:1};
-	Players.find({gameId:gameId}, {fields:fields}).forEach(function(player) {
+	for (const player of await Players.find({gameId:gameId}, {fields:fields}).fetchAsync()) {
 		members.push(player._id);
 		memberData.push(player);
-	});
+	}
 
-	var room = Rooms.findOne({gameId:gameId, type:'everyone'})
+	var room = await Rooms.findOneAsync({gameId:gameId, type:'everyone'})
 	if (room) {
-		Rooms.update(room._id, {$set: {members:members, memberData:memberData}});
+		await Rooms.updateAsync(room._id, {$set: {members:members, memberData:memberData}});
 	} else {
-		dChat.createChatroom(gameId, 'Everyone', 'everyone', null, members, memberData);
+		await dChat.createChatroom(gameId, 'Everyone', 'everyone', null, members, memberData);
 	}
 }
 
@@ -220,53 +217,52 @@ dChat.setupEveryoneChatroom = function(gameId) {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.cleanupAllKingChatrooms.process(Meteor.bindEnvironment(function(job) {
-		dChat.cleanupAllKingChatrooms(job.data.gameId);
-    return Promise.resolve();
-  }));
+  Queues.cleanupAllKingChatrooms.process(async function(job) {
+		await dChat.cleanupAllKingChatrooms(job.data.gameId);
+  });
 }
 
 
-dChat.cleanupAllKingChatrooms = function(gameId) {
+dChat.cleanupAllKingChatrooms = async function(gameId) {
 	// delete rooms where owner doesn't exist
-	Rooms.find({gameId:gameId, type:'king'}).forEach(function(room) {
-		let player = Players.findOne(room.owner)
+	for (const room of await Rooms.find({gameId:gameId, type:'king'}).fetchAsync()) {
+		let player = await Players.findOneAsync(room.owner)
 		if (!player) {
-			Roomchats.remove({room_id:room._id})
-			Rooms.remove(room._id)
+			await Roomchats.removeAsync({room_id:room._id})
+			await Rooms.removeAsync(room._id)
 		}
-	})
+	}
 
 	// destroy all king chatrooms that belong to people who are not kings
-	Players.find({gameId:gameId, is_king:false}).forEach(function(player) {
-		if (Rooms.find({owner:player._id, type:'king'}).count() > 0) {
-			Queues.add('destroyKingChatroom', {king_id:player._id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, player._id);
+	for (const player of await Players.find({gameId:gameId, is_king:false}).fetchAsync()) {
+		if (await Rooms.find({owner:player._id, type:'king'}).countAsync() > 0) {
+			await Queues.addAsyncOrLog('destroyKingChatroom', {king_id:player._id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, player._id);
 		}
-	})
+	}
 
 	// destroy chatrooms where king is the only member
-	Rooms.find({gameId:gameId, type:'king'}).forEach(function(room) {
+	for (const room of await Rooms.find({gameId:gameId, type:'king'}).fetchAsync()) {
 		if (room.members.length < 2) {
-			Roomchats.remove({room_id:room._id})
-			Rooms.remove(room._id)
+			await Roomchats.removeAsync({room_id:room._id})
+			await Rooms.removeAsync(room._id)
 		}
-	})
+	}
 
 	// create chatrooms for all users who are kings
-	Players.find({gameId:gameId, is_king:true}).forEach(function(player) {
+	for (const player of await Players.find({gameId:gameId, is_king:true}).fetchAsync()) {
 		if (player.team) {
 			var team = _.without(player.team, player._id)
 			if (team.length > 0) {
-				dChat.updateKingChatroom(gameId, player._id)
+				await dChat.updateKingChatroom(gameId, player._id)
 			}
 		}
-	})
+	}
 
 	// make sure all chatrooms are named correctly
-	Rooms.find({gameId:gameId, type:'king'}).forEach(function(room) {
-		var owner = Players.findOne(room.owner)
+	for (const room of await Rooms.find({gameId:gameId, type:'king'}).fetchAsync()) {
+		var owner = await Players.findOneAsync(room.owner)
 		if (owner) {
-			Rooms.update(room._id, {$set: {name:'King '+owner.username+' and Vassals'}})
+			await Rooms.updateAsync(room._id, {$set: {name:'King '+owner.username+' and Vassals'}})
 		}
-	})
+	}
 }

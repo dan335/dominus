@@ -56,3 +56,31 @@ test('two players talk in the Everyone room and in a room of their own', async (
   const saved = server(`dTest.e2e.findOne('Roomchats', {room_id: ${JSON.stringify(room._id)}})`);
   expect(saved.text).toBe('just us now');
 });
+
+test('a chat sent while the server is cut off shows at once, and is saved once when the page reconnects', async ({ page }) => {
+  const w = server("dTest.e2e.world(['cal'])");
+  await signIn(page, 'e2e_cal');
+  await openGame(page, w.gameId);
+  await openLeftPanel(page, 'fa-comments', 'chatrooms_panel');
+  await openChatroom(page, 'Everyone');
+  const room = server(`dTest.e2e.findOne('Rooms', {gameId: ${JSON.stringify(w.gameId)}, type: 'everyone'})`);
+  const saved = (text) => server(`dTest.e2e.count('Roomchats', {room_id: ${JSON.stringify(room._id)}, text: ${JSON.stringify(text)}})`);
+
+  // the simulation shows it before the server has it
+  await page.evaluate(() => Meteor.disconnect());
+  await say(page, 'sent offline');
+  await expect(chatLine(page, 'e2e_cal', 'sent offline')).toHaveCount(1);
+  expect(saved('sent offline')).toBe(0);
+
+  // and the server's copy takes its place: one line, one document
+  await page.evaluate(() => Meteor.reconnect());
+  await expect.poll(() => saved('sent offline')).toBe(1);
+  await expect(chatLine(page, 'e2e_cal', 'sent offline')).toHaveCount(1);
+  await page.waitForTimeout(500);
+  await expect(chatLine(page, 'e2e_cal', 'sent offline')).toHaveCount(1);
+
+  // a refused chat shows the server's reason and keeps the text
+  await say(page, 'x'.repeat(401));
+  await expect(page.locator('#chatSendAlert')).toHaveText('Text too long.');
+  await expect(page.locator('#chatrooms_panel .chatInput')).toHaveValue('x'.repeat(401));
+});

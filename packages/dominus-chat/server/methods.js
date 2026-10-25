@@ -1,28 +1,28 @@
 Meteor.methods({
-	startChatroomWith: function(gameId, username) {
+	startChatroomWith: async function(gameId, username) {
 
 		check(gameId, String);
 		check(username, String)
 
 		let find = {gameId:gameId, userId:this.userId};
 		let options = {fields: {username:1, x:1, y:1, castle_id:1}};
-		var player = Players.findOne(find, options);
+		var player = await Players.findOneAsync(find, options);
 
 		if (player) {
 			if (username == player.username) {
 				throw new Meteor.Error("Can't chat with yourself.")
 			}
 
-			var other_player = Players.findOne({gameId:gameId, username: {$regex: new RegExp('^' +username + '$', 'i')}}, {fields: {username:1, x:1, y:1, castle_id:1}})
+			var other_player = await Players.findOneAsync({gameId:gameId, username: {$regex: new RegExp('^' +username + '$', 'i')}}, {fields: {username:1, x:1, y:1, castle_id:1}})
 
 			if (other_player) {
 				// make sure there isn't another chatroom with only these two people
-				if (Rooms.find({gameId:gameId, type:'normal', members: {$all: [player._id, other_player._id], $size:2}}).count() > 0) {
+				if (await Rooms.find({gameId:gameId, type:'normal', members: {$all: [player._id, other_player._id], $size:2}}).countAsync() > 0) {
 					throw new Meteor.Error("You already have a chatroom with "+username+".")
 				}
 
 				var name = player.username+' and '+other_player.username;
-				var id = dChat.createChatroom(gameId, name, 'normal', player._id, [player._id, other_player._id], [player, other_player]);
+				var id = await dChat.createChatroom(gameId, name, 'normal', player._id, [player._id, other_player._id], [player, other_player]);
 
 				dAlerts.alert_addedToChatroom(gameId, other_player._id, player._id, id);
 
@@ -37,23 +37,23 @@ Meteor.methods({
 	},
 
 
-	leaveChatroom: function(gameId, room_id) {
+	leaveChatroom: async function(gameId, room_id) {
 		check(room_id, String);
 		check(gameId, String);
 
 		let find = {gameId:gameId, userId:this.userId};
 		let options = {fields: {_id:1}};
-		let player = Players.findOne(find, options);
+		let player = await Players.findOneAsync(find, options);
 
-		var room = Rooms.findOne({gameId:gameId, _id:room_id, members:player._id, type:'normal'})
+		var room = await Rooms.findOneAsync({gameId:gameId, _id:room_id, members:player._id, type:'normal'})
 		if (room) {
 			// removing from members and admins removes user from chatroom
-			Rooms.update(room_id, {$pull: {members:player._id, memberData:{_id:player._id}, admins:player._id}})
+			await Rooms.updateAsync(room_id, {$pull: {members:player._id, memberData:{_id:player._id}, admins:player._id}})
 
 			// if user is owner give room to person with most income
 			// if user is only person this will delete it
 			if (room.owner == player._id) {
-				dChat.removeOwnerFromRoom(gameId, room._id)
+				await dChat.removeOwnerFromRoom(gameId, room._id)
 			}
 
 		} else {
@@ -62,7 +62,7 @@ Meteor.methods({
 	},
 
 
-	renameChatroom: function(gameId, room_id, name) {
+	renameChatroom: async function(gameId, room_id, name) {
 		check(room_id, String);
 		check(name, String);
 		check(gameId, String);
@@ -71,9 +71,9 @@ Meteor.methods({
 
 		let find = {gameId:gameId, userId:this.userId};
 		let options = {fields: {_id:1}};
-		let player = Players.findOne(find, options);
+		let player = await Players.findOneAsync(find, options);
 
-		var room = Rooms.findOne({_id:room_id, gameId:gameId});
+		var room = await Rooms.findOneAsync({_id:room_id, gameId:gameId});
 
 		if (room) {
 			if (room.owner == player._id) {
@@ -85,7 +85,7 @@ Meteor.methods({
 					throw new Meteor.Error("Must be less than "+chatroomMaxNameLength+" characters.")
 				}
 
-				Rooms.update(room_id, {$set: {name:name}})
+				await Rooms.updateAsync(room_id, {$set: {name:name}})
 				return true
 
 			} else {
@@ -97,20 +97,20 @@ Meteor.methods({
 	},
 
 
-	inviteToChatroom: function(gameId, room_id, name) {
+	inviteToChatroom: async function(gameId, room_id, name) {
 		check(room_id, String)
 		check(name, String);
 		check(gameId, String);
 
 		let find = {gameId:gameId, userId:this.userId};
 		let options = {fields: {_id:1}};
-		let player = Players.findOne(find, options);
+		let player = await Players.findOneAsync(find, options);
 
-		var room = Rooms.findOne({_id:room_id, gameId:gameId})
+		var room = await Rooms.findOneAsync({_id:room_id, gameId:gameId})
 
 		if (room) {
 			if (room.owner == player._id || _.contains(room.admins, player._id)) {
-				var member = Players.findOne({username:name, gameId:gameId}, {fields: {username:1, x:1, y:1, castle_id:1}})
+				var member = await Players.findOneAsync({username:name, gameId:gameId}, {fields: {username:1, x:1, y:1, castle_id:1}})
 
 				if (member) {
 					if (_.contains(room.members, member._id)) {
@@ -119,7 +119,7 @@ Meteor.methods({
 
 					dAlerts.alert_addedToChatroom(gameId, member._id, player._id, room._id)
 
-					Rooms.update(room_id, {$addToSet: {members:member._id, memberData:member}})
+					await Rooms.updateAsync(room_id, {$addToSet: {members:member._id, memberData:member}})
 
 				} else {
 					throw new Meteor.Error("Can't find anyone named "+name+".")
@@ -137,20 +137,20 @@ Meteor.methods({
 
 	// must be owner
 	// owner is now admin
-	chatroomMakeOwner: function(gameId, room_id, member_id) {
+	chatroomMakeOwner: async function(gameId, room_id, member_id) {
 		check(room_id, String)
 		check(member_id, String);
 		check(gameId, String);
 
 		let find = {gameId:gameId, userId:this.userId};
 		let options = {fields: {_id:1}};
-		let player = Players.findOne(find, options);
+		let player = await Players.findOneAsync(find, options);
 
 		if (!player) {
 			return false;
 		}
 
-		var room = Rooms.findOne({gameId:gameId, _id:room_id, owner:player._id})
+		var room = await Rooms.findOneAsync({gameId:gameId, _id:room_id, owner:player._id})
 		if (room) {
 			// make sure member_id is a member of room
 			if (!_.contains(room.members, member_id)) {
@@ -160,12 +160,12 @@ Meteor.methods({
 			// can't do these two updates at the same time
 			// MongoError: Field name duplication not allowed with modifiers
 			// mongo bug?
-			Rooms.update(room_id, {
+			await Rooms.updateAsync(room_id, {
 				$set: {owner:member_id},
 				$addToSet: {admins:player._id}
 			})
 
-			Rooms.update(room_id, {
+			await Rooms.updateAsync(room_id, {
 				$pull: {admins:member_id}
 			})
 
@@ -175,20 +175,20 @@ Meteor.methods({
 
 
 	// if I am owner or admin and other user is not admin or owner
-	chatroomMakeAdmin: function(gameId, room_id, member_id) {
+	chatroomMakeAdmin: async function(gameId, room_id, member_id) {
 		check(room_id, String)
 		check(member_id, String);
 		check(gameId, String);
 
 		let find = {gameId:gameId, userId:this.userId};
 		let options = {fields: {_id:1}};
-		let player = Players.findOne(find, options);
+		let player = await Players.findOneAsync(find, options);
 
 		if (!player) {
 			return false;
 		}
 
-		var room = Rooms.findOne({_id:room_id, gameId:gameId})
+		var room = await Rooms.findOneAsync({_id:room_id, gameId:gameId})
 		if (room) {
 			// make sure member_id is a member of room
 			if (!_.contains(room.members, member_id)) {
@@ -198,7 +198,7 @@ Meteor.methods({
 			if (room.owner == player._id || _.contains(room.admins, player._id)) {
 				if (room.owner != member_id) {
 					if (!_.contains(room.admins, member_id)) {
-						Rooms.update(room_id, {$addToSet: {admins:member_id}})
+						await Rooms.updateAsync(room_id, {$addToSet: {admins:member_id}})
 						dAlerts.alert_chatroomMadeAdmin(gameId, member_id, room_id)
 					}
 				}
@@ -208,20 +208,20 @@ Meteor.methods({
 
 
 	// if i am owner and user is admin
-	chatroomRemoveAdmin: function(gameId, room_id, member_id) {
+	chatroomRemoveAdmin: async function(gameId, room_id, member_id) {
 		check(room_id, String)
 		check(member_id, String);
 		check(gameId, String);
 
 		let find = {gameId:gameId, userId:this.userId};
 		let options = {fields: {_id:1}};
-		let player = Players.findOne(find, options);
+		let player = await Players.findOneAsync(find, options);
 
 		if (!player) {
 			return false;
 		}
 
-		var room = Rooms.findOne({_id:room_id, gameId:gameId})
+		var room = await Rooms.findOneAsync({_id:room_id, gameId:gameId})
 		if (room) {
 			// make sure member_id is a member of room
 			if (!_.contains(room.members, member_id)) {
@@ -237,7 +237,7 @@ Meteor.methods({
 				return false
 			}
 
-			Rooms.update(room_id, {$pull: {admins:member_id}})
+			await Rooms.updateAsync(room_id, {$pull: {admins:member_id}})
 			dAlerts.alert_chatroomRemovedFromAdmin(gameId, member_id, room_id)
 		}
 	},
@@ -245,20 +245,20 @@ Meteor.methods({
 
 	// if i am owner - can kick anyone
 	// if i am admin - can kick not admin
-	kickFromChatroom: function(gameId, room_id, member_id) {
+	kickFromChatroom: async function(gameId, room_id, member_id) {
 		check(room_id, String)
 		check(member_id, String);
 		check(gameId, String);
 
 		let find = {gameId:gameId, userId:this.userId};
 		let options = {fields: {_id:1}};
-		let player = Players.findOne(find, options);
+		let player = await Players.findOneAsync(find, options);
 
 		if (!player) {
 			return false;
 		}
 
-		var room = Rooms.findOne({_id:room_id, gameId:gameId})
+		var room = await Rooms.findOneAsync({_id:room_id, gameId:gameId})
 		if (room) {
 			// make sure member_id is a member of room
 			if (!_.contains(room.members, member_id)) {
@@ -267,7 +267,7 @@ Meteor.methods({
 
 			// i am owner
 			if (room.owner == player._id) {
-				Rooms.update(room_id, {$pull: {admins:member_id, members:member_id, memberData:{_id:member_id}}});
+				await Rooms.updateAsync(room_id, {$pull: {admins:member_id, members:member_id, memberData:{_id:member_id}}});
 			}
 
 			// i am admin
@@ -276,7 +276,7 @@ Meteor.methods({
 				if (room.owner != member_id) {
 					// member is not an admin
 					if (!_.contains(room.admins, member_id)) {
-						Rooms.update(room_id, {$pull: {members:member_id, memberData:{_id:member_id}}})
+						await Rooms.updateAsync(room_id, {$pull: {members:member_id, memberData:{_id:member_id}}})
 					}
 				}
 			}

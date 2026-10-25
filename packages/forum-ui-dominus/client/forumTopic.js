@@ -46,7 +46,7 @@ Template.forumTopic.events({
     event.preventDefault();
     let topicId = Template.instance().topicId.get();
     if (topicId) {
-      Meteor.call('forumPinTopic', topicId);
+      dFunc.callAndForget('forumPinTopic', topicId);
     }
   },
 
@@ -54,7 +54,7 @@ Template.forumTopic.events({
     event.preventDefault();
     let topicId = Template.instance().topicId.get();
     if (topicId) {
-      Meteor.call('forumUnpinTopic', topicId);
+      dFunc.callAndForget('forumUnpinTopic', topicId);
     }
   },
 
@@ -62,7 +62,7 @@ Template.forumTopic.events({
     event.preventDefault();
     let topicId = Template.instance().topicId.get();
     if (topicId) {
-      Meteor.call('forumLockTopic', topicId);
+      dFunc.callAndForget('forumLockTopic', topicId);
     }
   },
 
@@ -70,7 +70,7 @@ Template.forumTopic.events({
     event.preventDefault();
     let topicId = Template.instance().topicId.get();
     if (topicId) {
-      Meteor.call('forumUnlockTopic', topicId);
+      dFunc.callAndForget('forumUnlockTopic', topicId);
     }
   },
 
@@ -78,7 +78,7 @@ Template.forumTopic.events({
     event.preventDefault();
     let topicId = Template.instance().topicId.get();
     if (topicId) {
-      Meteor.call('forumDeleteTopic', topicId);
+      dFunc.callAndForget('forumDeleteTopic', topicId);
       SimpleRouter.go('/forum');
     }
   },
@@ -138,7 +138,7 @@ Template.forumNewPost.events({
     $(button).prop('disabled', true);
     $(alert).hide();
 
-    Meteor.apply('forumNewPost', [template.data._id, text], {}, function(error, result) {
+    dFunc.callWithCallback('forumNewPost', [template.data._id, text], function(error, result) {
       $(button).text(buttonText);
       $(button).prop('disabled', false);
 
@@ -175,7 +175,7 @@ Template.forumTopic.onCreated(function() {
       Tracker.nonreactive(function() {
         if (!isTopicViewed(topicId)) {
           markTopicRead(topicId);
-          Meteor.call('addPostView', topicId);
+          dFunc.callAndForget('addPostView', topicId);
         }
       });
     }
