@@ -53,6 +53,31 @@ BattleRound.prototype.run = function() {
     army.updateUser();
   });
 
+  self.fight(start);
+}
+
+
+// server: the battle job's, which reads each army's player with await
+// (upgrade PR 14)
+BattleRound.prototype.runAsync = async function() {
+  var self = this;
+
+  var start = new Date().getTime();
+
+  for (const army of self.armies) {
+    army.resetInfo();
+    army.check();
+    await army.updateUserAsync();
+  }
+
+  self.fight(start);
+}
+
+
+// the rest of run, once every army has its player's info
+BattleRound.prototype.fight = function(start) {
+  var self = this;
+
   self.setCapitalStatus();
 
   self.checkOrderOfArrival();

@@ -1,13 +1,12 @@
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.removeStuckBattles.process(Meteor.bindEnvironment(function(job) {
-    dBattles.removeStuckBattles();
-    return Promise.resolve();
-  }));
+  Queues.removeStuckBattles.process(async function(job) {
+    await dBattles.removeStuckBattles();
+  });
 }
 
 
 
-dBattles.removeStuckBattles = function() {
+dBattles.removeStuckBattles = async function() {
   let cutoff = moment(dClock.now()).subtract(3, 'hours').toDate();
-  Battles2.update({isRunning:true, updatedAt: {$lt:cutoff}}, {$set: {isRunning:false}}, {multi:true});
+  await Battles2.updateAsync({isRunning:true, updatedAt: {$lt:cutoff}}, {$set: {isRunning:false}}, {multi:true});
 }

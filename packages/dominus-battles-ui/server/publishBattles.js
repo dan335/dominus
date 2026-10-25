@@ -85,11 +85,11 @@ DDPRateLimiter.addRule(lastFightInBattleSubRule, 10, 5000);
 
 
 
-Meteor.publish('roundtitles', function(battle_id) {
+Meteor.publish('roundtitles', async function(battle_id) {
   check(battle_id, Match.OneOf(String, null));
   var sub = this;
   var cur = Rounds.find({battle_id:battle_id}, {fields: { roundNumber:1, battle_id:1, createdAt:1 }});
-  Mongo.Collection._publishCursor(cur, sub, 'roundtitles');
+  await Mongo.Collection._publishCursor(cur, sub, 'roundtitles');
   return sub.ready();
 });
 

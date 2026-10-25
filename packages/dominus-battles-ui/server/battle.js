@@ -1,15 +1,14 @@
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.runBattle.process(5, Meteor.bindEnvironment(function(job) {
+  Queues.runBattle.process(5, async function(job) {
     check(job.data.gameId, String);
     check(job.data.x, validNumber);
     check(job.data.y, validNumber);
 
     var battle = new BattleJob(job.data.gameId, job.data.x, job.data.y);
-    battle.runBattle();
-    return Promise.resolve();
-  }));
+    await battle.runBattle();
+  });
 }
 
 
@@ -28,7 +27,7 @@ BattleJob = function(gameId, x, y) {
 }
 
 
-BattleJob.prototype.runBattle = function() {
+BattleJob.prototype.runBattle = async function() {
   var self = this;
 
   // check for a battle going on here
@@ -38,7 +37,7 @@ BattleJob.prototype.runBattle = function() {
   //   update: {$set:{isRunning:true}}
   // });
 
-  self.battleData = Battles2.findOne({gameId:self.gameId, x:self.x, y:self.y, isOver:false})
+  self.battleData = await Battles2.findOneAsync({gameId:self.gameId, x:self.x, y:self.y, isOver:false})
 
   // if found a battle
   if (self.battleData) {
@@ -48,7 +47,7 @@ BattleJob.prototype.runBattle = function() {
     // stalled-job reprocessing) could both pass the guard and run the round,
     // applying losses and set_lord_and_vassal/setOwner twice. Only the worker
     // whose conditional update actually flips isRunning to true proceeds.
-    var claimed = Battles2.update({_id:self.battleData._id, isRunning:{$ne:true}}, {$set:{isRunning:true}});
+    var claimed = await Battles2.updateAsync({_id:self.battleData._id, isRunning:{$ne:true}}, {$set:{isRunning:true}});
     if (!claimed) {
       return;
     }
@@ -60,7 +59,7 @@ BattleJob.prototype.runBattle = function() {
     if (battleDate.isAfter(cutoff)) {
 
       // abort if battle was too recent
-      Battles2.update(self.battleData._id, {$set: {isRunning:false}});
+      await Battles2.updateAsync(self.battleData._id, {$set: {isRunning:false}});
       return;
     } else {
 
@@ -92,49 +91,49 @@ BattleJob.prototype.runBattle = function() {
     }
 
     // insert so that isRunning is true
-    self.battleData._id = Battles2.insert(self.battleData);
+    self.battleData._id = await Battles2.insertAsync(self.battleData);
   }
 
   self.currentRound = new BattleRound();
   self.currentRound.gameId = self.gameId;
 
-  self.gatherData();
+  await self.gatherData();
   self.findOrderOfArrival();
-  self.currentRound.run();
-  self.processBattleResults();
-  self.saveRound();
-  self.saveBattle();
-  self.updateOnAllyBuildingIcon();
+  await self.currentRound.runAsync();
+  await self.processBattleResults();
+  await self.saveRound();
+  await self.saveBattle();
+  await self.updateOnAllyBuildingIcon();
 }
 
 
 
-BattleJob.prototype.updateOnAllyBuildingIcon = function() {
+BattleJob.prototype.updateOnAllyBuildingIcon = async function() {
   var self = this;
 
-  self.currentRound.armies.forEach(function(army) {
+  for (const army of self.currentRound.armies) {
     if (army.unitType == 'army' && !army.destroyed) {
       if (self.currentRound.castle) {
         if (army.tookCastle) {
-          Armies.update(army._id, {$set:{onAllyBuilding:true}});
+          await Armies.updateAsync(army._id, {$set:{onAllyBuilding:true}});
         }
       }
 
       if (self.currentRound.capitol) {
         if (army.tookCapital) {
-          Armies.update(army._id, {$set:{onAllyBuilding:true}});
+          await Armies.updateAsync(army._id, {$set:{onAllyBuilding:true}});
         }
       }
     }
-  });
+  }
 }
 
 
 
-BattleJob.prototype.processBattleResults = function() {
+BattleJob.prototype.processBattleResults = async function() {
   var self = this;
 
-  _.each(self.currentRound.armies, function(army) {
+  for (const army of self.currentRound.armies) {
 
     var inc = {};
     _s.armies.types.forEach(function(type) {
@@ -150,7 +149,7 @@ BattleJob.prototype.processBattleResults = function() {
         if (army.destroyed) {
           self.battleData.showBattle = true;
         }
-        Capitals.update(army._id, {$inc:inc});
+        await Capitals.updateAsync(army._id, {$inc:inc});
         break;
       case 'castle':
 
@@ -159,16 +158,15 @@ BattleJob.prototype.processBattleResults = function() {
 
           // give castle away
           if (army.becameVassalOfPlayerId) {
-            var lord = Players.findOne(army.becameVassalOfPlayerId, {fields:{_id:1}});
-            var vassal = Players.findOne(army.playerId, {fields:{_id:1}});
+            var lord = await Players.findOneAsync(army.becameVassalOfPlayerId, {fields:{_id:1}});
+            var vassal = await Players.findOneAsync(army.playerId, {fields:{_id:1}});
             if (lord && vassal) {
-              // async since upgrade PR 12; this function converts in PR 14
-              Promise.await(dInit.set_lord_and_vassal(lord._id, vassal._id));
+              await dInit.set_lord_and_vassal(lord._id, vassal._id);
             }
           }
         }
 
-        Castles.update(army._id, {$inc:inc});
+        await Castles.updateAsync(army._id, {$inc:inc});
 
         break;
       case 'village':
@@ -177,10 +175,10 @@ BattleJob.prototype.processBattleResults = function() {
           self.battleData.showBattle = true;
 
           dAlerts.alert_villageDestroyed(self.gameId, army.playerId, self.battleData._id, army.name);
-          Villages.remove(army._id);
+          await Villages.removeAsync(army._id);
           Mapmaker.buildingRemoved(self.gameId, army.x, army.y);
         } else {
-          Villages.update(army._id, {$inc:inc});
+          await Villages.updateAsync(army._id, {$inc:inc});
         }
 
         break;
@@ -190,32 +188,30 @@ BattleJob.prototype.processBattleResults = function() {
           self.battleData.showBattle = true;
 
           dAlerts.alert_armyDestroyed(self.gameId, army.playerId, self.battleData._id, army.name);
-          // async since upgrade PR 13a; this function converts in PR 14
-          Promise.await(dArmies.destroyArmy(army._id));
+          await dArmies.destroyArmy(army._id);
 
         } else {
 
           // give capital away, send alerts, update army onAllyBuilding summary icon
           if (self.currentRound.capital && army.tookCapital) {
             self.battleData.showBattle = true;
-            // async since upgrade PR 10; battles convert in PR 14
-            Promise.await(dCapitals.setOwner(self.gameId, army.playerId, self.currentRound.capital._id));
+            await dCapitals.setOwner(self.gameId, army.playerId, self.currentRound.capital._id);
           }
 
-          Armies.update(army._id, {$inc:inc, $set: {speed:null, moveTime:null}});
+          await Armies.updateAsync(army._id, {$inc:inc, $set: {speed:null, moveTime:null}});
         }
         break;
     }
 
-    self.trackLosesInPlayer(army);
-  })
+    await self.trackLosesInPlayer(army);
+  }
 }
 
 
 
 
 // for rankings
-BattleJob.prototype.trackLosesInPlayer = function(army) {
+BattleJob.prototype.trackLosesInPlayer = async function(army) {
   if (army.unitType != 'capital') {
     check(army.playerId, String);
 
@@ -227,16 +223,16 @@ BattleJob.prototype.trackLosesInPlayer = function(army) {
       inc["losses."+key] = value;
     })
 
-    var num = Players.update(army.playerId, {$inc:inc});
+    var num = await Players.updateAsync(army.playerId, {$inc:inc});
     if (num) {
-      Queues.add('update_losses_worth', {playerId:army.playerId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, false);
+      await Queues.addAsyncOrLog('update_losses_worth', {playerId:army.playerId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, false);
     }
   }
 }
 
 
 
-BattleJob.prototype.gatherData = function() {
+BattleJob.prototype.gatherData = async function() {
   var self = this;
 
   var castleFields = {playerId:1, gameId:1, name:1, user_id:1, x:1, y:1, username:1, image:1};
@@ -251,10 +247,9 @@ BattleJob.prototype.gatherData = function() {
     capitalFields[type] = 1;
   })
 
-  var armies = Armies.find({gameId:self.gameId, x:self.x, y:self.y}, {fields: armyFields});
-  var castleData = Castles.findOne({gameId:self.gameId, x:self.x, y:self.y}, {fields: castleFields});
-  var villageData = Villages.findOne({gameId:self.gameId, x:self.x, y:self.y}, {fields: villageFields});
-  var capitalData = Capitals.findOne({gameId:self.gameId, x:self.x, y:self.y}, {fields: capitalFields});
+  var castleData = await Castles.findOneAsync({gameId:self.gameId, x:self.x, y:self.y}, {fields: castleFields});
+  var villageData = await Villages.findOneAsync({gameId:self.gameId, x:self.x, y:self.y}, {fields: villageFields});
+  var capitalData = await Capitals.findOneAsync({gameId:self.gameId, x:self.x, y:self.y}, {fields: capitalFields});
 
   // capitals must happen before armies
   if (capitalData) {
@@ -265,13 +260,13 @@ BattleJob.prototype.gatherData = function() {
     self.currentRound.capital = capital;
   }
 
-  armies.forEach(function(a) {
+  for (const a of await Armies.find({gameId:self.gameId, x:self.x, y:self.y}, {fields: armyFields}).fetchAsync()) {
     var army =  new BattleArmy();
     army.unitType = 'army';
     processUnit(army, a);
     self.currentRound.armies.push(army);
-    self.handleEnteredAlert(army);
-  });
+    await self.handleEnteredAlert(army);
+  }
 
   if (castleData) {
     var castle = new BattleArmy();
@@ -279,7 +274,7 @@ BattleJob.prototype.gatherData = function() {
     processUnit(castle, castleData);
     self.currentRound.armies.push(castle);
     self.currentRound.castle = castle;
-    self.handleEnteredAlert(castle);
+    await self.handleEnteredAlert(castle);
   }
 
   if (villageData) {
@@ -288,7 +283,7 @@ BattleJob.prototype.gatherData = function() {
     processUnit(village, villageData);
     self.currentRound.armies.push(village);
     self.currentRound.village = village;
-    self.handleEnteredAlert(village);
+    await self.handleEnteredAlert(village);
   }
 }
 
@@ -319,7 +314,7 @@ BattleJob.prototype.findOrderOfArrival = function() {
 
 
 
-BattleJob.prototype.handleEnteredAlert = function(army) {
+BattleJob.prototype.handleEnteredAlert = async function(army) {
   var self = this;
 
   // has alert already been sent?
@@ -340,7 +335,7 @@ BattleJob.prototype.handleEnteredAlert = function(army) {
     if (army.unitType == 'castle') {
       dAlerts.alert_battleStart(self.gameId, army.playerId, army._id, 'castle', self.battleData._id);
 
-      var player = Players.findOne(army.playerId,  {fields: {allies_above:1}});
+      var player = await Players.findOneAsync(army.playerId,  {fields: {allies_above:1}});
       if (player && player.allies_above) {
         dAlerts.alert_vassalIsUnderAttack(self.gameId, player.allies_above, army.playerId, self.battleData._id);
       }
@@ -357,7 +352,7 @@ BattleJob.prototype.handleEnteredAlert = function(army) {
 
 
 
-BattleJob.prototype.saveRound = function() {
+BattleJob.prototype.saveRound = async function() {
   var self = this;
 
   // flatten allies and enemies or creates call stack size exceeded error
@@ -381,12 +376,12 @@ BattleJob.prototype.saveRound = function() {
   roundData.gameId = self.gameId;
   roundData = _.omit(roundData, _.functions(roundData));
 
-  Rounds.insert(roundData);
+  await Rounds.insertAsync(roundData);
 }
 
 
 
-BattleJob.prototype.saveBattle = function() {
+BattleJob.prototype.saveBattle = async function() {
   var self = this;
 
   // info for battleTitles
@@ -457,7 +452,7 @@ BattleJob.prototype.saveBattle = function() {
   self.battleData.isOver = self.currentRound.battleIsOver;
   self.battleData.isRunning = false;
 
-  Battles2.update(self.battleData._id, self.battleData);
+  await Battles2.updateAsync(self.battleData._id, self.battleData);
 }
 
 

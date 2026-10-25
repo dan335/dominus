@@ -18,7 +18,7 @@ if (Meteor.isServer) {
     var byName = {Players: Players, Castles: Castles, Villages: Villages, Armies: Armies, Armypaths: Armypaths,
       Capitals: Capitals, Market: Market, Battles2: Battles2, Roomchats: Roomchats, Rooms: Rooms, Alerts: Alerts,
       Games: Games, Settings: Settings, Forumtopics: Forumtopics, Forumposts: Forumposts, users: Meteor.users,
-      Markers: Markers, MarkerGroups: MarkerGroups, Gamesignups: Gamesignups, Hexes: Hexes};
+      Markers: Markers, MarkerGroups: MarkerGroups, Gamesignups: Gamesignups, Hexes: Hexes, Rounds: Rounds};
     var collection = byName[collectionName] || _.find(dTest.gameCollections(), function(c) { return c._name == collectionName; });
     if (!collection) throw new Error('no collection ' + collectionName);
     return collection;
