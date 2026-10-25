@@ -33,7 +33,7 @@ if (Meteor.isServer) {
       leaveChatroom: 2, markAlertAsRead: 2, markAllAlertsAsRead: 1, moveMarkerGroupDown: 1,
       moveMarkerGroupUp: 1, onEmailVerified: 0, pauseJobQueue: 0, pauseMovement: 1,
       removeArmyPath: 1, removeGame: 1, removeMarker: 1, removeMarkerGroup: 1,
-      renameChatroom: 3, rensendEmailVerification: 0, reportPlayer: 2, resetQueueStats: 0,
+      renameChatroom: 3, rensendEmailVerification: 0, reportClientError: 1, reportPlayer: 2, resetQueueStats: 0,
       resumeJobQueue: 0, resumeMovement: 1, runAllTests: 1, runBullJob: 2, runGameCreationTests: 0,
       saveMarkerGroupInfo: 2, saveMarkerInfo: 3, sell_resource: 3, sendToMailingList: 1,
       send_gold_to: 3, setGender: 1, setHexScale: 2, setMarkerOrder: 5, set_unit_image: 4,

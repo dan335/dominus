@@ -244,6 +244,7 @@ if (Meteor.isServer) {
         fetchCountriesOnScreen: [[[w.country]], [[{$ne: null}]]],
         addPostView: [['noSuchTopic']],
         forumMarkAllRead: [[]],
+        reportClientError: [[{kind: 'error', message: 'spectator test'}]],
 
         // armies
         hireArmy: games(function(g) { return [g, soldiers, w.castle, 'castle']; })
