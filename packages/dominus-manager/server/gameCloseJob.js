@@ -47,9 +47,17 @@ var cleanupPlayers = function(gameId) {
 	var hasBulkOp = false;
 
   Players.find({gameId:gameId}, {fields:keep}).forEach(function(player) {
-    // player.gameIsClosed = true;
-    // bulk.find({_id:player._id}).updateOne(player);
-    bulk.find({_id:player._id}).updateOne({$set:{gameIsClosed:true}});
+    // Replace the doc with only the whitelisted fields (the game is being
+    // erased), mirroring cleanupGame below. Previously this only did
+    // $set gameIsClosed:true, so the `keep` whitelist was dead code and closed-
+    // game player docs kept every field forever -- unbounded bloat plus stale
+    // is_dominus:true / is_king left on dead games. player was fetched with
+    // {fields:keep} so it already holds just the kept fields; drop _id (it is
+    // immutable and used as the filter) and mark it closed.
+    var id = player._id;
+    delete player._id;
+    player.gameIsClosed = true;
+    bulk.find({_id:id}).replaceOne(player);
     hasBulkOp = true;
   });
 
