@@ -33,7 +33,7 @@ Template.markerGroup.events({
     event.preventDefault();
     var data = Template.currentData();
     if (data) {
-      Meteor.call('moveMarkerGroupUp', data.groupId);
+      dFunc.callAndForget('moveMarkerGroupUp', data.groupId);
     }
   },
 
@@ -41,7 +41,7 @@ Template.markerGroup.events({
     event.preventDefault();
     var data = Template.currentData();
     if (data) {
-      Meteor.call('moveMarkerGroupDown', data.groupId);
+      dFunc.callAndForget('moveMarkerGroupDown', data.groupId);
     }
   },
 
@@ -49,7 +49,7 @@ Template.markerGroup.events({
     event.preventDefault();
     var data = Template.currentData();
     if (data) {
-      Meteor.call('removeMarkerGroup', data.groupId);
+      dFunc.callAndForget('removeMarkerGroup', data.groupId);
     }
   }
 })
@@ -147,7 +147,7 @@ renderMarkerTemplates = function(documents, groupId, initializing) {
       var newIndex = ui.elementIndex;
       var id = ui.item.data('id');
 
-      Meteor.call('setMarkerOrder', id, fromGroupId, toGroupId, oldIndex, newIndex);
+      dFunc.callAndForget('setMarkerOrder', id, fromGroupId, toGroupId, oldIndex, newIndex);
     });
 
   } else {

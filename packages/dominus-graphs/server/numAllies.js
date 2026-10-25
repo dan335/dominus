@@ -1,21 +1,18 @@
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-	Queues.dailystatsNumVassalsEveryone.process(Meteor.bindEnvironment(function(job) {
-		dGraphs.dailystatsNumVassalsEveryone(job.data.gameId);
-	  return Promise.resolve();
-	}));
+	Queues.dailystatsNumVassalsEveryone.process(async function(job) {
+		await dGraphs.dailystatsNumVassalsEveryone(job.data.gameId);
+	});
 }
 
 
-dGraphs.dailystatsNumVassalsEveryone = function(gameId) {
+dGraphs.dailystatsNumVassalsEveryone = async function(gameId) {
 
-  var fut = Npm.require('fibers/future');
-  var future = new fut();
   var bulk = Dailystats.rawCollection().initializeUnorderedBulkOp();
 
 	var hasBulkOp = false;
-	Players.find({gameId:gameId}, {fields: {userId:1, num_allies_below:1}}).forEach(function(player) {
+	for (const player of await Players.find({gameId:gameId}, {fields: {userId:1, num_allies_below:1}}).fetchAsync()) {
 		hasBulkOp = true;
 
 		let num_allies_below = 0;
@@ -27,15 +24,13 @@ dGraphs.dailystatsNumVassalsEveryone = function(gameId) {
     var set = {numVassals:num_allies_below, updated_at:dClock.now()};
     var setOnInsert = {_id:dRandom.id(), gameId:gameId, playerId:player._id, user_id:player.userId, created_at: dClock.now()};
     bulk.find(f).upsert().updateOne({$set:set, $setOnInsert:setOnInsert});
-	})
+	}
 
 	if (hasBulkOp) {
-		bulk.execute({}, function(error, result) {
-	    if (error) {
-	      console.error(error);
-	    }
-	    future.return(result);
-	  });
-	  var result = future.wait();
+		try {
+			await bulk.execute();
+		} catch (error) {
+			console.error(error);
+		}
 	}
 }

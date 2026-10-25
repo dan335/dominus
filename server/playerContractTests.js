@@ -293,6 +293,90 @@ if (Meteor.isServer) {
         });
 
 
+        // The browser runs each shared marker method as a simulation first, a
+        // sync copy of the change behind this.isSimulation; the server runs
+        // the async part the method returns. These run the simulation here, on
+        // the server's collections, and check that it is sync (two async
+        // simulations that overlap throw in the browser on 2.16) and ends
+        // where the real calls do. tests/e2e/specs/markers.spec.js checks it
+        // in the browser. The handler is called with the invocation as this,
+        // not inside DDP._CurrentMethodInvocation.withValue, which on 2.16
+        // waits for a promise it is handed.
+        test('marker simulations: each is sync, and ends where the real calls do', function() {
+          var user = w.users[0]._id;
+          var simulation = {userId: user, isSimulation: true, connection: null, unblock: function() {}, setUserId: function() {}};
+          var server = {userId: user, isSimulation: false, connection: null, unblock: function() {}, setUserId: function() {}};
+          var simulate = function(name, args) {
+            var returned = Meteor.server.method_handlers[name].apply(simulation, args);
+            assert(!dTest.isPromise(returned), name + ': the simulation is sync');
+            equal(returned, undefined, name + ' simulation returns nothing');
+          };
+          // and the server's part is async (removeMarker of nothing: no change)
+          var returned = Meteor.server.method_handlers.removeMarker.apply(server, ['nothing']);
+          assert(dTest.isPromise(returned), 'the server\'s part is a promise');
+          equal(dTest.settle(returned), undefined, 'that returns nothing');
+          var real = function(name, args) {
+            clients[0].call.apply(null, [name].concat(args));
+          };
+          // markers and groups, with group ids as names and no ids or dates
+          var state = function() {
+            var groups = groupsOf(0);
+            var groupName = function(id) { return id === 0 ? 'default' : (_.findWhere(groups, {_id: id}) || {}).name; };
+            return JSON.stringify({
+              groups: groups.map(function(g) { return [g.name, g.order, g.gameId, g.playerId]; }),
+              markers: _.sortBy(markersOf(0), function(m) { return groupName(m.groupId) + '/' + m.order; }).map(function(m) {
+                return [m.name, m.description, m.unitId, groupName(m.groupId), m.order];
+              }),
+              hexScale: w.player(0).hex_scale
+            });
+          };
+          var reset = function() {
+            Markers.remove({user_id: user});
+            MarkerGroups.remove({user_id: user});
+            Players.update(w.players[0]._id, {$set: {hex_scale: 1}});
+          };
+          var groupId = function(name) { return MarkerGroups.findOne({user_id: user, name: name})._id; };
+          var markerId = function(unitId) { return Markers.findOne({user_id: user, unitId: unitId})._id; };
+
+          var play = function(call) {
+            reset();
+            // addMarker has no simulation: it runs on the server only
+            real('addMarker', [w.gameId, 'castle', w.castles[1]._id]);
+            real('addMarker', [w.gameId, 'castle', w.castles[2]._id]);
+            call('addMarkerGroup', [w.gameId, 'Alpha <1>']);
+            call('addMarkerGroup', [w.gameId, 'Beta']);
+            call('saveMarkerGroupInfo', [groupId('Beta'), 'Gamma!']);
+            call('moveMarkerGroupUp', [groupId('Gamma')]);
+            call('moveMarkerGroupDown', [groupId('Alpha 1')]);
+            call('setMarkerOrder', [markerId(w.castles[2]._id), 0, groupId('Gamma'), 1, 0]);
+            call('setMarkerOrder', [markerId(w.castles[1]._id), 0, 0, 0, 0]);
+            call('saveMarkerInfo', [markerId(w.castles[1]._id), 'Keep <b>', 'Look out']);
+            call('moveMarkerGroupDown', [groupId('Gamma')]);
+            call('fixMarkerGroupOrder', []);
+            call('setHexScale', [w.players[0]._id, 0.8]);
+            var middle = state();
+            call('removeMarker', [markerId(w.castles[1]._id)]);
+            call('removeMarkerGroup', [groupId('Gamma')]);
+            return [middle, state()];
+          };
+
+          var fromServer = play(real);
+          var fromSimulations = play(simulate);
+          equal(fromSimulations[0], fromServer[0], 'after adding, renaming and moving');
+          equal(fromSimulations[1], fromServer[1], 'after removing');
+          var middle = JSON.parse(fromServer[0]);
+          equal(JSON.stringify(_.map(middle.groups, _.first)), '["Alpha 1","Gamma"]', 'the groups it ends with');
+          equal(middle.hexScale, 0.8, 'hex scale');
+          equal(JSON.parse(fromServer[1]).markers.length, 0, 'every marker gone at the end');
+
+          // a refused simulation throws, as the real call does
+          var error = dTest.throws(function() {
+            return Meteor.server.method_handlers.saveMarkerGroupInfo.apply(simulation, ['x', '***']);
+          });
+          equal(error && error.error, 'Name too short.', 'refused in the simulation too');
+        });
+
+
         // --- deleteGameAccount (last: it removes player 2) ---
 
         test('deleteGameAccount: you leave the game, with your castle and armies', function() {

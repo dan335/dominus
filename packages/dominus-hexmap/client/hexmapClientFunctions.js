@@ -186,7 +186,7 @@ var _saveHexScale = _.debounce(function() {
     let player = Players.findOne(playerId, {fields: {hex_scale:1}});
     if (player) {
       if (player.hex_scale != newScale) {
-        Meteor.call('setHexScale', playerId, newScale);
+        dFunc.callAndForget('setHexScale', playerId, newScale);
       }
     }
   }

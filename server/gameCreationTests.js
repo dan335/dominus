@@ -840,7 +840,7 @@ if (Meteor.isServer) {
         };
         let a = mk(5), b = mk(5), c = mk(0), d = mk(0), e = mk(0);
 
-        dGraphs.updateVassalRank(game._id);
+        dTest.settle(dGraphs.updateVassalRank(game._id));
         let vrank = function(pid) { let ds = Dailystats.findOne({playerId: pid}); return ds ? ds.vassalRank : null; };
         _testEqual(vrank(a), 1, 'top vassal count is rank 1');
         _testEqual(vrank(b), 1, 'tie with top is also rank 1');
@@ -848,7 +848,7 @@ if (Meteor.isServer) {
         _testEqual(vrank(d), 2, 'zero-vassal tie is rank 2');
         _testEqual(vrank(e), 2, 'zero-vassal tie is rank 2');
 
-        dGraphs.updateIncomeRank(game._id);
+        dTest.settle(dGraphs.updateIncomeRank(game._id));
         let irank = function(pid) { let ds = Dailystats.findOne({playerId: pid}); return ds ? ds.incomeRank : null; };
         _testEqual(irank(a), 1, 'top income is rank 1');
         _testEqual(irank(b), 1, 'income tie with top is rank 1');

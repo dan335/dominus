@@ -22,7 +22,7 @@ Template.infoPanelMarkerButton.events({
       let unitId = data._id;
       let marker = Markers.findOne({unitId:unitId}, {fields: {_id:1}});
       if (marker) {
-        Meteor.call('removeMarker', marker._id);
+        dFunc.callAndForget('removeMarker', marker._id);
       }
     }
   },

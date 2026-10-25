@@ -52,7 +52,7 @@ Template.markersPanel.events({
     $(button).attr('disabled', true);
     $(button).html('<i class="fa fa-refresh fa-spin"></i> Please Wait');
 
-    Meteor.apply('addMarkerGroup', [Session.get('gameId'), name], {}, function(error, result) {
+    dFunc.callWithCallback('addMarkerGroup', [Session.get('gameId'), name], function(error, result) {
       $(button).attr('disabled', false);
       $(button).html(button_html);
 

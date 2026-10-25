@@ -1,7 +1,7 @@
 Meteor.methods({
   // for marking hexes
   // client doesn't know hex id only x,y
-  addMarkerCoords: function(gameId, unitType, x, y) {
+  addMarkerCoords: async function(gameId, unitType, x, y) {
     check(gameId, String);
     check(unitType, String);
     var self = this;
@@ -9,12 +9,12 @@ Meteor.methods({
     check(x, Match.Integer);
     check(y, Match.Integer);
 
-    let player = Players.findOne({userId:this.userId, gameId:gameId}, {fields:{pro:1}});
+    let player = await Players.findOneAsync({userId:this.userId, gameId:gameId}, {fields:{pro:1}});
     if (!player) {
       console.error('No player found in addMarkerCoords');
     }
 
-    var numCurrent = Markers.find({playerId:player._id}).count();
+    var numCurrent = await Markers.find({playerId:player._id}).countAsync();
     var max = 0;
     if (player.pro) {
       max = _s.markers.maxMarkersPro;
@@ -44,7 +44,7 @@ Meteor.methods({
 
     switch(unitType) {
       case 'hex':
-        var unit = Hexes.findOne({gameId:gameId, x:x, y:y}, {fields:{x:1, y:1}});
+        var unit = await Hexes.findOneAsync({gameId:gameId, x:x, y:y}, {fields:{x:1, y:1}});
         if (!unit) {
           throw new Meteor.Error('no unit found');
         }
@@ -56,23 +56,23 @@ Meteor.methods({
         break;
     }
 
-    addMarker(markerData);
+    await addMarker(markerData);
   },
 
   // for everything but hexes
-  addMarker: function(gameId, unitType, unitId) {
+  addMarker: async function(gameId, unitType, unitId) {
     check(gameId, String);
     var self = this;
 
     check(unitType, String);
     check(unitId, String);
 
-    let player = Players.findOne({userId:this.userId, gameId:gameId}, {fields:{pro:1}});
+    let player = await Players.findOneAsync({userId:this.userId, gameId:gameId}, {fields:{pro:1}});
     if (!player) {
       console.error('no player found in addMarkerCoords');
     }
 
-    var numCurrent = Markers.find({playerId:player._id}).count();
+    var numCurrent = await Markers.find({playerId:player._id}).countAsync();
     var max = 0;
     if (player.pro) {
       max = _s.markers.maxMarkersPro;
@@ -102,7 +102,7 @@ Meteor.methods({
 
     switch(unitType) {
       case 'capital':
-        var unit = Capitals.findOne(unitId, {fields:{name:1, x:1, y:1}});
+        var unit = await Capitals.findOneAsync(unitId, {fields:{name:1, x:1, y:1}});
         if (!unit) {
           throw new Meteor.Error('no unit found');
         }
@@ -118,7 +118,7 @@ Meteor.methods({
 
         break;
       case 'castle':
-        var unit = Castles.findOne(unitId, {fields:{name:1, username:1, x:1, y:1}});
+        var unit = await Castles.findOneAsync(unitId, {fields:{name:1, username:1, x:1, y:1}});
         if (!unit) {
           throw new Meteor.Error('no unit found');
         }
@@ -129,7 +129,7 @@ Meteor.methods({
         markerData.unitId = unit._id;
         break;
       case 'village':
-        var unit = Villages.findOne(unitId, {fields:{name:1, username:1, x:1, y:1}});
+        var unit = await Villages.findOneAsync(unitId, {fields:{name:1, username:1, x:1, y:1}});
         if (!unit) {
           throw new Meteor.Error('no unit found');
         }
@@ -140,7 +140,7 @@ Meteor.methods({
         markerData.unitId = unit._id;
         break;
       case 'army':
-        var unit = Armies.findOne(unitId, {fields:{name:1, username:1, x:1, y:1}});
+        var unit = await Armies.findOneAsync(unitId, {fields:{name:1, username:1, x:1, y:1}});
         if (!unit) {
           throw new Meteor.Error('no unit found');
         }
@@ -151,7 +151,7 @@ Meteor.methods({
         markerData.unitId = unit._id;
         break;
       case 'hex':
-        var unit = Hexes.findOne(unitId, {fields:{x:1, y:1}});
+        var unit = await Hexes.findOneAsync(unitId, {fields:{x:1, y:1}});
         if (!unit) {
           throw new Meteor.Error('no unit found');
         }
@@ -163,23 +163,23 @@ Meteor.methods({
         break;
     }
 
-    addMarker(markerData);
+    await addMarker(markerData);
   }
 })
 
 
-var addMarker = function(markerData) {
+var addMarker = async function(markerData) {
   if (markerData.name.length > 35) {
     markerData.name = markerData.name.substring(0,35);
   }
 
   var selector = {unitType: markerData.unitType, unitId: markerData.unitId, user_id:markerData.user_id};
 
-  if (Markers.find(selector).count()) {
+  if (await Markers.find(selector).countAsync()) {
     throw new Meteor.Error('You already have a marker here.');
   }
 
-  var newMarkerId = Markers.insert(markerData);
+  var newMarkerId = await Markers.insertAsync(markerData);
 
   // return the marker id
   if (newMarkerId) {

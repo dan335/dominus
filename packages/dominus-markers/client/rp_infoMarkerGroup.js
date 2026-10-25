@@ -24,7 +24,7 @@ Template.rp_infoMarkerGroup.events({
     $(button).attr('disabled', true);
     $(button).html('<i class="fa fa-refresh fa-spin"></i> Please Wait');
 
-    Meteor.apply('saveMarkerGroupInfo', [selected.id, name], {}, function(error, result) {
+    dFunc.callWithCallback('saveMarkerGroupInfo', [selected.id, name], function(error, result) {
       $(button).attr('disabled', false);
       $(button).html(button_html);
 

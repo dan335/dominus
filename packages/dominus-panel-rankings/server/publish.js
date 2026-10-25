@@ -1,4 +1,4 @@
-Meteor.publish('income_rankings', function(gameId, page) {
+Meteor.publish('income_rankings', async function(gameId, page) {
 	check(gameId, Match.OneOf(String, null));
 	check(page, Match.Integer);
 	var skip = (page-1) * _s.panels.rankings.perPage
@@ -13,7 +13,7 @@ Meteor.publish('income_rankings', function(gameId, page) {
 			is_king:1,
 			userId:1
 		}, limit:_s.panels.rankings.perPage})
-	Mongo.Collection._publishCursor(cur, sub, 'income_rankings')
+	await Mongo.Collection._publishCursor(cur, sub, 'income_rankings')
 	return sub.ready();
 });
 
@@ -26,7 +26,7 @@ var income_rankingsSubRule = {
 DDPRateLimiter.addRule(income_rankingsSubRule, 5, 5000);
 
 
-Meteor.publish('ally_rankings', function(gameId, page) {
+Meteor.publish('ally_rankings', async function(gameId, page) {
 	check(gameId, Match.OneOf(String, null));
 	check(page, Match.Integer);
 	var skip = (page-1) * _s.panels.rankings.perPage
@@ -41,7 +41,7 @@ Meteor.publish('ally_rankings', function(gameId, page) {
 			is_king:1,
 			userId:1
 		}, limit:_s.panels.rankings.perPage})
-	Mongo.Collection._publishCursor(cur, sub, 'ally_rankings')
+	await Mongo.Collection._publishCursor(cur, sub, 'ally_rankings')
 	return sub.ready();
 });
 
@@ -54,7 +54,7 @@ var ally_rankingsSubRule = {
 DDPRateLimiter.addRule(ally_rankingsSubRule, 5, 5000);
 
 
-Meteor.publish('losses_rankings', function(gameId, page) {
+Meteor.publish('losses_rankings', async function(gameId, page) {
 	check(gameId, Match.OneOf(String, null));
 	check(page, Match.Integer);
 	var skip = (page-1) * _s.panels.rankings.perPage
@@ -70,7 +70,7 @@ Meteor.publish('losses_rankings', function(gameId, page) {
 			is_king:1,
 			userId:1
 		}, limit:_s.panels.rankings.perPage})
-	Mongo.Collection._publishCursor(cur, sub, 'losses_rankings')
+	await Mongo.Collection._publishCursor(cur, sub, 'losses_rankings')
 	return sub.ready();
 });
 
@@ -84,7 +84,7 @@ DDPRateLimiter.addRule(losses_rankingsSubRule, 5, 5000);
 
 
 
-Meteor.publish('dominus_rankings', function(gameId) {
+Meteor.publish('dominus_rankings', async function(gameId) {
 	check(gameId, Match.OneOf(String, null));
 	//this.unblock();
 
@@ -97,7 +97,7 @@ Meteor.publish('dominus_rankings', function(gameId) {
 			is_dominus:1,
 			userId:1
 		}})
-	Mongo.Collection._publishCursor(cur, sub, 'dominusplayer')
+	await Mongo.Collection._publishCursor(cur, sub, 'dominusplayer')
 	return sub.ready();
 });
 
@@ -112,7 +112,7 @@ DDPRateLimiter.addRule(dominus_rankingsSubRule, 5, 5000);
 
 
 
-Meteor.publish('country_rankings', function(gameId, page) {
+Meteor.publish('country_rankings', async function(gameId, page) {
 	check(gameId, Match.OneOf(String, null));
 	check(page, Match.Integer);
 	//this.unblock();
@@ -127,7 +127,7 @@ Meteor.publish('country_rankings', function(gameId, page) {
 			userId:1,
 			playerId:1
 		}, limit:_s.panels.rankings.perPage})
-	Mongo.Collection._publishCursor(cur, sub, 'country_rankings')
+	await Mongo.Collection._publishCursor(cur, sub, 'country_rankings')
 	return sub.ready();
 });
 
@@ -142,7 +142,7 @@ DDPRateLimiter.addRule(country_rankingsSubRule, 5, 5000);
 
 
 
-Meteor.publish('village_rankings', function(gameId, page) {
+Meteor.publish('village_rankings', async function(gameId, page) {
 	check(gameId, Match.OneOf(String, null));
 	check(page, Match.Integer);
 	var skip = (page-1) * _s.panels.rankings.perPage
@@ -160,7 +160,7 @@ Meteor.publish('village_rankings', function(gameId, page) {
 			userId:1,
 			playerId:1
 		}, limit:_s.panels.rankings.perPage})
-	Mongo.Collection._publishCursor(cur, sub, 'village_rankings')
+	await Mongo.Collection._publishCursor(cur, sub, 'village_rankings')
 	return sub.ready();
 });
 

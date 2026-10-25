@@ -127,7 +127,7 @@ if (Meteor.isServer) {
         let userId = 'u_' + Random.id(5);
         let pid = Players.insert({gameId: game._id, userId: userId, num_allies_below: 3});
 
-        dGraphs.dailystatsNumVassalsEveryone(game._id);
+        dTest.settle(dGraphs.dailystatsNumVassalsEveryone(game._id));
 
         let rows = Dailystats.find({playerId: pid}).fetch();
         equal(rows.length, 1, 'one row created');
@@ -149,7 +149,7 @@ if (Meteor.isServer) {
         let noRow = Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), num_allies_below: 1});
         let rowId = Dailystats.insert({gameId: game._id, playerId: withRow, created_at: new Date(), numVassals: 0});
 
-        dGraphs.dailystatsNumVassalsEveryone(game._id);
+        dTest.settle(dGraphs.dailystatsNumVassalsEveryone(game._id));
 
         let row = Dailystats.findOne({playerId: withRow});
         equal(row._id, rowId, 'existing row keeps its _id');
@@ -167,7 +167,7 @@ if (Meteor.isServer) {
     run('dailystatsNumVassalsEveryone: a game with no players writes nothing', function() {
       let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
       try {
-        dGraphs.dailystatsNumVassalsEveryone(game._id);
+        dTest.settle(dGraphs.dailystatsNumVassalsEveryone(game._id));
         equal(Dailystats.find({gameId: game._id}).count(), 0, 'no rows');
       } finally {
         t.cleanup(game._id);

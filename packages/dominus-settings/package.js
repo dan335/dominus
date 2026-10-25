@@ -31,9 +31,10 @@ Package.onUse(function(api) {
     'settingsMinimap.js',
     'settingsPanels.js',
     'settingsStore.js',
-    'settingsVillages.js',
-    'settingMethods.js'
+    'settingsVillages.js'
   ]);
+  // no simulation, nothing on the client calls it
+  api.addFiles('settingMethods.js', 'server');
   api.imply([
     'dominus-collections'
   ])

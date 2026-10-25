@@ -77,7 +77,8 @@ if (Meteor.isServer) {
       refuseInProduction();
       var byName = {Players: Players, Castles: Castles, Villages: Villages, Armies: Armies, Armypaths: Armypaths,
         Capitals: Capitals, Market: Market, Battles2: Battles2, Roomchats: Roomchats, Rooms: Rooms, Alerts: Alerts,
-        Games: Games, Settings: Settings, Forumtopics: Forumtopics, Forumposts: Forumposts, users: Meteor.users};
+        Games: Games, Settings: Settings, Forumtopics: Forumtopics, Forumposts: Forumposts, users: Meteor.users,
+        Markers: Markers, MarkerGroups: MarkerGroups};
       var collection = byName[collectionName] || _.find(dTest.gameCollections(), function(c) { return c._name == collectionName; });
       if (!collection) throw new Error('no collection ' + collectionName);
       return collection.findOne(selector);

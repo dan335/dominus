@@ -28,6 +28,8 @@ The checker also flags an async callback given to `forEach`, `_.each`, `_.map` o
 
 To skip a line, put `// check-await: ignore <reason>` on it or on the line above. The reason is required.
 
+`--meteor3` also lists the calls that are sync on 2.16 but return a promise on Meteor 3: a cursor's `observe()` and `observeChanges()`, and `Mongo.Collection._publishCursor()`, outside client files. They are not findings yet, so the test run only counts them. Each domain's PR awaits its own (`observeAsync`, `await Mongo.Collection._publishCursor(...)` in an async publication), and the list must be empty before stage 3.
+
 The checker finds the app's own async functions by name: `async function foo`, `foo = async () => ...`, `dX.foo = async function`, and `dX = {foo: async function}`. It also matches calls by name, the way this codebase calls its namespaced functions. It does not follow a call through a variable or through `this`.
 
 ## async-graph.js
