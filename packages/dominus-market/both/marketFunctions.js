@@ -71,12 +71,36 @@ dMarket.total_of_sell = function(gameId, type, quantity) {
 }
 
 
-// The server's versions of total_of_buy and total_of_sell, for the Meteor 3
-// upgrade: the market methods move onto these when the market converts (PR
-// 10), while the client's market UI keeps the sync ones (minimongo stays
-// sync). Same checks and same results; server/asyncFoundationTests.js compares
-// them.
+// The server's versions of resourcesToGold, total_of_buy and total_of_sell,
+// for the Meteor 3 upgrade: the market methods and the income jobs use these,
+// while the client's panels keep the sync ones (minimongo stays sync). Same
+// checks and same results; server/asyncFoundationTests.js compares them.
 if (Meteor.isServer) {
+	dMarket.resourcesToGoldAsync = async function(gameId, resources) {
+		check(gameId, String);
+
+		_s.market.types.forEach(function(type) {
+			if (resources[type]) {
+				check(resources[type], validNumber);
+			}
+		});
+
+		var worth = 0;
+
+		if (resources.gold) {
+			worth = resources.gold;
+		}
+
+		var market = await Market.find({gameId:gameId}, {fields: {price:1, type:1}}).fetchAsync();
+		market.forEach(function(r) {
+			if (resources[r.type]) {
+				worth += r.price * resources[r.type];
+			}
+		});
+
+		return worth;
+	};
+
 	dMarket.total_of_buyAsync = async function(gameId, type, quantity) {
 		check(type, String)
 		check(quantity, validNumber);

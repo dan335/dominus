@@ -84,7 +84,7 @@ if (Meteor.isServer) {
         var c = Capitals.findOne({gameId: w.gameId});
         if (!c) {
           var country = Countries.findOne({gameId: w.gameId});
-          c = dCapitals.createCapital(w.gameId, country._id);
+          c = dTest.settle(dCapitals.createCapital(w.gameId, country._id));
           if (!c) throw new Error('FAIL: could not place a capital');
           Mapmaker.buildingAdded(w.gameId, c.x, c.y);
         }

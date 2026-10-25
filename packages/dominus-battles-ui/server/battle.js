@@ -196,7 +196,8 @@ BattleJob.prototype.processBattleResults = function() {
           // give capital away, send alerts, update army onAllyBuilding summary icon
           if (self.currentRound.capital && army.tookCapital) {
             self.battleData.showBattle = true;
-            dCapitals.setOwner(self.gameId, army.playerId, self.currentRound.capital._id);
+            // async since upgrade PR 10; battles convert in PR 14
+            Promise.await(dCapitals.setOwner(self.gameId, army.playerId, self.currentRound.capital._id));
           }
 
           Armies.update(army._id, {$inc:inc, $set: {speed:null, moveTime:null}});

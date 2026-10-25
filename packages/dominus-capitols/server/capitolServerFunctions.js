@@ -1,23 +1,23 @@
-dCapitals.createCapital = function(gameId, countryId) {
+dCapitals.createCapital = async function(gameId, countryId) {
   check(countryId, String);
   check(gameId, String);
 
-  if (Capitals.find({countryId:countryId}).count()) {
+  if (await Capitals.find({countryId:countryId}).countAsync()) {
     console.error('Country already has a capital.', countryId);
     return false;
   }
 
   var query = {countryId:countryId, isBorder:false, hasBuilding:false, nearbyBuildings:false};
-  var numHexes = Hexes.find(query).count();
+  var numHexes = await Hexes.find(query).countAsync();
   var randNum = Math.floor(dRandom.fraction() * numHexes);
-  var hex =  Hexes.findOne(query, {skip:randNum, limit:1});
+  var hex =  await Hexes.findOneAsync(query, {skip:randNum, limit:1});
 
   if (!hex) {
     console.error('Hex to place capital not found in country.', countryId);
     return false;
   }
 
-  Hexes.update(hex._id, {$set:{type:'grain', large:false}});
+  await Hexes.updateAsync(hex._id, {$set:{type:'grain', large:false}});
 
   var capital = {
     gameId:gameId,
@@ -39,9 +39,9 @@ dCapitals.createCapital = function(gameId, countryId) {
     capital.income[type] = 0;
   })
 
-  capital._id = Capitals.insert(capital);
+  capital._id = await Capitals.insertAsync(capital);
 
-  Countries.update(countryId, {$set:{capitalId:capital._id, capitalPlayerId:null}});
+  await Countries.updateAsync(countryId, {$set:{capitalId:capital._id, capitalPlayerId:null}});
 
   return capital;
 }
@@ -52,18 +52,18 @@ dCapitals.createName = function() {
 }
 
 
-dCapitals.setOwner = function(gameId, playerId, capital_id) {
+dCapitals.setOwner = async function(gameId, playerId, capital_id) {
   check(playerId, String);
   check(gameId, String);
 
-  var capital = Capitals.findOne(capital_id, {fields:{playerId:1}});
+  var capital = await Capitals.findOneAsync(capital_id, {fields:{playerId:1}});
   if (capital) {
     if (capital.playerId != playerId) {
       if (capital.playerId) {
         dAlerts.alert_lostCapital(gameId, capital.playerId, capital._id);
       }
 
-      Capitals.update(capital_id, {$set:{playerId:playerId}});
+      await Capitals.updateAsync(capital_id, {$set:{playerId:playerId}});
       dAlerts.alert_capturedCapital(gameId, playerId, capital._id);
     }
   }

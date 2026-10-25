@@ -406,13 +406,17 @@ if (Meteor.isServer) {
         var golden = JSON.parse(fs.readFileSync(goldenPath(), 'utf8'));
         var steps = 2;
         var resourcesToGold = dMarket.resourcesToGold;
+        var resourcesToGoldAsync = dMarket.resourcesToGoldAsync;
         var played;
         try {
-          // a player's income is worked out 1% too high
+          // a player's income is worked out 1% too high (the income jobs use
+          // the async twin since upgrade PR 10)
           dMarket.resourcesToGold = function() { return resourcesToGold.apply(this, arguments) * 1.01; };
+          dMarket.resourcesToGoldAsync = async function() { return (await resourcesToGoldAsync.apply(this, arguments)) * 1.01; };
           played = JSON.parse(JSON.stringify(dTest.playSimulation({steps: steps})));
         } finally {
           dMarket.resourcesToGold = resourcesToGold;
+          dMarket.resourcesToGoldAsync = resourcesToGoldAsync;
         }
         var changes = dTest.compareSimulation(golden.steps.slice(0, steps), played);
         assert(changes.length, 'the golden master noticed');

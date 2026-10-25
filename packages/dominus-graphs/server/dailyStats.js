@@ -93,26 +93,26 @@ dGraphs.updateIncomeStats = async function(player) {
   let vassalIncome = 0;
 
   if (player.castleIncome || player.capitalIncome || player.villageIncome || player.vassalIncome) {
-    totalIncome += dMarket.resourcesToGold(player.gameId, player.castleIncome);
-    totalIncome += dMarket.resourcesToGold(player.gameId, player.capitalIncome);
-    totalIncome += dMarket.resourcesToGold(player.gameId, player.villageIncome);
-    totalIncome += dMarket.resourcesToGold(player.gameId, player.vassalIncome);
+    totalIncome += await dMarket.resourcesToGoldAsync(player.gameId, player.castleIncome);
+    totalIncome += await dMarket.resourcesToGoldAsync(player.gameId, player.capitalIncome);
+    totalIncome += await dMarket.resourcesToGoldAsync(player.gameId, player.villageIncome);
+    totalIncome += await dMarket.resourcesToGoldAsync(player.gameId, player.vassalIncome);
   }
 
   if (player.capitalIncome) {
-    capitalIncome = dMarket.resourcesToGold(player.gameId, player.capitalIncome);
+    capitalIncome = await dMarket.resourcesToGoldAsync(player.gameId, player.capitalIncome);
   }
 
   if (player.castleIncome) {
-    castleIncome = dMarket.resourcesToGold(player.gameId, player.castleIncome);
+    castleIncome = await dMarket.resourcesToGoldAsync(player.gameId, player.castleIncome);
   }
 
   if (player.villageIncome) {
-    villageIncome = dMarket.resourcesToGold(player.gameId, player.villageIncome);
+    villageIncome = await dMarket.resourcesToGoldAsync(player.gameId, player.villageIncome);
   }
 
   if (player.vassalIncome) {
-    vassalIncome = dMarket.resourcesToGold(player.gameId, player.vassalIncome);
+    vassalIncome = await dMarket.resourcesToGoldAsync(player.gameId, player.vassalIncome);
   }
 
 	check(player.userId, String);

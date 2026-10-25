@@ -1,28 +1,25 @@
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-	Queues.collectVillageIncome.process(Meteor.bindEnvironment(function(job) {
-		collectVillageIncome();
-		return Promise.resolve();
-  }));
+	Queues.collectVillageIncome.process(async function(job) {
+		await collectVillageIncome();
+  });
 }
 
-Future = Npm.require('fibers/future');
 
-
-var collectVillageIncome = function() {
+var collectVillageIncome = async function() {
 	let bulkVillages = Villages.rawCollection().initializeOrderedBulkOp();
 	let bulkPlayers = Players.rawCollection().initializeOrderedBulkOp();
 	let hasBulkOp = false;
 
-	Games.find({hasStarted:true, hasEnded:false}, {fields: {_id:1}}).forEach(function(game) {
+	for (const game of await Games.find({hasStarted:true, hasEnded:false}, {fields: {_id:1}}).fetchAsync()) {
 
 		const interval = _gs.villages(game._id, 'incomeInterval');
 		const cutoff = moment(dClock.now()).subtract(interval, 'ms').toDate();
 		const villageFields = {playerId:1, x:1, y:1, level:1};
-		Villages.find({gameId:game._id, under_construction:false, lastIncomeUpdate: {$lte:cutoff}}, {fields:villageFields}).forEach(function(village) {
+		for (const village of await Villages.find({gameId:game._id, under_construction:false, lastIncomeUpdate: {$lte:cutoff}}, {fields:villageFields}).fetchAsync()) {
 
-			const player = Players.findOne(village.playerId, {fields:{allies_above:1}});
+			const player = await Players.findOneAsync(village.playerId, {fields:{allies_above:1}});
 			if (player) {
 
 				let error = false;
@@ -68,7 +65,7 @@ var collectVillageIncome = function() {
 				}
 
 				// find worth for rankings and right panel
-				villageIncome.worth = dMarket.resourcesToGold(game._id, villageIncome);
+				villageIncome.worth = await dMarket.resourcesToGoldAsync(game._id, villageIncome);
 				villageIncome.worth += _s.villages.gold_gained_at_village;
 				check(villageIncome.worth, validNumber);
 
@@ -81,27 +78,12 @@ var collectVillageIncome = function() {
 
 				bulkVillages.find({_id:village._id}).updateOne({$set:setVillage});
 			}
-		});
-	});
+		}
+	}
 
 	if (hasBulkOp) {
-		const villageFuture = new Future();
-		bulkVillages.execute({}, function(error, result) {
-			if (error) {
-				console.error(error);
-			}
-			villageFuture.return(result);
-		});
-		villageFuture.wait();
-
-		const playerFuture = new Future();
-		bulkPlayers.execute({}, function(error, result) {
-			if (error) {
-				console.error(error);
-			}
-			playerFuture.return(result);
-		});
-		playerFuture.wait();
+		await dIncome.executeBulk(bulkVillages);
+		await dIncome.executeBulk(bulkPlayers);
 	}
 }
 

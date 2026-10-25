@@ -1,23 +1,18 @@
-Future = Npm.require('fibers/future');
-
-
-
 if (process.env.DOMINUS_WORKER == 'true') {
-	Queues.collectCastleIncome.process(Meteor.bindEnvironment(function(job) {
-		dIncome.collectCastleIncome();
-		return Promise.resolve();
-  }));
+	Queues.collectCastleIncome.process(async function(job) {
+		await dIncome.collectCastleIncome();
+  });
 }
 
 
 
-dIncome.collectCastleIncome = function() {
+dIncome.collectCastleIncome = async function() {
 
 	let bulkPlayers = Players.rawCollection().initializeOrderedBulkOp();
 	let hasBulkOp = false;
 	const playerFields = {lastIncomeUpdate:1, username:1, allies_above:1, incomeFromVassals:1, incomeFromCapitals:1, incomeFromVillages:1};
 
-	Games.find({hasStarted:true, hasEnded:false}, {fields: {_id:1}}).forEach(function(game) {
+	for (const game of await Games.find({hasStarted:true, hasEnded:false}, {fields: {_id:1}}).fetchAsync()) {
 
 		const interval = _gs.castles(game._id, 'incomeInterval');
 		const cutoff = moment(dClock.now()).subtract(interval, 'ms').toDate();
@@ -25,7 +20,7 @@ dIncome.collectCastleIncome = function() {
 		// base castle income
 		let incomeFromCastle = _gs.castles(game._id, 'income');
 
-		Players.find({gameId:game._id, lastIncomeUpdate:{$lte:cutoff}}, {fields:playerFields}).forEach(function(player) {
+		for (const player of await Players.find({gameId:game._id, lastIncomeUpdate:{$lte:cutoff}}, {fields:playerFields}).fetchAsync()) {
 			hasBulkOp = true;
 
 			// defaults
@@ -76,7 +71,7 @@ dIncome.collectCastleIncome = function() {
 			});
 
 			// total income worth
-			playerSet.income = dMarket.resourcesToGold(game._id, totalIncome);
+			playerSet.income = await dMarket.resourcesToGoldAsync(game._id, totalIncome);
 
 			// update player
 			bulkPlayers.find({_id:player._id}).updateOne({
@@ -114,18 +109,10 @@ dIncome.collectCastleIncome = function() {
 
 				//Players.update({_id: {$in: player.allies_above}}, {$inc:lordIncome}, {multi:true});
 			}
-		});
-	});
+		}
+	}
 
 	if (hasBulkOp) {
-		let future = new Future();
-		bulkPlayers.execute({}, function(error, result) {
-			if (error) {
-				console.error(error);
-			}
-			future.return(result);
-		});
-		let result = future.wait();
-		//console.log(result.writeErrors, result.writeConcernErrors, result.nInserted, result.nUpserted, result.nMatched, result.nModified, result.nRemoved)
+		await dIncome.executeBulk(bulkPlayers);
 	}
 }

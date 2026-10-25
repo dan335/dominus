@@ -272,7 +272,7 @@ if (Meteor.isServer) {
 
       run('createMarket creates one doc per resource type', function() {
         let game = _createTestGame();
-        dMarket.createMarket(game._id);
+        dTest.settle(dMarket.createMarket(game._id));
         _testEqual(Market.find({gameId: game._id}).count(), _s.market.types.length, 'count');
         _s.market.types.forEach(function(type) {
           _testAssert(Market.findOne({gameId: game._id, type: type}) !== undefined, type + ' exists');
@@ -282,7 +282,7 @@ if (Meteor.isServer) {
 
       run('createMarket correct starting prices', function() {
         let game = _createTestGame();
-        dMarket.createMarket(game._id);
+        dTest.settle(dMarket.createMarket(game._id));
         Market.find({gameId: game._id}).forEach(function(doc) {
           _testEqual(doc.price, _s.market.startPrice[doc.type], doc.type + ' price');
         });
@@ -291,8 +291,8 @@ if (Meteor.isServer) {
 
       run('createMarket is idempotent', function() {
         let game = _createTestGame();
-        dMarket.createMarket(game._id);
-        dMarket.createMarket(game._id);
+        dTest.settle(dMarket.createMarket(game._id));
+        dTest.settle(dMarket.createMarket(game._id));
         _testEqual(Market.find({gameId: game._id}).count(), _s.market.types.length, 'no dupes');
         _testCleanup(game._id);
       });
