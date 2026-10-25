@@ -358,7 +358,10 @@ if (Meteor.isServer) {
           equal(JSON.stringify(s3.deletes), JSON.stringify([path + first, path + second]), 'both deleted in the end');
         });
 
-        test('uploadAvatarToS3: with S3 faked, a refused upload or an image that isn\'t one returns false and keeps the avatar', function() {
+        // The old avatar is deleted from S3 before the new one is read and
+        // uploaded, so when that fails the account still names a file that
+        // is gone. The conversion keeps that order.
+        test('known bug: uploadAvatarToS3, with S3 faked: a refused upload or an image that isn\'t one returns false and keeps the avatar\'s name, but deletes its file', function() {
           if (!imageMagick) return 'skip';
           var p = person({avatarFilename: 'kept.png'});
           var s3 = withFakeS3(500, function() {
@@ -366,6 +369,7 @@ if (Meteor.isServer) {
           });
           equal(s3.puts.length, 1, 'it was tried');
           equal(p.doc().avatarFilename, 'kept.png', 'the avatar is kept');
+          equal(JSON.stringify(s3.deletes), JSON.stringify([Meteor.settings.public.s3.avatarPath + 'kept.png']), 'but its file was deleted first');
           var broken = withFakeS3(200, function() {
             var error = console.error;
             console.error = function() {};
@@ -377,6 +381,7 @@ if (Meteor.isServer) {
           });
           equal(broken.puts.length, 0, 'nothing uploaded');
           equal(p.doc().avatarFilename, 'kept.png', 'the avatar is still kept');
+          equal(broken.deletes.length, 1, 'and its file deleted again');
         });
 
         test('addToMailingList job: adds an address once, and a second signup with the same address changes nothing', function() {
