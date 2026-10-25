@@ -336,7 +336,7 @@ Template.chatroom_open.events({
 
 		$(alert).hide();
 
-		Meteor.apply('addChatToRoom', [Session.get('gameId'), template.data._id, text], {}, function(error, result) {
+		dFunc.callWithCallback('addChatToRoom', [Session.get('gameId'), template.data._id, text], function(error, result) {
 			if (error) {
 				$(alert).show();
 				$(alert).html(error.reason);
@@ -360,7 +360,7 @@ Template.chatroom_open.events({
 
 			$(alert).hide();
 
-			Meteor.apply('addChatToRoom', [Session.get('gameId'), template.data._id, text], {}, function(error, result) {
+			dFunc.callWithCallback('addChatToRoom', [Session.get('gameId'), template.data._id, text], function(error, result) {
 				if (error) {
 					$(alert).show();
 					$(alert).html(error.reason);

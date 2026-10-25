@@ -2,7 +2,7 @@ Meteor.publish('forumPinnedTopics', function() {
   return Forumtopics.find({isPinned:true}, {sort:{lastPostDate:-1}});
 });
 
-Meteor.publish('forumTopics', function(sort, numShow, categoryId, filter) {
+Meteor.publish('forumTopics', async function(sort, numShow, categoryId, filter) {
   check(sort, String);
   check(numShow, Match.Integer);
   check(categoryId, Match.OneOf(String, Match.Integer));
@@ -11,7 +11,7 @@ Meteor.publish('forumTopics', function(sort, numShow, categoryId, filter) {
     return this.ready();
   }
 
-  let user = Meteor.users.findOne(this.userId, {fields: {verifiedEmail:1, banned:1}})
+  let user = await Meteor.users.findOneAsync(this.userId, {fields: {verifiedEmail:1, banned:1}})
   if (!user || !user.verifiedEmail || user.banned) {
     return this.ready();
   }

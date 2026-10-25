@@ -43,9 +43,21 @@ if (Meteor.isServer) {
         return moment().subtract(n, 'minutes').toDate();
       }
 
-      // free hexes next to each other in the same country, walking from a free hex
+      // free hexes next to each other in the same country, walking from a free
+      // hex. A walk can end in a corner of the random map, so it tries the
+      // next free hex, and the next.
       function freeLine(count) {
-        var start = w.freeHex();
+        var tried = [];
+        for (var attempt = 0; attempt < 50; attempt++) {
+          var start = w.freeHex(tried);
+          tried.push(start);
+          var line = walkFrom(start, count);
+          if (line) return line;
+        }
+        throw new Error('FAIL: no line of ' + count + ' free hexes');
+      }
+
+      function walkFrom(start, count) {
         var line = [Hexes.findOne({gameId: w.gameId, x: start.x, y: start.y})];
         var taken = {};
         Castles.find({gameId: w.gameId}).forEach(function(c) { taken[c.x + '_' + c.y] = true; });
@@ -59,7 +71,7 @@ if (Meteor.isServer) {
           var next = _.find(candidates, function(h) {
             return !taken[h.x + '_' + h.y] && Math.abs((h.x - last.x) + (h.y - last.y)) <= 1 && !(h.x == last.x && h.y == last.y);
           });
-          if (!next) throw new Error('FAIL: no line of ' + count + ' free hexes');
+          if (!next) return null;
           taken[next.x + '_' + next.y] = true;
           line.push(next);
         }

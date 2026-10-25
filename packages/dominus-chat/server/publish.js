@@ -93,12 +93,12 @@ DDPRateLimiter.addRule(recentchatsSubRule, 5, 5000);
 
 
 
-Meteor.publish('room_list', function(gameId, playerId) {
+Meteor.publish('room_list', async function(gameId, playerId) {
 	check(gameId, Match.OneOf(String, null));
 	check(playerId, Match.OneOf(String, null));
 	if (typeof gameId === 'string' && typeof playerId === 'string' && gameId && playerId) {
 		var cur = Rooms.find({members:playerId}, {fields: {_id:1}})
-		Mongo.Collection._publishCursor(cur, this, 'room_list')
+		await Mongo.Collection._publishCursor(cur, this, 'room_list')
 	}
 	this.ready()
 });

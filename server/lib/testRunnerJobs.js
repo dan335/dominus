@@ -53,7 +53,8 @@ if (Meteor.isServer) {
   };
 
   // Replaces Queues.add while fn runs, so the jobs it adds are recorded and
-  // not run. Returns the jobs: [{name, data, options, uniqueId}].
+  // not run (Queues.addAsync too: see dTest.followQueuesAdd). Returns the
+  // jobs: [{name, data, options, uniqueId}].
   dTest.recordJobs = function(fn) {
     var jobs = [];
     var original = Queues.add;

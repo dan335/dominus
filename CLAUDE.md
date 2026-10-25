@@ -140,6 +140,7 @@ The server code is moving from fibers to `async`/`await`, one domain per PR, whi
 - **Order.** Callers can go first. On 2.16, an async function can still make sync Meteor calls after an `await`. `node tests/async/async-graph.js` shows how far converting a domain ripples into others.
   - A sync caller in a domain that hasn't converted yet calls a converted function as `Promise.await(fn())`, with a comment naming the PR that converts the caller. The final sweep removes these.
 - **Publications and observers.** On Meteor 3, server `observe`, `observeChanges` and `Mongo.Collection._publishCursor` return promises. Use `observeAsync`/`observeChangesAsync`, and make a publication that calls `_publishCursor` async and await it. `node tests/async/check-await.js --meteor3` lists the ones left.
+- **Jobs.** A handler becomes `process(async function(job) { await ... })`, without `Meteor.bindEnvironment`. Converted code adds jobs with `await Queues.addAsync(...)`, which rejects when Redis refuses the job. Where the caller should carry on, as every `Queues.add` caller did, use `await Queues.addAsyncOrLog(...)`, which logs the error and resolves with false. While the suites run, `Queues.addAsync` goes through a test's replaced `Queues.add` (`dTest.followQueuesAdd`), so `dTest.recordJobs` and the simulation still see every job.
 - **Tests.** Test files keep their own sync setup calls until the final sweep. They add `await`, or `dTest.settle`, only where they call converted functions.
 
 ### Tech Stack

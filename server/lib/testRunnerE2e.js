@@ -13,6 +13,17 @@ if (Meteor.isServer) {
     if (Meteor.isProduction) throw new Error('the browser test fixtures never run in production');
   };
 
+  // a collection by its name in the code (Armypaths) or in Mongo (armypaths2)
+  function collectionNamed(collectionName) {
+    var byName = {Players: Players, Castles: Castles, Villages: Villages, Armies: Armies, Armypaths: Armypaths,
+      Capitals: Capitals, Market: Market, Battles2: Battles2, Roomchats: Roomchats, Rooms: Rooms, Alerts: Alerts,
+      Games: Games, Settings: Settings, Forumtopics: Forumtopics, Forumposts: Forumposts, users: Meteor.users,
+      Markers: Markers, MarkerGroups: MarkerGroups};
+    var collection = byName[collectionName] || _.find(dTest.gameCollections(), function(c) { return c._name == collectionName; });
+    if (!collection) throw new Error('no collection ' + collectionName);
+    return collection;
+  }
+
   dTest.e2e = {
 
     // every e2e user's password
@@ -61,7 +72,7 @@ if (Meteor.isServer) {
       var users = names.map(function(name) { return dTest.e2e.user(name, opts.admins && _.contains(opts.admins, name) ? {admin: true} : {}); });
       var w = dTest.buildGameWorld({users: users, game: _.extend({name: 'E2E ' + names.join(' ')}, opts.game || {})});
       // the start job does this, but not for a test start (gameStartJob.js)
-      dChat.setupEveryoneChatroom(w.gameId);
+      dTest.settle(dChat.setupEveryoneChatroom(w.gameId));
       var out = {gameId: w.gameId, players: {}};
       names.forEach(function(name, i) {
         var castle = w.castle(i);
@@ -71,17 +82,16 @@ if (Meteor.isServer) {
       return out;
     },
 
-    // a document, for checking what a click did. collectionName is the name
-    // in the code (Armypaths) or in Mongo (armypaths2).
+    // a document, for checking what a click did
     findOne: function(collectionName, selector) {
       refuseInProduction();
-      var byName = {Players: Players, Castles: Castles, Villages: Villages, Armies: Armies, Armypaths: Armypaths,
-        Capitals: Capitals, Market: Market, Battles2: Battles2, Roomchats: Roomchats, Rooms: Rooms, Alerts: Alerts,
-        Games: Games, Settings: Settings, Forumtopics: Forumtopics, Forumposts: Forumposts, users: Meteor.users,
-        Markers: Markers, MarkerGroups: MarkerGroups};
-      var collection = byName[collectionName] || _.find(dTest.gameCollections(), function(c) { return c._name == collectionName; });
-      if (!collection) throw new Error('no collection ' + collectionName);
-      return collection.findOne(selector);
+      return collectionNamed(collectionName).findOne(selector);
+    },
+
+    // how many documents match, e.g. to check a chat was saved once
+    count: function(collectionName, selector) {
+      refuseInProduction();
+      return collectionNamed(collectionName).find(selector).count();
     },
 
     // what a user has bought in the store, e.g. {castles: ['castle_03_skull']}

@@ -136,9 +136,9 @@ if (Meteor.isServer) {
         });
 
         test('destroyKingChatroom: removes the player\'s king rooms and their chats, and nothing else', function() {
-          var king = dChat.createChatroom(w.gameId, 'King room', 'king', ids[0], [ids[0], ids[1]], []);
-          var normal = dChat.createChatroom(w.gameId, 'Normal room', 'normal', ids[0], [ids[0], ids[1]], []);
-          var other = dChat.createChatroom(w.gameId, 'Other king', 'king', ids[2], [ids[2], ids[1]], []);
+          var king = dTest.settle(dChat.createChatroom(w.gameId, 'King room', 'king', ids[0], [ids[0], ids[1]], []));
+          var normal = dTest.settle(dChat.createChatroom(w.gameId, 'Normal room', 'normal', ids[0], [ids[0], ids[1]], []));
+          var other = dTest.settle(dChat.createChatroom(w.gameId, 'Other king', 'king', ids[2], [ids[2], ids[1]], []));
           [king, normal, other].forEach(function(room) {
             Roomchats.insert({gameId: w.gameId, room_id: room, text: 'hi', created_at: new Date()});
           });
@@ -153,10 +153,10 @@ if (Meteor.isServer) {
 
         test('cleanupAllKingChatrooms: removes rooms of missing owners and of one member, queues removal for non-kings, and fixes names', function() {
           conquer(0, 1);
-          var gone = dChat.createChatroom(w.gameId, 'King gone', 'king', 'noSuchPlayer', ['noSuchPlayer', ids[1]], []);
-          var lonely = dChat.createChatroom(w.gameId, 'King lonely', 'king', ids[2], [ids[2]], []);
-          var notKing = dChat.createChatroom(w.gameId, 'King of nothing', 'king', ids[1], [ids[1], ids[2]], []);
-          var misnamed = dChat.createChatroom(w.gameId, 'Wrong name', 'king', ids[0], [ids[0], ids[1]], []);
+          var gone = dTest.settle(dChat.createChatroom(w.gameId, 'King gone', 'king', 'noSuchPlayer', ['noSuchPlayer', ids[1]], []));
+          var lonely = dTest.settle(dChat.createChatroom(w.gameId, 'King lonely', 'king', ids[2], [ids[2]], []));
+          var notKing = dTest.settle(dChat.createChatroom(w.gameId, 'King of nothing', 'king', ids[1], [ids[1], ids[2]], []));
+          var misnamed = dTest.settle(dChat.createChatroom(w.gameId, 'Wrong name', 'king', ids[0], [ids[0], ids[1]], []));
           Roomchats.insert({gameId: w.gameId, room_id: gone, text: 'hi', created_at: new Date()});
 
           var jobs = dTest.recordJobs(function() {

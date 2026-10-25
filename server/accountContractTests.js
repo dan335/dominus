@@ -463,6 +463,86 @@ if (Meteor.isServer) {
           equal(Forumtopics.find(tp._id).count(), 0, 'deleted');
         });
 
+        test('forum simulations: each is sync, and ends where the real calls do', function() {
+          var mod = person({moderator: true});
+          var invocation = function(userId, isSimulation) {
+            return {userId: userId, isSimulation: isSimulation, connection: null, unblock: function() {}, setUserId: function() {}};
+          };
+          var simulate = function(name, args) {
+            var returned = Meteor.server.method_handlers[name].apply(invocation(mod.id, true), args);
+            assert(!dTest.isPromise(returned), name + ': the simulation is sync');
+            equal(returned, undefined, name + ' simulation returns nothing');
+          };
+          var returns = [];
+          var real = function(name, args) {
+            returns.push(name + ' ' + JSON.stringify(mod.client.call.apply(null, [name].concat(args))));
+          };
+          var title = 'Sim topic ' + Random.id(4);
+          var topicId = function() { return Forumtopics.findOne({title: title})._id; };
+          // the topic and its posts, without ids or dates
+          var state = function() {
+            var tp = Forumtopics.findOne({title: title});
+            if (!tp) return 'no topic';
+            var posts = _.sortBy(Forumposts.find({topicId: tp._id}).fetch(), 'text');
+            return JSON.stringify({
+              topic: _.omit(tp, '_id', 'createdAt', 'updatedAt', 'lastPostDate'),
+              posts: posts.map(function(p) { return _.omit(p, '_id', 'topicId', 'createdAt'); })
+            });
+          };
+
+          var play = function(call) {
+            call('forumNewTopic', [title, '2', 'first post']);
+            made.topics.push(topicId());
+            call('forumNewPost', [topicId(), 'a reply']);
+            call('addPostView', [topicId()]);
+            call('forumPinTopic', [topicId()]);
+            call('forumLockTopic', [topicId()]);
+            var pinned = state();
+            call('forumUnpinTopic', [topicId()]);
+            call('forumUnlockTopic', [topicId()]);
+            var unpinned = state();
+            var id = topicId();
+            call('forumDeleteTopic', [id]);
+            var left = Forumtopics.find({title: title}).count() + ' topics, ' + Forumposts.find({topicId: id}).count() + ' posts';
+            Forumposts.remove({topicId: id});
+            return [pinned, unpinned, left];
+          };
+
+          var fromServer = play(real);
+          var fromSimulations = play(simulate);
+          equal(fromSimulations[0], fromServer[0], 'after posting, pinning and locking');
+          equal(fromSimulations[1], fromServer[1], 'after unpinning and unlocking');
+          equal(fromSimulations[2], fromServer[2], 'after deleting');
+          var pinned = JSON.parse(fromServer[0]);
+          equal([pinned.topic.numPosts, pinned.topic.numViews, pinned.topic.isPinned, pinned.topic.isLocked].join(), '2,1,true,true',
+            'posts, views, pinned and locked');
+          equal(fromServer[2], '0 topics, 2 posts', 'deleting a topic leaves its posts');
+          equal(returns.slice(1).join('; '), 'forumNewPost true; addPostView undefined; forumPinTopic undefined; ' +
+            'forumLockTopic undefined; forumUnpinTopic undefined; forumUnlockTopic undefined; forumDeleteTopic undefined',
+            'what the real calls return');
+          assert(/^forumNewTopic "[^"]+"$/.test(returns[0]), 'forumNewTopic returns the topic id');
+
+          // refused simulations throw, as the real calls do
+          var refusal = function(userId, name, args) {
+            var error = dTest.throws(function() { return Meteor.server.method_handlers[name].apply(invocation(userId, true), args); });
+            return error && error.error;
+          };
+          var tp = topic();
+          var plain = account();
+          equal(refusal(plain, 'forumPinTopic', [tp._id]), 'forumDeleteTopic', 'not a moderator');
+          equal(refusal(null, 'forumDeleteTopic', [tp._id]), 'forumDeleteTopic', 'logged out');
+          equal(refusal(mod.id, 'forumNewTopic', ['', '1', 'x']), 'Title too short.', 'empty title');
+          equal(refusal(account({banned: true}), 'forumNewTopic', ['T', '1', 'x']), 'banned', 'banned');
+          equal(refusal(mod.id, 'forumNewPost', ['nope', 'x']), 'Topic not found.', 'no topic');
+          equal(refusal(null, 'forumNewPost', [tp._id, 'x']), 'No user found.', 'logged out post');
+          assert(Forumtopics.findOne(tp._id) && !Forumtopics.findOne(tp._id).isPinned, 'the topic is unchanged');
+
+          // forumMarkAllRead has no simulation: it runs on the server only
+          var marked = Meteor.server.method_handlers.forumMarkAllRead.apply(invocation(null, false), []);
+          assert(dTest.isPromise(marked), 'forumMarkAllRead is async');
+          assert(_.isArray(dTest.settle(marked)), 'and lists topic ids');
+        });
+
         test('addPostView and forumMarkAllRead: work logged out', function() {
           var recent = topic();
           var old = topic({lastPostDate: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000)});

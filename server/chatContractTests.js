@@ -103,6 +103,47 @@ if (Meteor.isServer) {
         });
 
 
+        test('addChatToRoom simulation: sync, and saves the chat the real call does', function() {
+          var handler = Meteor.server.method_handlers.addChatToRoom;
+          var invocation = function(i, isSimulation) {
+            return {userId: i === null ? null : w.users[i]._id, isSimulation: isSimulation, connection: null,
+              unblock: function() {}, setUserId: function() {}};
+          };
+          var roomId = insertRoom(0, [0, 1]);
+          var returned = handler.apply(invocation(1, true), [w.gameId, roomId, '  from the simulation  ']);
+          assert(!dTest.isPromise(returned), 'the simulation is sync');
+          equal(returned, undefined, 'and returns nothing');
+          clients[1].call('addChatToRoom', w.gameId, roomId, '  from the server  ');
+
+          var chats = Roomchats.find({room_id: roomId}, {sort: {text: 1}}).fetch();
+          equal(_.pluck(chats, 'text').join('|'), 'from the server|from the simulation', 'both saved, trimmed');
+          var rest = function(chat) { return JSON.stringify(_.omit(chat, '_id', 'created_at', 'text')); };
+          equal(rest(chats[1]), rest(chats[0]), 'the same chat apart from its text and time');
+          equal(Recentchats.find({room_id: roomId}).count(), 1, 'one recent chats entry');
+
+          // refused the same way, and changing nothing
+          var before = dTest.snapshot(w.gameId, chatCollections);
+          var refusal = function(i, text) {
+            var error = dTest.throws(function() { return handler.apply(invocation(i, true), [w.gameId, roomId, text]); });
+            return error && error.error;
+          };
+          equal(refusal(2, 'let me in'), 'not-authorized', 'not a member');
+          equal(refusal(1, '   '), 'validation', 'empty');
+          equal(refusal(1, 'x'.repeat(401)), 'validation', 'too long');
+          equal(handler.apply(invocation(null, true), [w.gameId, roomId, 'hi']), false, 'logged out: false');
+          equal(handler.apply(invocation(3, true), ['noSuchGame', roomId, 'hi']), false, 'not in the game: false');
+          Reports.insert({gameId: w.gameId, playerId: pid(1), active: true, reason: 'test', createdAt: new Date()});
+          equal(refusal(1, 'am I muted'), 'reported', 'reported');
+          dTest.assertUnchanged(w.gameId, before, 'a refused simulation changed the game', chatCollections);
+
+          // the server's part is a promise, and a refusal rejects it
+          var serverPart = handler.apply(invocation(2, false), [w.gameId, roomId, 'let me in']);
+          assert(dTest.isPromise(serverPart), 'the server\'s part is a promise');
+          var error = dTest.throws(function() { return serverPart; });
+          equal(error && error.error, 'not-authorized', 'refused');
+        });
+
+
         // --- startChatroomWith ---
 
         test('startChatroomWith: makes a room for the two of you, owned by you', function() {
