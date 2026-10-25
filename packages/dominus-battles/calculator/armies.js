@@ -109,30 +109,42 @@ BattleArmy.prototype.check = function() {
 }
 
 
+var userFields = {playerId:1, user_id:1, allies_below:1, allies_above:1, team:1, king:1, lord:1, vassals:1, is_dominus:1};
+
 BattleArmy.prototype.updateUser = function() {
   if (this.isRealArmy) {
-    var fields = {playerId:1, user_id:1, allies_below:1, allies_above:1, team:1, king:1, lord:1, vassals:1, is_dominus:1};
-
     if (Meteor.isServer) {
-      var player = Players.findOne(this.playerId, {fields:fields});
+      var player = Players.findOne(this.playerId, {fields:userFields});
     } else {
-      var player = Calcplayers.findOne(this.playerId, {fields:fields});
+      var player = Calcplayers.findOne(this.playerId, {fields:userFields});
     }
+    this.setUser(player);
+  }
+}
 
-    if (player) {
-      this.allies_below = player.allies_below;
-      this.allies_above = player.allies_above;
-      this.team = player.team;
-      this.king = player.king;
-      this.lord = player.lord;
-      this.vassals = player.vassals;
-      this.is_dominus = player.is_dominus;
-    } else {
-      if (Meteor.isServer) {
-        // this might fail on client
-        // when subscription is ready battle will re-run
-        //console.error('could not find player in BattleArmy.updateUser', this, player);
-      }
+
+// server: the battle job's (upgrade PR 14)
+BattleArmy.prototype.updateUserAsync = async function() {
+  if (this.isRealArmy) {
+    this.setUser(await Players.findOneAsync(this.playerId, {fields:userFields}));
+  }
+}
+
+
+BattleArmy.prototype.setUser = function(player) {
+  if (player) {
+    this.allies_below = player.allies_below;
+    this.allies_above = player.allies_above;
+    this.team = player.team;
+    this.king = player.king;
+    this.lord = player.lord;
+    this.vassals = player.vassals;
+    this.is_dominus = player.is_dominus;
+  } else {
+    if (Meteor.isServer) {
+      // this might fail on client
+      // when subscription is ready battle will re-run
+      //console.error('could not find player in BattleArmy.updateUser', this, player);
     }
   }
 }

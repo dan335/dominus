@@ -1,0 +1,2164 @@
+{
+ "about": "What the battles test (server/battleTests.js) left behind after each step. Recorded from the code before the battle job became async; see that file before recording it again.",
+ "seed": "dominus battles",
+ "startAt": "2026-01-19T09:00:00.000Z",
+ "at": {
+  "open": {
+   "x": -1,
+   "y": 9
+  },
+  "village": {
+   "x": 1,
+   "y": 7
+  },
+  "capital": {
+   "x": -2,
+   "y": 1
+  },
+  "castle": {
+   "x": 1,
+   "y": 9
+  }
+ },
+ "steps": [
+  {
+   "step": "three players sign up and the game starts",
+   "time": "2026-01-19T09:02:00.000Z",
+   "facts": {
+    "battles": [],
+    "capitals": [
+     {
+      "archers": 20,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 20,
+      "owner": null,
+      "pikemen": 20,
+      "x": -4,
+      "y": 11
+     },
+     {
+      "archers": 20,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 20,
+      "owner": null,
+      "pikemen": 20,
+      "x": -2,
+      "y": 1
+     },
+     {
+      "archers": 20,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 20,
+      "owner": null,
+      "pikemen": 20,
+      "x": 8,
+      "y": 0
+     }
+    ],
+    "players": {
+     "sim_ares": {
+      "alerts": {},
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {},
+      "vassals": [],
+      "villages": []
+     },
+     "sim_hera": {
+      "alerts": {},
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {},
+      "vassals": [],
+      "villages": []
+     },
+     "sim_zeus": {
+      "alerts": {},
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {},
+      "vassals": [],
+      "villages": []
+     }
+    }
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {
+     "bakeCountry": 3,
+     "createCountryMask": 3,
+     "sendGameStartedEmail": 3
+    },
+    "ran": {
+     "checkForGameClose": 2,
+     "checkForGameEnd": 2,
+     "checkForGameStart": 2,
+     "collectCapitalIncome": 6,
+     "collectCastleIncome": 6,
+     "collectVillageIncome": 6,
+     "generateTree": 1,
+     "initDailystatsForNewUser": 3,
+     "moveArmiesJob": 6,
+     "setupEveryoneChatroom": 1,
+     "villageConstructionJob": 1
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 3,
+     "hash": "c48346a57c27c021"
+    },
+    "castles": {
+     "count": 3,
+     "hash": "9271c3dbf3ec2bd7"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 3,
+     "hash": "1e8a2d64d1bf7f50"
+    },
+    "hexes": {
+     "count": 452,
+     "hash": "a82aa9965d4d33e2"
+    },
+    "countries": {
+     "count": 3,
+     "hash": "2148cffdb2cf44ee"
+    },
+    "rooms": {
+     "count": 1,
+     "hash": "257a37d0c0020aad"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "globalalerts": {
+     "count": 3,
+     "hash": "a91e551627262eb7"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "b04d67bd17f3f781"
+    },
+    "markethistory": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "battles2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 3,
+     "hash": "20597d40a84be280"
+    },
+    "gamestats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "games": {
+     "count": 1,
+     "hash": "8bbabbc2c1470e4d"
+    },
+    "rounds": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 3,
+     "hash": "975570ae6eccca1f"
+    }
+   }
+  },
+  {
+   "step": "two armies meet in the open",
+   "time": "2026-01-19T10:23:40.000Z",
+   "facts": {
+    "battles": [
+     {
+      "isOver": true,
+      "loses": [
+       {
+        "power": 1365.507,
+        "soldiers": {
+         "archers": 20,
+         "catapults": 0,
+         "cavalry": 0,
+         "footmen": 60,
+         "pikemen": 0
+        },
+        "unit": "sim_hera army"
+       },
+       {
+        "power": 539.339,
+        "soldiers": {
+         "archers": 12,
+         "catapults": 0,
+         "cavalry": 8,
+         "footmen": 11,
+         "pikemen": 0
+        },
+        "unit": "sim_ares army"
+       }
+      ],
+      "rounds": 3,
+      "showBattle": true,
+      "units": [
+       "sim_hera army destroyed",
+       "sim_ares army"
+      ],
+      "x": -1,
+      "y": 9
+     }
+    ],
+    "capitals": [
+     {
+      "archers": 20,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 20,
+      "owner": null,
+      "pikemen": 20,
+      "x": -4,
+      "y": 11
+     },
+     {
+      "archers": 20,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 20,
+      "owner": null,
+      "pikemen": 20,
+      "x": -2,
+      "y": 1
+     },
+     {
+      "archers": 20,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 20,
+      "owner": null,
+      "pikemen": 20,
+      "x": 8,
+      "y": 0
+     }
+    ],
+    "players": {
+     "sim_ares": {
+      "alerts": {
+       "armyFinishedAllMoves": 1,
+       "battleStart": 1
+      },
+      "armies": [
+       {
+        "archers": 18,
+        "catapults": 0,
+        "cavalry": 22,
+        "footmen": 89,
+        "onAllyBuilding": false,
+        "pikemen": 0,
+        "x": -1,
+        "y": 9
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 8,
+       "footmen": 11,
+       "pikemen": 0
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_hera": {
+      "alerts": {
+       "armyDestroyed": 1,
+       "armyFinishedAllMoves": 1,
+       "battleStart": 1
+      },
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {
+       "archers": 20,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 60,
+       "pikemen": 0
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_zeus": {
+      "alerts": {},
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {},
+      "vassals": [],
+      "villages": []
+     }
+    }
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {
+     "checkForGameClose": 81,
+     "checkForGameEnd": 81,
+     "checkForGameStart": 81,
+     "collectCapitalIncome": 245,
+     "collectCastleIncome": 245,
+     "collectVillageIncome": 245,
+     "enterNewHexCheck": 2,
+     "expirePastMoves": 16,
+     "findCountriesInPath": 2,
+     "gamestats_job": 8,
+     "generateTree": 2,
+     "moveArmiesJob": 245,
+     "pathToHex": 2,
+     "record_market_history": 2,
+     "removeStuckBattles": 2,
+     "runBattle": 3,
+     "spendTaxes": 2,
+     "updateArmyMoveTotals": 2,
+     "updateIncomeRank": 8,
+     "updateIncomeStats": 2,
+     "updateMoveSpeed": 7,
+     "updatePathTime": 2,
+     "updateVassalRank": 8,
+     "update_losses_worth": 6,
+     "villageConstructionJob": 81
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 3,
+     "hash": "4740b548e8dc03da"
+    },
+    "castles": {
+     "count": 3,
+     "hash": "9271c3dbf3ec2bd7"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 1,
+     "hash": "5c7985ffa1580d34"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 3,
+     "hash": "98bfded7aa179091"
+    },
+    "hexes": {
+     "count": 452,
+     "hash": "a82aa9965d4d33e2"
+    },
+    "countries": {
+     "count": 3,
+     "hash": "2148cffdb2cf44ee"
+    },
+    "rooms": {
+     "count": 1,
+     "hash": "257a37d0c0020aad"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 5,
+     "hash": "932ee4f8c658e909"
+    },
+    "globalalerts": {
+     "count": 3,
+     "hash": "a91e551627262eb7"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "b04d67bd17f3f781"
+    },
+    "markethistory": {
+     "count": 2,
+     "hash": "094d330ee3ac5630"
+    },
+    "battles2": {
+     "count": 1,
+     "hash": "6f7d6d87560cff15"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 3,
+     "hash": "f80ac091997be253"
+    },
+    "gamestats": {
+     "count": 8,
+     "hash": "8ad9562d454f3ae1"
+    },
+    "games": {
+     "count": 1,
+     "hash": "083c2c3e82ec8018"
+    },
+    "rounds": {
+     "count": 3,
+     "hash": "9eb4ea316d1b4790"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 3,
+     "hash": "975570ae6eccca1f"
+    }
+   }
+  },
+  {
+   "step": "an army burns a village",
+   "time": "2026-01-19T10:49:00.000Z",
+   "facts": {
+    "battles": [
+     {
+      "isOver": true,
+      "loses": [
+       {
+        "power": 1365.507,
+        "soldiers": {
+         "archers": 20,
+         "catapults": 0,
+         "cavalry": 0,
+         "footmen": 60,
+         "pikemen": 0
+        },
+        "unit": "sim_hera army"
+       },
+       {
+        "power": 539.339,
+        "soldiers": {
+         "archers": 12,
+         "catapults": 0,
+         "cavalry": 8,
+         "footmen": 11,
+         "pikemen": 0
+        },
+        "unit": "sim_ares army"
+       }
+      ],
+      "rounds": 3,
+      "showBattle": true,
+      "units": [
+       "sim_hera army destroyed",
+       "sim_ares army"
+      ],
+      "x": -1,
+      "y": 9
+     },
+     {
+      "isOver": true,
+      "loses": [
+       {
+        "power": 260,
+        "soldiers": {
+         "archers": 0,
+         "catapults": 0,
+         "cavalry": 0,
+         "footmen": 10,
+         "pikemen": 0
+        },
+        "unit": "sim_hera village"
+       },
+       {
+        "power": 96.5,
+        "soldiers": {
+         "archers": 2,
+         "catapults": 0,
+         "cavalry": 1,
+         "footmen": 3,
+         "pikemen": 0
+        },
+        "unit": "sim_ares army"
+       }
+      ],
+      "rounds": 1,
+      "showBattle": true,
+      "units": [
+       "sim_hera village destroyed",
+       "sim_ares army"
+      ],
+      "x": 1,
+      "y": 7
+     }
+    ],
+    "capitals": [
+     {
+      "archers": 20,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 20,
+      "owner": null,
+      "pikemen": 20,
+      "x": -4,
+      "y": 11
+     },
+     {
+      "archers": 20,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 20,
+      "owner": null,
+      "pikemen": 20,
+      "x": -2,
+      "y": 1
+     },
+     {
+      "archers": 20,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 20,
+      "owner": null,
+      "pikemen": 20,
+      "x": 8,
+      "y": 0
+     }
+    ],
+    "players": {
+     "sim_ares": {
+      "alerts": {
+       "armyFinishedAllMoves": 2,
+       "battleStart": 2
+      },
+      "armies": [
+       {
+        "archers": 16,
+        "catapults": 0,
+        "cavalry": 21,
+        "footmen": 86,
+        "onAllyBuilding": false,
+        "pikemen": 0,
+        "x": 1,
+        "y": 7
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {
+       "archers": 14,
+       "catapults": 0,
+       "cavalry": 9,
+       "footmen": 14,
+       "pikemen": 0
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_hera": {
+      "alerts": {
+       "armyDestroyed": 1,
+       "armyFinishedAllMoves": 2,
+       "battleStart": 2,
+       "villageDestroyed": 1
+      },
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {
+       "archers": 20,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 70,
+       "pikemen": 0
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_zeus": {
+      "alerts": {},
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {},
+      "vassals": [],
+      "villages": []
+     }
+    }
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {
+     "checkForGameClose": 26,
+     "checkForGameEnd": 26,
+     "checkForGameStart": 26,
+     "collectCapitalIncome": 76,
+     "collectCastleIncome": 76,
+     "collectVillageIncome": 76,
+     "enterNewHexCheck": 1,
+     "expirePastMoves": 5,
+     "findCountriesInPath": 2,
+     "gamestats_job": 2,
+     "generateTree": 1,
+     "moveArmiesJob": 76,
+     "pathToHex": 2,
+     "record_market_history": 1,
+     "removeStuckBattles": 1,
+     "runBattle": 1,
+     "spendTaxes": 1,
+     "updateArmyMoveTotals": 2,
+     "updateIncomeRank": 2,
+     "updateIncomeStats": 1,
+     "updateMoveSpeed": 2,
+     "updatePathTime": 1,
+     "updateVassalRank": 2,
+     "update_losses_worth": 2,
+     "villageConstructionJob": 26
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 3,
+     "hash": "01ad2e538f183d49"
+    },
+    "castles": {
+     "count": 3,
+     "hash": "9271c3dbf3ec2bd7"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 1,
+     "hash": "1084067faf83483f"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 3,
+     "hash": "5af0266e7cfcb481"
+    },
+    "hexes": {
+     "count": 452,
+     "hash": "33c1b35a8e4a2e20"
+    },
+    "countries": {
+     "count": 3,
+     "hash": "987bb39cadde928f"
+    },
+    "rooms": {
+     "count": 1,
+     "hash": "257a37d0c0020aad"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 10,
+     "hash": "7a42f60b5196f4a4"
+    },
+    "globalalerts": {
+     "count": 3,
+     "hash": "a91e551627262eb7"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "b04d67bd17f3f781"
+    },
+    "markethistory": {
+     "count": 2,
+     "hash": "094d330ee3ac5630"
+    },
+    "battles2": {
+     "count": 2,
+     "hash": "61569d6bf423f331"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 3,
+     "hash": "a54a0e9218dad1a7"
+    },
+    "gamestats": {
+     "count": 10,
+     "hash": "e9327f009cf5090d"
+    },
+    "games": {
+     "count": 1,
+     "hash": "083c2c3e82ec8018"
+    },
+    "rounds": {
+     "count": 4,
+     "hash": "848bef96bf50d101"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 3,
+     "hash": "975570ae6eccca1f"
+    }
+   }
+  },
+  {
+   "step": "an army takes a capital",
+   "time": "2026-01-19T11:45:20.000Z",
+   "facts": {
+    "battles": [
+     {
+      "isOver": true,
+      "loses": [
+       {
+        "power": 1365.507,
+        "soldiers": {
+         "archers": 20,
+         "catapults": 0,
+         "cavalry": 0,
+         "footmen": 60,
+         "pikemen": 0
+        },
+        "unit": "sim_hera army"
+       },
+       {
+        "power": 539.339,
+        "soldiers": {
+         "archers": 12,
+         "catapults": 0,
+         "cavalry": 8,
+         "footmen": 11,
+         "pikemen": 0
+        },
+        "unit": "sim_ares army"
+       }
+      ],
+      "rounds": 3,
+      "showBattle": true,
+      "units": [
+       "sim_hera army destroyed",
+       "sim_ares army"
+      ],
+      "x": -1,
+      "y": 9
+     },
+     {
+      "isOver": true,
+      "loses": [
+       {
+        "power": 260,
+        "soldiers": {
+         "archers": 0,
+         "catapults": 0,
+         "cavalry": 0,
+         "footmen": 10,
+         "pikemen": 0
+        },
+        "unit": "sim_hera village"
+       },
+       {
+        "power": 96.5,
+        "soldiers": {
+         "archers": 2,
+         "catapults": 0,
+         "cavalry": 1,
+         "footmen": 3,
+         "pikemen": 0
+        },
+        "unit": "sim_ares army"
+       }
+      ],
+      "rounds": 1,
+      "showBattle": true,
+      "units": [
+       "sim_hera village destroyed",
+       "sim_ares army"
+      ],
+      "x": 1,
+      "y": 7
+     },
+     {
+      "isOver": true,
+      "loses": [
+       {
+        "power": 1278.621,
+        "soldiers": {
+         "archers": 20,
+         "catapults": 0,
+         "cavalry": 0,
+         "footmen": 20,
+         "pikemen": 20
+        },
+        "unit": "capital"
+       },
+       {
+        "power": 506.75,
+        "soldiers": {
+         "archers": 14,
+         "catapults": 0,
+         "cavalry": 8,
+         "footmen": 10,
+         "pikemen": 0
+        },
+        "unit": "sim_ares army"
+       }
+      ],
+      "rounds": 3,
+      "showBattle": true,
+      "units": [
+       "capital destroyed",
+       "sim_ares army took the capital"
+      ],
+      "x": -2,
+      "y": 1
+     }
+    ],
+    "capitals": [
+     {
+      "archers": 20,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 20,
+      "owner": null,
+      "pikemen": 20,
+      "x": -4,
+      "y": 11
+     },
+     {
+      "archers": 0,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 0,
+      "owner": "sim_ares",
+      "pikemen": 0,
+      "x": -2,
+      "y": 1
+     },
+     {
+      "archers": 20,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 20,
+      "owner": null,
+      "pikemen": 20,
+      "x": 8,
+      "y": 0
+     }
+    ],
+    "players": {
+     "sim_ares": {
+      "alerts": {
+       "armyFinishedAllMoves": 3,
+       "battleStart": 3,
+       "capturedCapital": 1
+      },
+      "armies": [
+       {
+        "archers": 26,
+        "catapults": 0,
+        "cavalry": 32,
+        "footmen": 110,
+        "onAllyBuilding": false,
+        "pikemen": 0,
+        "x": -2,
+        "y": 1
+       },
+       {
+        "archers": 16,
+        "catapults": 0,
+        "cavalry": 21,
+        "footmen": 86,
+        "onAllyBuilding": false,
+        "pikemen": 0,
+        "x": 1,
+        "y": 7
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {
+       "archers": 28,
+       "catapults": 0,
+       "cavalry": 17,
+       "footmen": 24,
+       "pikemen": 0
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_hera": {
+      "alerts": {
+       "armyDestroyed": 1,
+       "armyFinishedAllMoves": 2,
+       "battleStart": 2,
+       "villageDestroyed": 1
+      },
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {
+       "archers": 20,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 70,
+       "pikemen": 0
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_zeus": {
+      "alerts": {},
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {},
+      "vassals": [],
+      "villages": []
+     }
+    }
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {
+     "checkForGameClose": 56,
+     "checkForGameEnd": 56,
+     "checkForGameStart": 56,
+     "collectCapitalIncome": 169,
+     "collectCastleIncome": 169,
+     "collectVillageIncome": 169,
+     "enterNewHexCheck": 1,
+     "expirePastMoves": 12,
+     "findCountriesInPath": 1,
+     "gamestats_job": 6,
+     "generateTree": 2,
+     "moveArmiesJob": 169,
+     "pathToHex": 1,
+     "record_market_history": 2,
+     "removeStuckBattles": 2,
+     "runBattle": 3,
+     "spendTaxes": 2,
+     "updateArmyMoveTotals": 1,
+     "updateIncomeRank": 6,
+     "updateIncomeStats": 2,
+     "updateMoveSpeed": 4,
+     "updatePathTime": 1,
+     "updateVassalRank": 6,
+     "update_losses_worth": 3,
+     "villageConstructionJob": 56
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 3,
+     "hash": "783603494745d1bd"
+    },
+    "castles": {
+     "count": 3,
+     "hash": "9271c3dbf3ec2bd7"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 2,
+     "hash": "a3d6e355731f365a"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 3,
+     "hash": "5fbd7e69aac86bd1"
+    },
+    "hexes": {
+     "count": 452,
+     "hash": "33c1b35a8e4a2e20"
+    },
+    "countries": {
+     "count": 3,
+     "hash": "987bb39cadde928f"
+    },
+    "rooms": {
+     "count": 1,
+     "hash": "257a37d0c0020aad"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 13,
+     "hash": "f709e3e24cbc6e90"
+    },
+    "globalalerts": {
+     "count": 3,
+     "hash": "a91e551627262eb7"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "b04d67bd17f3f781"
+    },
+    "markethistory": {
+     "count": 3,
+     "hash": "43120fc7e97091c6"
+    },
+    "battles2": {
+     "count": 3,
+     "hash": "63622386cafc5337"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 3,
+     "hash": "4e5e98b373ffef9f"
+    },
+    "gamestats": {
+     "count": 16,
+     "hash": "72d511459d5729e4"
+    },
+    "games": {
+     "count": 1,
+     "hash": "083c2c3e82ec8018"
+    },
+    "rounds": {
+     "count": 7,
+     "hash": "378af08844bc8641"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 3,
+     "hash": "975570ae6eccca1f"
+    }
+   }
+  },
+  {
+   "step": "an army takes a castle",
+   "time": "2026-01-19T14:55:00.000Z",
+   "facts": {
+    "battles": [
+     {
+      "isOver": true,
+      "loses": [
+       {
+        "power": 1365.507,
+        "soldiers": {
+         "archers": 20,
+         "catapults": 0,
+         "cavalry": 0,
+         "footmen": 60,
+         "pikemen": 0
+        },
+        "unit": "sim_hera army"
+       },
+       {
+        "power": 539.339,
+        "soldiers": {
+         "archers": 12,
+         "catapults": 0,
+         "cavalry": 8,
+         "footmen": 11,
+         "pikemen": 0
+        },
+        "unit": "sim_ares army"
+       }
+      ],
+      "rounds": 3,
+      "showBattle": true,
+      "units": [
+       "sim_hera army destroyed",
+       "sim_ares army"
+      ],
+      "x": -1,
+      "y": 9
+     },
+     {
+      "isOver": true,
+      "loses": [
+       {
+        "power": 260,
+        "soldiers": {
+         "archers": 0,
+         "catapults": 0,
+         "cavalry": 0,
+         "footmen": 10,
+         "pikemen": 0
+        },
+        "unit": "sim_hera village"
+       },
+       {
+        "power": 96.5,
+        "soldiers": {
+         "archers": 2,
+         "catapults": 0,
+         "cavalry": 1,
+         "footmen": 3,
+         "pikemen": 0
+        },
+        "unit": "sim_ares army"
+       }
+      ],
+      "rounds": 1,
+      "showBattle": true,
+      "units": [
+       "sim_hera village destroyed",
+       "sim_ares army"
+      ],
+      "x": 1,
+      "y": 7
+     },
+     {
+      "isOver": true,
+      "loses": [
+       {
+        "power": 1278.621,
+        "soldiers": {
+         "archers": 20,
+         "catapults": 0,
+         "cavalry": 0,
+         "footmen": 20,
+         "pikemen": 20
+        },
+        "unit": "capital"
+       },
+       {
+        "power": 506.75,
+        "soldiers": {
+         "archers": 14,
+         "catapults": 0,
+         "cavalry": 8,
+         "footmen": 10,
+         "pikemen": 0
+        },
+        "unit": "sim_ares army"
+       }
+      ],
+      "rounds": 3,
+      "showBattle": true,
+      "units": [
+       "capital destroyed",
+       "sim_ares army took the capital"
+      ],
+      "x": -2,
+      "y": 1
+     },
+     {
+      "isOver": true,
+      "loses": [
+       {
+        "power": 697.179,
+        "soldiers": {
+         "archers": 0,
+         "catapults": 0,
+         "cavalry": 0,
+         "footmen": 20,
+         "pikemen": 10
+        },
+        "unit": "sim_hera army"
+       },
+       {
+        "power": 1093.573,
+        "soldiers": {
+         "archers": 12,
+         "catapults": 0,
+         "cavalry": 2,
+         "footmen": 2,
+         "pikemen": 12
+        },
+        "unit": "sim_hera castle"
+       },
+       {
+        "power": 440.369,
+        "soldiers": {
+         "archers": 10,
+         "catapults": 4,
+         "cavalry": 4,
+         "footmen": 7,
+         "pikemen": 0
+        },
+        "unit": "sim_ares army"
+       }
+      ],
+      "rounds": 3,
+      "showBattle": true,
+      "units": [
+       "sim_hera castle destroyed",
+       "sim_ares army took the castle"
+      ],
+      "x": 1,
+      "y": 9
+     }
+    ],
+    "capitals": [
+     {
+      "archers": 20,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 20,
+      "owner": null,
+      "pikemen": 20,
+      "x": -4,
+      "y": 11
+     },
+     {
+      "archers": 0,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 0,
+      "owner": "sim_ares",
+      "pikemen": 0,
+      "x": -2,
+      "y": 1
+     },
+     {
+      "archers": 20,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 20,
+      "owner": null,
+      "pikemen": 20,
+      "x": 8,
+      "y": 0
+     }
+    ],
+    "players": {
+     "sim_ares": {
+      "alerts": {
+       "armyFinishedAllMoves": 4,
+       "battleStart": 4,
+       "capturedCapital": 1,
+       "gainedVassal": 1,
+       "newKingChatroom": 1
+      },
+      "armies": [
+       {
+        "archers": 40,
+        "catapults": 6,
+        "cavalry": 56,
+        "footmen": 143,
+        "onAllyBuilding": true,
+        "pikemen": 0,
+        "x": 1,
+        "y": 9
+       },
+       {
+        "archers": 26,
+        "catapults": 0,
+        "cavalry": 32,
+        "footmen": 110,
+        "onAllyBuilding": false,
+        "pikemen": 0,
+        "x": -2,
+        "y": 1
+       },
+       {
+        "archers": 16,
+        "catapults": 0,
+        "cavalry": 21,
+        "footmen": 86,
+        "onAllyBuilding": false,
+        "pikemen": 0,
+        "x": 1,
+        "y": 7
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {
+       "archers": 38,
+       "catapults": 4,
+       "cavalry": 21,
+       "footmen": 31,
+       "pikemen": 0
+      },
+      "vassals": [
+       "sim_hera"
+      ],
+      "villages": []
+     },
+     "sim_hera": {
+      "alerts": {
+       "armyDestroyed": 2,
+       "armyFinishedAllMoves": 2,
+       "battleStart": 4,
+       "newLord": 1,
+       "villageDestroyed": 1
+      },
+      "armies": [],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 0,
+       "pikemen": 0
+      },
+      "lord": "sim_ares",
+      "losses": {
+       "archers": 32,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 92,
+       "pikemen": 22
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_zeus": {
+      "alerts": {},
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {},
+      "vassals": [],
+      "villages": []
+     }
+    }
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {
+     "checkForDominus": 1,
+     "checkForGameClose": 190,
+     "checkForGameEnd": 190,
+     "checkForGameStart": 190,
+     "cleanupAllKingChatrooms": 1,
+     "collectCapitalIncome": 569,
+     "collectCastleIncome": 569,
+     "collectVillageIncome": 569,
+     "destroyKingChatroom": 1,
+     "enemies_together_check": 1,
+     "enemy_on_building_check": 1,
+     "enterNewHexCheck": 2,
+     "expirePastMoves": 38,
+     "findCountriesInPath": 1,
+     "gamestats_job": 19,
+     "generateTree": 7,
+     "moveArmiesJob": 569,
+     "pathToHex": 1,
+     "record_market_history": 6,
+     "removeStuckBattles": 6,
+     "runBattle": 3,
+     "spendTaxes": 6,
+     "updateArmyMoveTotals": 1,
+     "updateIncomeRank": 19,
+     "updateIncomeStats": 6,
+     "updateKingChatroom": 1,
+     "updateMoveSpeed": 6,
+     "updatePathTime": 1,
+     "updateVassalAllyCountMultiple": 1,
+     "updateVassalRank": 19,
+     "update_losses_worth": 8,
+     "villageConstructionJob": 190
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 3,
+     "hash": "13ca39540b7d432a"
+    },
+    "castles": {
+     "count": 3,
+     "hash": "07f96cd16a6f8067"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 3,
+     "hash": "0076f17208323e22"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 3,
+     "hash": "3798bf09ea379f4f"
+    },
+    "hexes": {
+     "count": 452,
+     "hash": "33c1b35a8e4a2e20"
+    },
+    "countries": {
+     "count": 3,
+     "hash": "987bb39cadde928f"
+    },
+    "rooms": {
+     "count": 2,
+     "hash": "0f9e49837815fc8c"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 22,
+     "hash": "02da56a805028f28"
+    },
+    "globalalerts": {
+     "count": 3,
+     "hash": "a91e551627262eb7"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "b04d67bd17f3f781"
+    },
+    "markethistory": {
+     "count": 6,
+     "hash": "16399e00c94c67fb"
+    },
+    "battles2": {
+     "count": 4,
+     "hash": "0879bec61d623d9f"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 6,
+     "hash": "c62d8b9ecff3b014"
+    },
+    "gamestats": {
+     "count": 35,
+     "hash": "05ec1b096688d96d"
+    },
+    "games": {
+     "count": 1,
+     "hash": "9b00ef357af17f6f"
+    },
+    "rounds": {
+     "count": 10,
+     "hash": "06d766762f3b7142"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 3,
+     "hash": "975570ae6eccca1f"
+    }
+   }
+  },
+  {
+   "step": "a lord's army defends its new vassal's castle",
+   "time": "2026-01-19T16:04:20.000Z",
+   "facts": {
+    "battles": [
+     {
+      "isOver": true,
+      "loses": [
+       {
+        "power": 1365.507,
+        "soldiers": {
+         "archers": 20,
+         "catapults": 0,
+         "cavalry": 0,
+         "footmen": 60,
+         "pikemen": 0
+        },
+        "unit": "sim_hera army"
+       },
+       {
+        "power": 539.339,
+        "soldiers": {
+         "archers": 12,
+         "catapults": 0,
+         "cavalry": 8,
+         "footmen": 11,
+         "pikemen": 0
+        },
+        "unit": "sim_ares army"
+       }
+      ],
+      "rounds": 3,
+      "showBattle": true,
+      "units": [
+       "sim_hera army destroyed",
+       "sim_ares army"
+      ],
+      "x": -1,
+      "y": 9
+     },
+     {
+      "isOver": true,
+      "loses": [
+       {
+        "power": 260,
+        "soldiers": {
+         "archers": 0,
+         "catapults": 0,
+         "cavalry": 0,
+         "footmen": 10,
+         "pikemen": 0
+        },
+        "unit": "sim_hera village"
+       },
+       {
+        "power": 96.5,
+        "soldiers": {
+         "archers": 2,
+         "catapults": 0,
+         "cavalry": 1,
+         "footmen": 3,
+         "pikemen": 0
+        },
+        "unit": "sim_ares army"
+       }
+      ],
+      "rounds": 1,
+      "showBattle": true,
+      "units": [
+       "sim_hera village destroyed",
+       "sim_ares army"
+      ],
+      "x": 1,
+      "y": 7
+     },
+     {
+      "isOver": true,
+      "loses": [
+       {
+        "power": 1278.621,
+        "soldiers": {
+         "archers": 20,
+         "catapults": 0,
+         "cavalry": 0,
+         "footmen": 20,
+         "pikemen": 20
+        },
+        "unit": "capital"
+       },
+       {
+        "power": 506.75,
+        "soldiers": {
+         "archers": 14,
+         "catapults": 0,
+         "cavalry": 8,
+         "footmen": 10,
+         "pikemen": 0
+        },
+        "unit": "sim_ares army"
+       }
+      ],
+      "rounds": 3,
+      "showBattle": true,
+      "units": [
+       "capital destroyed",
+       "sim_ares army took the capital"
+      ],
+      "x": -2,
+      "y": 1
+     },
+     {
+      "isOver": true,
+      "loses": [
+       {
+        "power": 697.179,
+        "soldiers": {
+         "archers": 0,
+         "catapults": 0,
+         "cavalry": 0,
+         "footmen": 20,
+         "pikemen": 10
+        },
+        "unit": "sim_hera army"
+       },
+       {
+        "power": 1093.573,
+        "soldiers": {
+         "archers": 12,
+         "catapults": 0,
+         "cavalry": 2,
+         "footmen": 2,
+         "pikemen": 12
+        },
+        "unit": "sim_hera castle"
+       },
+       {
+        "power": 440.369,
+        "soldiers": {
+         "archers": 10,
+         "catapults": 4,
+         "cavalry": 4,
+         "footmen": 7,
+         "pikemen": 0
+        },
+        "unit": "sim_ares army"
+       }
+      ],
+      "rounds": 3,
+      "showBattle": true,
+      "units": [
+       "sim_hera castle destroyed",
+       "sim_ares army took the castle"
+      ],
+      "x": 1,
+      "y": 9
+     },
+     {
+      "isOver": true,
+      "loses": [
+       {
+        "power": 0,
+        "soldiers": {
+         "archers": 0,
+         "catapults": 0,
+         "cavalry": 0,
+         "footmen": 0,
+         "pikemen": 0
+        },
+        "unit": "sim_hera castle"
+       },
+       {
+        "power": 699.108,
+        "soldiers": {
+         "archers": 7,
+         "catapults": 6,
+         "cavalry": 10,
+         "footmen": 11,
+         "pikemen": 0
+        },
+        "unit": "sim_ares army"
+       },
+       {
+        "power": 1789.84,
+        "soldiers": {
+         "archers": 20,
+         "catapults": 0,
+         "cavalry": 20,
+         "footmen": 80,
+         "pikemen": 0
+        },
+        "unit": "sim_zeus army"
+       }
+      ],
+      "rounds": 4,
+      "showBattle": true,
+      "units": [
+       "sim_hera castle destroyed",
+       "sim_ares army",
+       "sim_zeus army destroyed"
+      ],
+      "x": 1,
+      "y": 9
+     }
+    ],
+    "capitals": [
+     {
+      "archers": 20,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 20,
+      "owner": null,
+      "pikemen": 20,
+      "x": -4,
+      "y": 11
+     },
+     {
+      "archers": 0,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 0,
+      "owner": "sim_ares",
+      "pikemen": 0,
+      "x": -2,
+      "y": 1
+     },
+     {
+      "archers": 20,
+      "catapults": 0,
+      "cavalry": 0,
+      "footmen": 20,
+      "owner": null,
+      "pikemen": 20,
+      "x": 8,
+      "y": 0
+     }
+    ],
+    "players": {
+     "sim_ares": {
+      "alerts": {
+       "armyFinishedAllMoves": 4,
+       "battleStart": 5,
+       "capturedCapital": 1,
+       "gainedVassal": 1,
+       "newKingChatroom": 1,
+       "vassalIsUnderAttack": 1
+      },
+      "armies": [
+       {
+        "archers": 33,
+        "catapults": 0,
+        "cavalry": 46,
+        "footmen": 132,
+        "onAllyBuilding": true,
+        "pikemen": 0,
+        "x": 1,
+        "y": 9
+       },
+       {
+        "archers": 26,
+        "catapults": 0,
+        "cavalry": 32,
+        "footmen": 110,
+        "onAllyBuilding": false,
+        "pikemen": 0,
+        "x": -2,
+        "y": 1
+       },
+       {
+        "archers": 16,
+        "catapults": 0,
+        "cavalry": 21,
+        "footmen": 86,
+        "onAllyBuilding": false,
+        "pikemen": 0,
+        "x": 1,
+        "y": 7
+       }
+      ],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {
+       "archers": 45,
+       "catapults": 10,
+       "cavalry": 31,
+       "footmen": 42,
+       "pikemen": 0
+      },
+      "vassals": [
+       "sim_hera"
+      ],
+      "villages": []
+     },
+     "sim_hera": {
+      "alerts": {
+       "armyDestroyed": 2,
+       "armyFinishedAllMoves": 2,
+       "battleStart": 5,
+       "newLord": 1,
+       "villageDestroyed": 1
+      },
+      "armies": [],
+      "castle": {
+       "archers": 0,
+       "catapults": 0,
+       "cavalry": 0,
+       "footmen": 0,
+       "pikemen": 0
+      },
+      "lord": "sim_ares",
+      "losses": {
+       "archers": 32,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 92,
+       "pikemen": 22
+      },
+      "vassals": [],
+      "villages": []
+     },
+     "sim_zeus": {
+      "alerts": {
+       "armyDestroyed": 1,
+       "armyFinishedAllMoves": 1,
+       "battleStart": 1
+      },
+      "armies": [],
+      "castle": {
+       "archers": 12,
+       "catapults": 0,
+       "cavalry": 2,
+       "footmen": 2,
+       "pikemen": 12
+      },
+      "lord": null,
+      "losses": {
+       "archers": 20,
+       "catapults": 0,
+       "cavalry": 20,
+       "footmen": 80,
+       "pikemen": 0
+      },
+      "vassals": [],
+      "villages": []
+     }
+    }
+   },
+   "invariantProblems": [],
+   "jobs": {
+    "failed": [],
+    "notRun": {},
+    "ran": {
+     "checkForGameClose": 69,
+     "checkForGameEnd": 69,
+     "checkForGameStart": 69,
+     "collectCapitalIncome": 208,
+     "collectCastleIncome": 208,
+     "collectVillageIncome": 208,
+     "enterNewHexCheck": 1,
+     "expirePastMoves": 13,
+     "findCountriesInPath": 1,
+     "gamestats_job": 7,
+     "generateTree": 3,
+     "moveArmiesJob": 208,
+     "pathToHex": 1,
+     "record_market_history": 3,
+     "removeStuckBattles": 3,
+     "runBattle": 4,
+     "spendTaxes": 3,
+     "updateArmyMoveTotals": 1,
+     "updateIncomeRank": 7,
+     "updateIncomeStats": 3,
+     "updateMoveSpeed": 8,
+     "updatePathTime": 1,
+     "updateVassalRank": 7,
+     "update_losses_worth": 12,
+     "villageConstructionJob": 69
+    }
+   },
+   "emails": 0,
+   "collections": {
+    "players": {
+     "count": 3,
+     "hash": "fdc9b07d71c18adc"
+    },
+    "castles": {
+     "count": 3,
+     "hash": "07f96cd16a6f8067"
+    },
+    "villages": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "armies": {
+     "count": 3,
+     "hash": "5092dc81abf62ec0"
+    },
+    "armypaths2": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "capitals": {
+     "count": 3,
+     "hash": "7842d1fb7e60c7d5"
+    },
+    "hexes": {
+     "count": 452,
+     "hash": "33c1b35a8e4a2e20"
+    },
+    "countries": {
+     "count": 3,
+     "hash": "987bb39cadde928f"
+    },
+    "rooms": {
+     "count": 2,
+     "hash": "0f9e49837815fc8c"
+    },
+    "roomchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "recentchats": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "alerts": {
+     "count": 28,
+     "hash": "2ff578ceb2fcb26c"
+    },
+    "globalalerts": {
+     "count": 3,
+     "hash": "a91e551627262eb7"
+    },
+    "markers": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "markergroups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "market": {
+     "count": 6,
+     "hash": "b04d67bd17f3f781"
+    },
+    "markethistory": {
+     "count": 8,
+     "hash": "a3d146cf9c854d67"
+    },
+    "battles2": {
+     "count": 5,
+     "hash": "9b515b80063d0b08"
+    },
+    "reports": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "gamesignups": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "dailystats": {
+     "count": 6,
+     "hash": "b4a1007f0d7ab0bd"
+    },
+    "gamestats": {
+     "count": 42,
+     "hash": "8fa6243ce9ef4f37"
+    },
+    "games": {
+     "count": 1,
+     "hash": "9b00ef357af17f6f"
+    },
+    "rounds": {
+     "count": 14,
+     "hash": "20f95337d6ea0cb9"
+    },
+    "countriestemp": {
+     "count": 0,
+     "hash": "97d170e1550eee4a"
+    },
+    "users": {
+     "count": 3,
+     "hash": "975570ae6eccca1f"
+    }
+   }
+  }
+ ]
+}

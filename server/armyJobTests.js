@@ -343,6 +343,95 @@ if (Meteor.isServer) {
           equal(Armies.findOne(b._id).footmen, 20, 'no losses');
         });
 
+        // the job is async since upgrade PR 14, so two runs on one hex can
+        // now interleave at every database call, not only where a fiber yields
+        test('runBattle: two runs at once on a battle that is due fight one round between them', function() {
+          var hex = w.freeHex();
+          var a, b;
+          dTest.recordJobs(function() {
+            a = w.makeArmy(0, {footmen: 200}, hex);
+            b = w.makeArmy(1, {footmen: 200}, hex);
+          });
+          var due = moment().subtract(_gs.battles(w.gameId, 'battleInterval') + 1000, 'ms').toDate();
+          var id = Battles2.insert({gameId: w.gameId, x: hex.x, y: hex.y, isRunning: false, isOver: false, roundNumber: 1,
+            createdAt: due, updatedAt: due, loses: [], showBattle: false, unitsFromPreviousRounds: [a._id, b._id]});
+          var job = function() {
+            return {id: 'test-' + Random.id(), data: {jobName: 'runBattle', gameId: w.gameId, x: hex.x, y: hex.y}, progress: function() { return Promise.resolve(); }};
+          };
+          dTest.recordJobs(function() {
+            dTest.settle(Promise.all([Queues.runBattle.handler(job()), Queues.runBattle.handler(job())]));
+          });
+          var battle = Battles2.findOne(id);
+          equal(battle.roundNumber, 2, 'one more round');
+          equal(battle.isRunning, false, 'not left running');
+          equal(Rounds.find({battle_id: id}).count(), 1, 'one round saved');
+          equal(Battles2.find({gameId: w.gameId, x: hex.x, y: hex.y}).count(), 1, 'no second battle');
+          var footmen = function(army) { var doc = Armies.findOne(army._id); return doc ? doc.footmen : 0; };
+          var lost = 400 - footmen(a) - footmen(b);
+          var saved = Rounds.findOne({battle_id: id});
+          var roundLost = _.reduce(saved.armies, function(sum, army) { return sum + army.loses.footmen; }, 0);
+          equal(lost, roundLost, 'the soldiers lost are the round\'s, once');
+          Rounds.remove({battle_id: id});
+        });
+
+        // The calculator panel runs a round in the browser with run(), which
+        // reads each player from Calcplayers; the battle job runs it with
+        // runAsync(), which reads them from Players with await (upgrade PR 14).
+        test('battle rounds: runAsync, as the battle job runs a round, gives what run gives', function() {
+          var ids = {lord: 'battletest_lord', vassal: 'battletest_vassal', enemy: 'battletest_enemy'};
+          var players = [
+            {_id: ids.lord, user_id: 'u_lord', allies_below: [ids.vassal], allies_above: [], team: [ids.vassal], king: ids.lord, lord: null, vassals: [ids.vassal], is_dominus: false},
+            {_id: ids.vassal, user_id: 'u_vassal', allies_below: [], allies_above: [ids.lord], team: [ids.lord], king: ids.lord, lord: ids.lord, vassals: [], is_dominus: false},
+            {_id: ids.enemy, user_id: 'u_enemy', allies_below: [], allies_above: [], team: [], king: null, lord: null, vassals: [], is_dominus: false}
+          ];
+          var unit = function(type, playerId, values, arrival) {
+            var army = new BattleArmy();
+            army.unitType = type;
+            army._id = type + '_' + playerId;
+            army.playerId = playerId;
+            army.user_id = 'u_' + playerId;
+            army.isRealArmy = true;
+            army.units = _.extend(dTest.soldierCounts({}), values);
+            army.last_move_at = new Date(Date.UTC(2026, 0, 1, 0, arrival));
+            return army;
+          };
+          var round = function() {
+            var r = new BattleRound();
+            var castle = unit('castle', ids.vassal, {footmen: 10, archers: 5}, 0);
+            r.armies = [castle, unit('army', ids.lord, {footmen: 30, pikemen: 10}, 1), unit('army', ids.enemy, {footmen: 50, cavalry: 10}, 2)];
+            r.castle = castle;
+            r.armies.forEach(function(army, n) { army.orderOfArrival = n; });
+            return r;
+          };
+          var result = function(r) {
+            return JSON.stringify({
+              battleIsOver: r.battleIsOver,
+              armies: _.map(r.armies, function(army) {
+                return _.extend(_.pick(army, '_id', 'lord', 'team', 'allies_above', 'allies_below', 'king', 'vassals', 'loses', 'destroyed',
+                  'tookCastle', 'tookCapital', 'isAttacker', 'basePower', 'finalPower', 'teamFinalPower', 'enemyFinalPower', 'powerToLose', 'dif', 'becameVassalOfPlayerId'),
+                  {allies: _.pluck(army.allies, '_id'), enemies: _.pluck(army.enemies, '_id')});
+              })
+            });
+          };
+          try {
+            players.forEach(function(p) { Players.insert(p); });
+            var sync = round();
+            sync.run();
+            var async = round();
+            var returned = async.runAsync();
+            assert(returned instanceof Promise, 'runAsync returns a promise');
+            dTest.settle(returned);
+            equal(result(async), result(sync), 'the same round');
+            var lordArmy = _.findWhere(async.armies, {_id: 'army_' + ids.lord});
+            equal(lordArmy.lord, null, 'the lord\'s player was read');
+            equal(JSON.stringify(_.findWhere(async.armies, {_id: 'castle_' + ids.vassal}).allies_above), JSON.stringify([ids.lord]), 'and the vassal\'s');
+            equal(JSON.stringify(_.pluck(lordArmy.allies, '_id')), JSON.stringify(['castle_' + ids.vassal]), 'so the lord\'s army defends the castle');
+            assert(_.pluck(lordArmy.enemies, '_id').indexOf('army_' + ids.enemy) != -1, 'against the enemy');
+          } finally {
+            Players.remove({_id: {$in: _.values(ids)}});
+          }
+        });
+
         test('removeStuckBattles: a battle running for over 3 hours is released, a newer one is not', function() {
           var stuck = Battles2.insert({gameId: w.gameId, x: 1, y: 1, isRunning: true, isOver: false, updatedAt: moment().subtract(4, 'hours').toDate()});
           var busy = Battles2.insert({gameId: w.gameId, x: 2, y: 2, isRunning: true, isOver: false, updatedAt: moment().subtract(1, 'hours').toDate()});

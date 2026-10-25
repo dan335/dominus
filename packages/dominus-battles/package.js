@@ -9,6 +9,9 @@ Package.describe({
 Package.onUse(function(api) {
   //api.versionsFrom('1.2');
   api.use([
+    // compiles its async functions so each await resumes in a fiber; without
+    // it, a sync Meteor call after an await throws "Can't wait without a fiber"
+    'ecmascript',
     'mongo',
     'momentjs:moment@2.18.1',
     'dominus-clock'
