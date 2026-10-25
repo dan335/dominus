@@ -7,7 +7,7 @@
 // fixing the bug means changing that test on purpose.
 //
 // Nothing here sends mail or touches S3: sendGameStartedEmail runs with
-// Email.send replaced, and checkForGameClose with
+// Email.send and Email.sendAsync replaced, and checkForGameClose with
 // Mapbaker.deleteS3BakesForGame replaced.
 //
 // They run as part of runAllTests (server/lib/testRunner.js), so the
@@ -397,12 +397,16 @@ if (Meteor.isServer) {
         });
 
 
-        // --- sendGameStartedEmail (Email.send replaced) ---
+        // --- sendGameStartedEmail (Email.sendAsync replaced) ---
 
         test('sendGameStartedEmail: emails a link to the game to a user with an address, and nobody without one', function() {
           var sent = [];
+          // the job sends with Email.sendAsync since upgrade PR 15; Email.send
+          // is replaced too, so a send through either never leaves the test
           var send = Email.send;
+          var sendAsync = Email.sendAsync;
           Email.send = function(options) { sent.push(options); };
+          Email.sendAsync = async function(options) { sent.push(options); };
           var withEmail = t.createTestUser({emails: [{address: 'started_' + Random.id(4).toLowerCase() + '@example.com', verified: true}]});
           var without = t.createTestUser();
           try {
@@ -411,6 +415,7 @@ if (Meteor.isServer) {
             runJob('sendGameStartedEmail', {gameId: w.gameId, gameName: 'Test World', userId: 'noSuchUser'});
           } finally {
             Email.send = send;
+            Email.sendAsync = sendAsync;
             Meteor.users.remove({_id: {$in: [withEmail._id, without._id]}});
           }
           equal(sent.length, 1, 'one email');
@@ -455,6 +460,78 @@ if (Meteor.isServer) {
         dTest.gameCollections().forEach(function(collection) { collection.remove({gameId: g.game._id}); });
         g.users.forEach(function(user) { Meteor.users.remove(user._id); });
       }
+
+      // the game the start job would pick: the only one waiting whose start time came
+      function startingGame(fields) {
+        var game = t.createTestGame(_.extend({name: 'Starting ' + Random.id(4), hasStarted: false, isStarting: false,
+          startAt: moment().subtract(1, 'minute').toDate()}, fields));
+        var waiting = Games.find({hasStarted: false, isStarting: false, startAt: {$lte: new Date()}}, {fields: {name: 1}}).fetch();
+        equal(JSON.stringify(_.pluck(waiting, '_id')), JSON.stringify([game._id]), 'no other game waits to start: ' + _.pluck(waiting, 'name').join(', '));
+        return game;
+      }
+
+      run('checkForGameStart: a game past its start time starts: a player for each signup, its market, and the start jobs', function() {
+        var game = startingGame();
+        var user = t.createTestUser({emails: [{address: 'start_' + Random.id(5).toLowerCase() + '@example.com', verified: true}]});
+        var g = {game: game, users: [user]};
+        var sizes = _.pick(_s.mapmaker, 'minHexesInCountry', 'maxHexesInCountry');
+        try {
+          Gamesignups.insert({gameId: game._id, userId: user._id, username: user.username, createdAt: new Date(), usedToken: false});
+          Mapmaker.eraseMap(game._id);
+          _s.mapmaker.minHexesInCountry = 100;
+          _s.mapmaker.maxHexesInCountry = 100;
+          Mapmaker.addCountry(game._id, true);
+          _.extend(_s.mapmaker, sizes);
+
+          var jobs = dTest.recordJobs(function() {
+            runJob('checkForGameStart', {});
+          });
+
+          var started = Games.findOne(game._id);
+          equal(started.hasStarted, true, 'started');
+          assert(started.startedAt, 'startedAt set');
+          equal(started.taxesCollected, 0, 'no taxes yet');
+          var player = Players.findOne({gameId: game._id, userId: user._id});
+          assert(player && player.castle_id, 'the signup has a player and a castle');
+          equal(Market.find({gameId: game._id}).count(), _s.market.types.length, 'a market');
+          equal(Gamesignups.find({gameId: game._id}).count(), 0, 'the signups are gone');
+          equal(dTest.jobsNamed(jobs, 'initDailystatsForNewUser').length, 1, 'daily stats for the player');
+          equal(dTest.jobsNamed(jobs, 'setupEveryoneChatroom').length, 1, 'the everyone chatroom');
+          equal(dTest.jobsNamed(jobs, 'generateTree').length, 1, 'the tree');
+          var emails = dTest.jobsNamed(jobs, 'sendGameStartedEmail');
+          equal(JSON.stringify(_.map(emails, function(j) { return j.data.userId; })), JSON.stringify([user._id]), 'an email to the player');
+        } finally {
+          _.extend(_s.mapmaker, sizes);
+          cleanup(g);
+        }
+      });
+
+      // startGame is async since upgrade PR 15: the job must wait for it to
+      // catch its failure
+      run('checkForGameStart: when the start fails, isStarting is put back so a later run tries again', function() {
+        var game = startingGame();
+        var startGame = dManager.startGame;
+        var error = null;
+        try {
+          dManager.startGame = async function() { await Promise.resolve(); throw new Error('planted start failure'); };
+          var errors = [];
+          var consoleError = console.error;
+          console.error = function() { errors.push(_.toArray(arguments)); };
+          try {
+            error = runJob('checkForGameStart', {}, {allowError: true}).error;
+          } finally {
+            console.error = consoleError;
+          }
+          assert(error && /planted start failure/.test(error.message), 'the job failed with the start\'s error: ' + (error && error.message));
+          assert(_.some(errors, function(e) { return e[0] == 'startGame failed, resetting isStarting'; }), 'and logged it');
+          var after = Games.findOne(game._id);
+          equal(after.isStarting, false, 'isStarting put back');
+          equal(after.hasStarted, false, 'not started');
+        } finally {
+          dManager.startGame = startGame;
+          t.cleanup(game._id);
+        }
+      });
 
       run('checkForGameEnd: a game past its end date ends with its dominus the winner, ranked results and a close date', function() {
         var g = endedGame({endDate: moment().subtract(1, 'minute').toDate()});

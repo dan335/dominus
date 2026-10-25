@@ -1,27 +1,35 @@
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.checkForGameClose.process(Meteor.bindEnvironment(function(job) {
-    checkForGameClose();
-    return Promise.resolve();
-  }));
+  Queues.checkForGameClose.process(async function(job) {
+    await checkForGameClose();
+  });
 }
 
 
+var executeBulk = async function(bulk) {
+  try {
+    await bulk.execute();
+  } catch (error) {
+    console.error(error);
+  }
+};
 
-var checkForGameClose = function() {
+
+
+var checkForGameClose = async function() {
   // let game = Games.findAndModify({
   //     query: {hasClosed:false, hasEnded:true, closeDate: {$lte: new Date()}},
   //     update: {$set:{hasClosed:true, closeDate:new Date()}}
   // });
 
-  let game = Games.findOne({hasClosed:false, hasEnded:true, closeDate: {$lte: dClock.now()}});
+  let game = await Games.findOneAsync({hasClosed:false, hasEnded:true, closeDate: {$lte: dClock.now()}});
 
   if (game) {
-    Games.update(game._id, {$set:{hasClosed:true, closeDate:dClock.now()}});
-    cleanupPlayers(game._id);
-    cleanupGame(game._id);
-    closeGame(game._id);
+    await Games.updateAsync(game._id, {$set:{hasClosed:true, closeDate:dClock.now()}});
+    await cleanupPlayers(game._id);
+    await cleanupGame(game._id);
+    await closeGame(game._id);
     Mapbaker.deleteS3BakesForGame(game._id);
   }
 }
@@ -29,7 +37,7 @@ var checkForGameClose = function() {
 
 
 // remove extra fields from players
-var cleanupPlayers = function(gameId) {
+var cleanupPlayers = async function(gameId) {
   let keep = {
     username:1,
     userId:1,
@@ -46,7 +54,7 @@ var cleanupPlayers = function(gameId) {
   var bulk = Players.rawCollection().initializeUnorderedBulkOp();
 	var hasBulkOp = false;
 
-  Players.find({gameId:gameId}, {fields:keep}).forEach(function(player) {
+  (await Players.find({gameId:gameId}, {fields:keep}).fetchAsync()).forEach(function(player) {
     // player.gameIsClosed = true;
     // bulk.find({_id:player._id}).updateOne(player);
     bulk.find({_id:player._id}).updateOne({$set:{gameIsClosed:true}});
@@ -54,18 +62,14 @@ var cleanupPlayers = function(gameId) {
   });
 
   if (hasBulkOp) {
-		bulk.execute({}, function(error, result) {
-	    if (error) {
-	      console.error(error);
-	    }
-	  });
+		await executeBulk(bulk);
 	}
 }
 
 
 
 // remove extra fields from game
-var cleanupGame = function(gameId) {
+var cleanupGame = async function(gameId) {
   let keep = {
     createdAt:1,
     hasEnded:1,
@@ -88,35 +92,35 @@ var cleanupGame = function(gameId) {
     isSuperSpeed:1
   }
 
-  let game = Games.findOne(gameId, {fields:keep});
+  let game = await Games.findOneAsync(gameId, {fields:keep});
   if (game) {
-    Games.update(gameId, game);
+    await Games.updateAsync(gameId, game);
   }
 }
 
 
 
 
-var closeGame = function(gameId) {
-  Alerts.remove({gameId:gameId});
-  Armies.remove({gameId:gameId});
-  Armypaths.remove({gameId:gameId});
-  Battles2.remove({gameId:gameId});
-  Castles.remove({gameId:gameId});
-  Countries.remove({gameId:gameId});
-  CountriesTemp.remove({gameId:gameId})
-  Dailystats.remove({gameId:gameId});
-  Gamestats.remove({gameId:gameId});
-  GlobalAlerts.remove({gameId:gameId});
-  Hexes.remove({gameId:gameId});
-  Markers.remove({gameId:gameId});
-  MarkerGroups.remove({gameId:gameId});
-  Market.remove({gameId:gameId});
-  Markethistory.remove({gameId:gameId});
-  Recentchats.remove({gameId:gameId});
-  Reports.remove({gameId:gameId});
-  Roomchats.remove({gameId:gameId});
-  Rooms.remove({gameId:gameId});
-  Rounds.remove({gameId:gameId});
-  Villages.remove({gameId:gameId});
+var closeGame = async function(gameId) {
+  await Alerts.removeAsync({gameId:gameId});
+  await Armies.removeAsync({gameId:gameId});
+  await Armypaths.removeAsync({gameId:gameId});
+  await Battles2.removeAsync({gameId:gameId});
+  await Castles.removeAsync({gameId:gameId});
+  await Countries.removeAsync({gameId:gameId});
+  await CountriesTemp.removeAsync({gameId:gameId});
+  await Dailystats.removeAsync({gameId:gameId});
+  await Gamestats.removeAsync({gameId:gameId});
+  await GlobalAlerts.removeAsync({gameId:gameId});
+  await Hexes.removeAsync({gameId:gameId});
+  await Markers.removeAsync({gameId:gameId});
+  await MarkerGroups.removeAsync({gameId:gameId});
+  await Market.removeAsync({gameId:gameId});
+  await Markethistory.removeAsync({gameId:gameId});
+  await Recentchats.removeAsync({gameId:gameId});
+  await Reports.removeAsync({gameId:gameId});
+  await Roomchats.removeAsync({gameId:gameId});
+  await Rooms.removeAsync({gameId:gameId});
+  await Rounds.removeAsync({gameId:gameId});
+  await Villages.removeAsync({gameId:gameId});
 }

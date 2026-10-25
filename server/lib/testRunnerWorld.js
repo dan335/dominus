@@ -117,7 +117,7 @@ if (Meteor.isServer) {
       _s.mapmaker.minHexesInCountry = 200;
       _s.mapmaker.maxHexesInCountry = 200;
       Mapmaker.addCountry(w.gameId, true);
-      dManager.startGame(Games.findOne(w.gameId), true);
+      dTest.settle(dManager.startGame(Games.findOne(w.gameId), true));
     } finally {
       _.extend(_s.mapmaker, sizes);
     }

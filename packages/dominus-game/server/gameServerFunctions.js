@@ -102,7 +102,7 @@ dGame.deleteGameAccount = async function(playerId) {
 
 	// this can't be a job
 	// might pick the wrong dominus if multiple people are deleted
-	dManager.checkForDominus(player.gameId);
+	await dManager.checkForDominus(player.gameId);
 
   await Queues.addAsyncOrLog('setupEveryoneChatroom', {gameId:player.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, player.gameId);
   await Queues.addAsyncOrLog('generateTree', {gameId:player.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, player.gameId);

@@ -5,19 +5,19 @@ Meteor.methods({
   // if user is not then create player and castle in game then return true
   // throws error if fails
   // if no username then main username is used
-  joinGame: function(gameId, username) {
+  joinGame: async function(gameId, username) {
     check(username, Match.Maybe(String));
     check(gameId, String);
 
     var self = this;
 
-    let alreadyInGame = Players.find({userId:this.userId, gameId:gameId}).count();
+    let alreadyInGame = await Players.find({userId:this.userId, gameId:gameId}).countAsync();
     if (alreadyInGame) {
       return true;
     }
 
     // get username
-    let user = Meteor.users.findOne(this.userId, {fields: {banned:1, admin:1, pro:1, proTokens:1, username:1, verifiedEmail:1}});
+    let user = await Meteor.users.findOneAsync(this.userId, {fields: {banned:1, admin:1, pro:1, proTokens:1, username:1, verifiedEmail:1}});
     if (!user) {
       throw new Meteor.Error('userNotFound', 'User not found.');
     }
@@ -44,7 +44,7 @@ Meteor.methods({
       throw new Meteor.Error('nonVerifiedEmail', 'Email must be verified before joining a game.');
     }
 
-    let game = Games.findOne(gameId, {fields: {isProOnly:1, dominusAchieved:1, hasStarted:1, hasEnded:1}});
+    let game = await Games.findOneAsync(gameId, {fields: {isProOnly:1, dominusAchieved:1, hasStarted:1, hasEnded:1}});
     if (!game) {
       throw new Meteor.Error('gameNotFound', 'Game not found.');
     }
@@ -66,7 +66,7 @@ Meteor.methods({
       if (!user.pro) {
         if (user.proTokens > 0) {
           // use token
-          Meteor.users.update(self.userId, {$inc: {proTokens:-1}});
+          await Meteor.users.updateAsync(self.userId, {$inc: {proTokens:-1}});
           makePro = true;
         }
       }
@@ -74,6 +74,6 @@ Meteor.methods({
 
     // join game
     // create player and castle
-    Queues.add('createPlayer', {gameId:gameId, userId:self.userId, username:username, makePro:makePro}, {attempts:10, backoff:{type:'fixed', delay:5000}, delay:0, timeout:1000*60*10}, false);
+    await Queues.addAsyncOrLog('createPlayer', {gameId:gameId, userId:self.userId, username:username, makePro:makePro}, {attempts:10, backoff:{type:'fixed', delay:5000}, delay:0, timeout:1000*60*10}, false);
   }
 });

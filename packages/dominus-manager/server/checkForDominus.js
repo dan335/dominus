@@ -1,15 +1,14 @@
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.checkForDominus.process(Meteor.bindEnvironment(function(job) {
-		dManager.checkForDominus(job.data.gameId);
-    return Promise.resolve();
-	}));
+  Queues.checkForDominus.process(async function(job) {
+		await dManager.checkForDominus(job.data.gameId);
+	});
 }
 
 
-dManager.checkForDominus = function(gameId) {
+dManager.checkForDominus = async function(gameId) {
   //console.log('--- checking for dominus', gameId, '---')
-	var numPlayers = Players.find({gameId:gameId, castle_id: {$exists: true, $ne:null}}).count()
+	var numPlayers = await Players.find({gameId:gameId, castle_id: {$exists: true, $ne:null}}).countAsync()
 
 	if (numPlayers <= 1) {
 		return;
@@ -26,37 +25,37 @@ dManager.checkForDominus = function(gameId) {
 	// Zero kings therefore means we are reading an inconsistent/transient state --
 	// bail out without touching is_dominus or alerting. A real dethroning always
 	// leaves at least one king, so this does not suppress legitimate updates.
-	let numKings = Players.find({gameId:gameId, is_king:true, castle_id: {$exists: true, $ne:null}}).count();
+	let numKings = await Players.find({gameId:gameId, is_king:true, castle_id: {$exists: true, $ne:null}}).countAsync();
 	if (numKings == 0) {
 		return;
 	}
 
-	let dominus = Players.findOne({gameId:gameId, is_dominus:true}, {fields: {gameId:1}});
+	let dominus = await Players.findOneAsync({gameId:gameId, is_dominus:true}, {fields: {gameId:1}});
 	let is_still_dominus = false;
 
   // get prevDominusId
-  let game = Games.findOne(gameId, {fields: {lastDominusPlayerId:1}});
+  let game = await Games.findOneAsync(gameId, {fields: {lastDominusPlayerId:1}});
 
 	// find dominus
   let newDominus = null;
   let query = {gameId:gameId, is_king:true, castle_id: {$exists:true, $ne:null}};
-	Players.find(query, {fields:{gameId:1}}).forEach(function(king) {
+	for (const king of await Players.find(query, {fields:{gameId:1}}).fetchAsync()) {
 
 		// get number of players who are not under king
 		let find = {gameId:gameId, _id:{$ne:king._id}, king:{$ne:king._id}, castle_id: {$exists: true, $ne:null}};
-		let nonVassals = Players.find(find).count();
+		let nonVassals = await Players.find(find).countAsync();
 
 		// in none then dominus
 		if (nonVassals == 0) {
       newDominus = king;
 		}
-	})
+	}
 
   if (newDominus) {
-    Players.update(newDominus._id, {$set: {is_dominus: true}});
+    await Players.updateAsync(newDominus._id, {$set: {is_dominus: true}});
 
     // set everyone to not dominus except new dominus
-    Players.update({gameId:gameId, is_dominus:true, _id:{$ne:newDominus._id}}, {$set: {is_dominus:false}}, {multi:true});
+    await Players.updateAsync({gameId:gameId, is_dominus:true, _id:{$ne:newDominus._id}}, {$set: {is_dominus:false}}, {multi:true});
 
     if (dominus) {
     //if (game.lastDominusPlayerId) {
@@ -64,15 +63,15 @@ dManager.checkForDominus = function(gameId) {
       //if (newDominus._id == game.lastDominusPlayerId) {
         is_still_dominus = true;
       } else {
-        new_dominus_event(gameId, newDominus);
+        await new_dominus_event(gameId, newDominus);
       }
     } else {
-      new_dominus_event(gameId, newDominus);
+      await new_dominus_event(gameId, newDominus);
     }
   } else {
     //console.log('no dominus found.');
     // remove dominus
-    Players.update({gameId:gameId, is_dominus:true}, {$set: {is_dominus:false}}, {multi:true});
+    await Players.updateAsync({gameId:gameId, is_dominus:true}, {$set: {is_dominus:false}}, {multi:true});
   }
 
 	// if old dominus is no longer dominus
@@ -90,28 +89,27 @@ dManager.checkForDominus = function(gameId) {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.removeDominus.process(Meteor.bindEnvironment(function(job) {
-    remove_dominus(job.data.gameId);
-    return Promise.resolve();
-  }));
+  Queues.removeDominus.process(async function(job) {
+    await remove_dominus(job.data.gameId);
+  });
 }
 
 
 // TODO: fix alerts
 // called when new user joins the game
-var remove_dominus = function(gameId) {
+var remove_dominus = async function(gameId) {
 	check(gameId, String);
-	let dominus = Players.findOne({is_dominus:true, gameId:gameId}, {fields:{_id:1}})
+	let dominus = await Players.findOneAsync({is_dominus:true, gameId:gameId}, {fields:{_id:1}})
 	if (dominus) {
 		dAlerts.gAlert_noLongerDominusNewUser(gameId, dominus._id);
 		dAlerts.alert_noLongerDominusNewUser(gameId, dominus._id);
-		Players.update(dominus._id, {$set: {is_dominus: false}});
+		await Players.updateAsync(dominus._id, {$set: {is_dominus: false}});
 	}
 }
 
 
 // happens when there is a new dominus
-var new_dominus_event = function(gameId, dominusPlayer) {
+var new_dominus_event = async function(gameId, dominusPlayer) {
 	check(dominusPlayer, Object);
 	check(dominusPlayer._id, String);
 	check(gameId, String);
@@ -119,7 +117,7 @@ var new_dominus_event = function(gameId, dominusPlayer) {
 	let set = {};
 
 	// make sure dominus and last dominus are not the same
-	let game = Games.findOne(gameId, {fields: {dominusAchieved:1, lastDominusPlayerId:1}});
+	let game = await Games.findOneAsync(gameId, {fields: {dominusAchieved:1, lastDominusPlayerId:1}});
 	let lastDominusPlayerId = null;
 
 	if (game && game.lastDominusPlayerId) {
@@ -137,10 +135,10 @@ var new_dominus_event = function(gameId, dominusPlayer) {
 	// close game registration
 	set.dominusAchieved = true;
 
-	Games.update(gameId, {$set:set});
+	await Games.updateAsync(gameId, {$set:set});
 
 	// auto-create next game
-	dManager.createNextGame();
+	await dManager.createNextGame();
 
 	// send notifications
 	dAlerts.gAlert_newDominus(dominusPlayer.gameId, dominusPlayer._id, lastDominusPlayerId);

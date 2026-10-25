@@ -110,8 +110,7 @@ dArmies.resourceCost = function(gameId, soldiers) {
 }
 
 
-// doesn't take into account that market is not linear
-dArmies.worth = function(gameId, soldiers) {
+var checkWorthArgs = function(gameId, soldiers) {
   check(gameId, String);
   
   _s.armies.types.forEach(function(type) {
@@ -119,7 +118,22 @@ dArmies.worth = function(gameId, soldiers) {
       check(soldiers[type], Match.Integer)
     }
   })
+}
+
+// doesn't take into account that market is not linear
+dArmies.worth = function(gameId, soldiers) {
+  checkWorthArgs(gameId, soldiers);
 
 	var cost = dArmies.resourceCost(gameId, soldiers)
   return dMarket.resourcesToGold(gameId, cost);
+}
+
+// the server's: reads the market with await (upgrade PR 15)
+if (Meteor.isServer) {
+  dArmies.worthAsync = async function(gameId, soldiers) {
+    checkWorthArgs(gameId, soldiers);
+
+    var cost = dArmies.resourceCost(gameId, soldiers)
+    return await dMarket.resourcesToGoldAsync(gameId, cost);
+  }
 }
