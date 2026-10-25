@@ -72,18 +72,45 @@
   // Meteor catches the exceptions from autoruns, template helpers and method
   // callbacks itself and logs them with Meteor._debug ("Exception from Tracker
   // recompute function:", "Exception in template helper:", ...), so they never
-  // reach the listeners above. Meteor._debug is internal to Meteor, so check
-  // this still works after a Meteor upgrade (tests/e2e/specs/clientErrors.spec.js).
+  // reach the listeners above. Tracker logs the heading and the error's stack
+  // in two calls, so a heading on its own waits for the call after it.
+  // Meteor._debug is internal to Meteor, so check this still works after a
+  // Meteor upgrade (tests/e2e/specs/clientErrors.spec.js).
+  var pending = null;
+  var flushPending = function() {
+    if (pending) {
+      report('meteor', pending, '');
+      pending = null;
+    }
+  };
+
+  var logged = function(first, second) {
+    if (pending) {
+      var heading = pending;
+      pending = null;
+      var detail = typeof first === 'string' ? first : first && first.stack || String(first);
+      report('meteor', heading + ' ' + detail.split('\n')[0], detail);
+      return;
+    }
+    if (typeof first !== 'string' || first.indexOf('Exception') !== 0) return;
+    // a method the browser refused before asking the server, as the server
+    // would: not a bug
+    if (first.indexOf('Exception while simulating the effect of invoking') === 0 && second && second.errorType === 'Meteor.Error') return;
+    if (second === undefined) {
+      pending = first;
+      setTimeout(flushPending, 0);
+      return;
+    }
+    var message = second && second.message || (typeof second === 'string' ? second.split('\n')[0] : String(second));
+    report('meteor', first + ' ' + message, second && second.stack || (typeof second === 'string' ? second : ''));
+  };
+
   var debug = Meteor._debug;
-  Meteor._debug = function(first, second) {
+  Meteor._debug = function() {
     var suppressed = Meteor._suppressed_log_expected && Meteor._suppressed_log_expected();
     var result = debug.apply(this, arguments);
     try {
-      if (!suppressed && typeof first === 'string' && first.indexOf('Exception') === 0) {
-        var detail = second && second.message || (typeof second === 'string' ? second.split('\n')[0] : '');
-        var stack = second && second.stack || (typeof second === 'string' ? second : '');
-        report('meteor', first + (detail ? ' ' + detail : ''), stack);
-      }
+      if (!suppressed) logged.apply(null, arguments);
     } catch (error) {
       // as above
     }
