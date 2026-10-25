@@ -835,12 +835,12 @@ if (Meteor.isServer) {
     // queues were paused at that moment
     function stubRebuild(failFor) {
       var log = {rebuilt: [], dominus: [], chatrooms: [], pausedDuringRebuild: [], pauses: 0, resumes: 0};
-      var realPause = Queues.pauseAll;
-      var realResume = Queues.resumeAll;
+      var realPause = Queues.pauseAllAsync;
+      var realResume = Queues.resumeAllAsync;
       var restores = [
         stub(dInit, 'updateAllKingsAlliesWaitMs', 0),
-        stub(Queues, 'pauseAll', function(isManual) { log.pauses++; return realPause(isManual); }),
-        stub(Queues, 'resumeAll', function() { log.resumes++; return realResume(); }),
+        stub(Queues, 'pauseAllAsync', function(isManual) { log.pauses++; return realPause(isManual); }),
+        stub(Queues, 'resumeAllAsync', function() { log.resumes++; return realResume(); }),
         stub(dInit, 'rebuildRelationships', function(gameId) {
           log.pausedDuringRebuild.push(settingsDoc().isPaused === true);
           if (failFor && failFor.indexOf(gameId) !== -1) {
@@ -863,7 +863,7 @@ if (Meteor.isServer) {
       var ids = games.map(function(g) { return g._id; });
       var log = stubRebuild();
       try {
-        dInit.updateAllKingsAlliesJob();
+        dTest.settle(dInit.updateAllKingsAlliesJob());
         log.restore();
 
         ids.forEach(function(id) {
@@ -888,7 +888,7 @@ if (Meteor.isServer) {
       var notStarted = t.createTestGame({hasStarted: false, hasEnded: false});
       var log = stubRebuild();
       try {
-        dInit.updateAllKingsAlliesJob();
+        dTest.settle(dInit.updateAllKingsAlliesJob());
         log.restore();
         assert(log.rebuilt.indexOf(running._id) !== -1, 'running game rebuilt');
         equal(log.rebuilt.indexOf(ended._id), -1, 'ended game skipped');
@@ -905,7 +905,7 @@ if (Meteor.isServer) {
       var b = t.createTestGame({hasStarted: true, hasEnded: false, startedAt: new Date()});
       var log = stubRebuild();
       try {
-        dInit.updateAllKingsAlliesJob(a._id);
+        dTest.settle(dInit.updateAllKingsAlliesJob(a._id));
         log.restore();
         sameList(log.rebuilt, [a._id], 'only game a');
         equal(log.pauses, 1, 'paused once');
@@ -923,7 +923,7 @@ if (Meteor.isServer) {
       var ids = games.map(function(g) { return g._id; });
       var log = stubRebuild([ids[1]]);
       try {
-        dInit.updateAllKingsAlliesJob();
+        dTest.settle(dInit.updateAllKingsAlliesJob());
         log.restore();
         assert(log.rebuilt.indexOf(ids[0]) !== -1, 'game before the failure rebuilt');
         assert(log.rebuilt.indexOf(ids[2]) !== -1, 'game after the failure rebuilt');
@@ -941,11 +941,11 @@ if (Meteor.isServer) {
     run('updateAllKingsAlliesJob resumes the queues even when the job itself throws', function() {
       var game = t.createTestGame({hasStarted: true, hasEnded: false, startedAt: new Date()});
       var log = stubRebuild();
-      var restoreSleep = stub(Meteor, '_sleepForMs', function() { throw new Error('boom'); });
+      var restoreSleep = stub(dInit, 'waitForRunningJobs', function() { return Promise.reject(new Error('boom')); });
       var threw = false;
       try {
         try {
-          dInit.updateAllKingsAlliesJob(game._id);
+          dTest.settle(dInit.updateAllKingsAlliesJob(game._id));
         } catch (e) {
           threw = true;
         }
@@ -1179,8 +1179,8 @@ if (Meteor.isServer) {
       var game = t.createTestGame();
       try {
         makeLoop(game._id, 5, 5, 9, 9);
-        equal(dInit.attackCreatesLoop(game._id, 5, 5), true, 'loop at the first castle');
-        equal(dInit.attackCreatesLoop(game._id, 9, 9), true, 'loop at the second castle');
+        equal(dTest.settle(dInit.attackCreatesLoop(game._id, 5, 5)), true, 'loop at the first castle');
+        equal(dTest.settle(dInit.attackCreatesLoop(game._id, 9, 9)), true, 'loop at the second castle');
       } finally {
         cleanupMap(game._id);
       }
@@ -1194,8 +1194,8 @@ if (Meteor.isServer) {
         Castles.insert({gameId: game._id, playerId: a, x: 5, y: 5});
         Castles.insert({gameId: game._id, playerId: b, x: 9, y: 9});
         Armies.insert({gameId: game._id, playerId: b, x: 5, y: 5, speed: 1});
-        equal(dInit.attackCreatesLoop(game._id, 5, 5), false, 'one-sided attack is not a loop');
-        equal(dInit.attackCreatesLoop(game._id, 1, 1), false, 'no castle there');
+        equal(dTest.settle(dInit.attackCreatesLoop(game._id, 5, 5)), false, 'one-sided attack is not a loop');
+        equal(dTest.settle(dInit.attackCreatesLoop(game._id, 1, 1)), false, 'no castle there');
       } finally {
         cleanupMap(game._id);
       }
@@ -1213,8 +1213,8 @@ if (Meteor.isServer) {
         Castles.insert({gameId: other._id, playerId: b, x: 9, y: 9});
         Armies.insert({gameId: other._id, playerId: b, x: 5, y: 5, speed: 1});
 
-        equal(dInit.attackCreatesLoop(other._id, 5, 5), false, 'the other game can attack');
-        equal(dInit.attackCreatesLoop(looped._id, 5, 5), true, 'the looped game still sees its loop');
+        equal(dTest.settle(dInit.attackCreatesLoop(other._id, 5, 5)), false, 'the other game can attack');
+        equal(dTest.settle(dInit.attackCreatesLoop(looped._id, 5, 5)), true, 'the looped game still sees its loop');
       } finally {
         cleanupMap(looped._id);
         cleanupMap(other._id);
@@ -1229,7 +1229,7 @@ if (Meteor.isServer) {
         Castles.insert({gameId: game._id, playerId: a, x: 5, y: 5});
         // the other game has a full loop through the same coordinates
         makeLoop(other._id, 5, 5, 9, 9);
-        equal(dInit.attackCreatesLoop(game._id, 5, 5), false, 'no army of this game is here');
+        equal(dTest.settle(dInit.attackCreatesLoop(game._id, 5, 5)), false, 'no army of this game is here');
       } finally {
         cleanupMap(game._id);
         cleanupMap(other._id);

@@ -16,12 +16,13 @@ dInit.getRelationshipClient = function(otherPlayerId) {
 }
 
 
-dInit.getRelationshipServer = function(playerId, otherPlayerId) {
+// server only
+dInit.getRelationshipServer = async function(playerId, otherPlayerId) {
   check(playerId, String)
   check(otherPlayerId, String)
 
   var fields = {userId:1, lord:1, allies_above:1, allies_below:1, team:1, king:1, vassals:1}
-  var player = Players.findOne(playerId, {fields: fields})
+  var player = await Players.findOneAsync(playerId, {fields: fields})
   if (player) {
     return dInit.getPlayersRelationship(player, otherPlayerId);
   } else {

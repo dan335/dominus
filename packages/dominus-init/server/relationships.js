@@ -10,11 +10,21 @@
 //		#TODO:220 when user is created team does not include self
 
 
-dInit.set_lord_and_vassal = function(winner_id, loser_id) {
+// awaits a bulk op, and logs a failed one, as the callbacks did
+var executeBulk = async function(bulk) {
+	try {
+		return await bulk.execute();
+	} catch (error) {
+		console.error(error);
+	}
+};
+
+
+dInit.set_lord_and_vassal = async function(winner_id, loser_id) {
 	var fields = {allies_above:1, lord:1, king:1, is_king:1, gameId:1};
 
-	var winner = Players.findOne(winner_id, {fields:fields});
-	var loser = Players.findOne(loser_id, {fields:fields});
+	var winner = await Players.findOneAsync(winner_id, {fields:fields});
+	var loser = await Players.findOneAsync(loser_id, {fields:fields});
 
 	if (!winner || !loser) {
 		console.error('winner or loser not found');
@@ -59,7 +69,7 @@ dInit.set_lord_and_vassal = function(winner_id, loser_id) {
 		// destroy king chatroom
 		// #TODO:120 isn't this handled in cleanupAllKingChatrooms?
 		if (loser.is_king) {
-			Queues.add('destroyKingChatroom', {king_id:loser._id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, loser._id);
+			await Queues.addAsyncOrLog('destroyKingChatroom', {king_id:loser._id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, loser._id);
 		}
 	}
 
@@ -68,46 +78,46 @@ dInit.set_lord_and_vassal = function(winner_id, loser_id) {
 	if (_.contains(winner.allies_above, loser._id)) {
 
 		// winner is conquering their lord, moving up the tree
-		dInit.remove_lord_and_vassal(winner.lord, winner._id);
+		await dInit.remove_lord_and_vassal(winner.lord, winner._id);
 
 		// loser's lord is now winner's lord
 		if (loser.lord) {
-			dInit.remove_lord_and_vassal(loser.lord, loser._id);
-			create_lord_and_vassal(loser.lord, winner._id);
+			await dInit.remove_lord_and_vassal(loser.lord, loser._id);
+			await create_lord_and_vassal(loser.lord, winner._id);
 		}
 
 	// winner is stealing loser from another lord
 	// remove connection between loser and their lord
 	// create notification for old lord that he lost a vassal
 	} else if (loser.lord) {
-		dInit.remove_lord_and_vassal(loser.lord, loser._id);
+		await dInit.remove_lord_and_vassal(loser.lord, loser._id);
 	}
 
 	// create connection between winner and loser
-	create_lord_and_vassal(winner._id, loser._id);
+	await create_lord_and_vassal(winner._id, loser._id);
 
 	// is winner a new king
 	// has he conquered their lord?
 	if (winner.king == loser._id) {
-		Players.update(winner._id, {$set: {is_king:true}});
+		await Players.updateAsync(winner._id, {$set: {is_king:true}});
 	}
 
 	if (process.env.DOMINUS_TEST != 'true') {
 		// send notification
 		dAlerts.alert_newLord(loser.gameId, loser._id, winner._id);
 
-		Queues.add('enemies_together_check', {gameId:loser.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:3000, timeout:1000*60*5}, loser.gameId);
-		Queues.add('enemy_on_building_check', {gameId:loser.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:3000, timeout:1000*60*5}, loser.gameId);
+		await Queues.addAsyncOrLog('enemies_together_check', {gameId:loser.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:3000, timeout:1000*60*5}, loser.gameId);
+		await Queues.addAsyncOrLog('enemy_on_building_check', {gameId:loser.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:3000, timeout:1000*60*5}, loser.gameId);
 
-		Queues.add('checkForDominus', {gameId:loser.gameId}, {attempts:10, backoff:{type:'fixed', delay:20000}, delay:0, timeout:1000*60*5}, loser.gameId);
+		await Queues.addAsyncOrLog('checkForDominus', {gameId:loser.gameId}, {attempts:10, backoff:{type:'fixed', delay:20000}, delay:0, timeout:1000*60*5}, loser.gameId);
 		if (loser.king) {
-			Queues.add('updateKingChatroom', {gameId:loser.gameId, playerId:loser.king}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:15000, timeout:1000*60*5}, false);
+			await Queues.addAsyncOrLog('updateKingChatroom', {gameId:loser.gameId, playerId:loser.king}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:15000, timeout:1000*60*5}, false);
 		}
 
-		Queues.add('updateKingChatroom', {gameId:loser.gameId, playerId:loser._id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, false);
-		Queues.add('cleanupAllKingChatrooms', {gameId:loser.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, loser.gameId);
+		await Queues.addAsyncOrLog('updateKingChatroom', {gameId:loser.gameId, playerId:loser._id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, false);
+		await Queues.addAsyncOrLog('cleanupAllKingChatrooms', {gameId:loser.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, loser.gameId);
 
-		Queues.add('generateTree', {gameId:winner.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, winner.gameId);
+		await Queues.addAsyncOrLog('generateTree', {gameId:winner.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, winner.gameId);
 	}
 };
 
@@ -115,7 +125,7 @@ dInit.set_lord_and_vassal = function(winner_id, loser_id) {
 
 // remove lord and vassal connection
 // vassal is now king
-dInit.remove_lord_and_vassal = function(lord_id, vassal_id) {
+dInit.remove_lord_and_vassal = async function(lord_id, vassal_id) {
 	check(lord_id, String);
 	check(vassal_id, String);
 
@@ -126,8 +136,8 @@ dInit.remove_lord_and_vassal = function(lord_id, vassal_id) {
 	}
 
 	var fields = {allies_above:1, allies_below:1, team:1, gameId:1};
-	var lord = Players.findOne(lord_id, {fields:fields});
-	var vassal = Players.findOne(vassal_id, {fields:fields});
+	var lord = await Players.findOneAsync(lord_id, {fields:fields});
+	var vassal = await Players.findOneAsync(vassal_id, {fields:fields});
 
 	if (!lord || !vassal) {
 		console.error('lord or vassal not found');
@@ -182,28 +192,20 @@ dInit.remove_lord_and_vassal = function(lord_id, vassal_id) {
 	bulk.find({_id: {$in: teamIds}}).update({$set: {team: teamIds}});
 	//Players.update({_id:{$in:teamIds}}, {$set:{team:teamIds}}, {multi:true});
 
-	var fut = Npm.require('fibers/future');
-  var future = new fut();
-	bulk.execute({}, function(error, result) {
-		if (error) {
-			console.error(error);
-		}
-		future.return(result);
-	});
-	var result = future.wait();
+	await executeBulk(bulk);
 
 	// update count of everyone who was changed: allies_below shrank for the
 	// lord and everyone above them, allies_above for the vassal and everyone
 	// below them, and team for both old teams
 	var ids = _.union([lord_id, vassal_id], lord.allies_above, vassal.allies_below, lord.team, vassal.team);
 	if (ids.length) {
-		Queues.add('updateVassalAllyCountMultiple', {playerIds:ids}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, false);
+		await Queues.addAsyncOrLog('updateVassalAllyCountMultiple', {playerIds:ids}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, false);
 	}
 };
 
 
 
-var create_lord_and_vassal = function(lord_id, vassal_id) {
+var create_lord_and_vassal = async function(lord_id, vassal_id) {
 	check(lord_id, String);
 	check(vassal_id, String);
 
@@ -217,8 +219,8 @@ var create_lord_and_vassal = function(lord_id, vassal_id) {
 	}
 
 	var fields = {allies_above:1, allies_below:1, king:1, team:1, is_king:1};
-	var lord = Players.findOne(lord_id, {fields:fields});
-	var vassal = Players.findOne(vassal_id, {fields:fields});
+	var lord = await Players.findOneAsync(lord_id, {fields:fields});
+	var vassal = await Players.findOneAsync(vassal_id, {fields:fields});
 
 	if (!lord || !vassal) {
 		console.log('lord '+lord_id);
@@ -273,7 +275,7 @@ var create_lord_and_vassal = function(lord_id, vassal_id) {
 		// That would point the whole vassal subtree's king at a mid-tree node,
 		// making checkForDominus count them as non-vassals and blocking a
 		// legitimate dominus until the nightly rebuild.
-		newKing = getKingOf(lord_id);
+		newKing = await getKingOf(lord_id);
 	}
 
 	if (!newKing) {
@@ -298,30 +300,22 @@ var create_lord_and_vassal = function(lord_id, vassal_id) {
 	bulk.find({_id: {$in: addVassalUsers}}).update({$addToSet: {allies_below: {$each: addVassalIds}}});
 	//Players.update({_id: {$in:addVassalUsers}}, {$addToSet: {allies_below:{$each:addVassalIds}}}, {multi:true});
 
-	var fut = Npm.require('fibers/future');
-  var future = new fut();
-	bulk.execute({}, function(error, result) {
-		if (error) {
-			console.error(error);
-		}
-		future.return(result);
-	});
-	var result = future.wait();
+	await executeBulk(bulk);
 
 	// team
 	// add vassal and vassal's allies_below to lord's team
 	// this does not work for some reason
 	// var team = _.union(lord.team, [lord._id, vassal._id], vassal.allies_below);
 	// use this slower way instead
-	var team = getTeamOf(newKing);
-	Players.update({_id:{$in:team}}, {$set:{team:team}}, {multi:true});
+	var team = await getTeamOf(newKing);
+	await Players.updateAsync({_id:{$in:team}}, {$set:{team:team}}, {multi:true});
 
 	// update count of everyone who was changed: allies_below grew for the
 	// lord and everyone above them, allies_above for the vassal and everyone
 	// below them, and team for both old teams
 	var ids = _.union([lord_id, vassal_id], lord.allies_above, vassal.allies_below, lord.team, vassal.team);
 	if (ids.length) {
-		Queues.add('updateVassalAllyCountMultiple', {playerIds:ids}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, false);
+		await Queues.addAsyncOrLog('updateVassalAllyCountMultiple', {playerIds:ids}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, false);
 	}
 };
 
@@ -330,29 +324,25 @@ var create_lord_and_vassal = function(lord_id, vassal_id) {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.updateVassalAllyCountMultiple.process(Meteor.bindEnvironment(function(job) {
-		updateVassalAllyCountMultiple(job.data.playerIds);
-    return Promise.resolve();
-  }));
+  Queues.updateVassalAllyCountMultiple.process(async function(job) {
+		await updateVassalAllyCountMultiple(job.data.playerIds);
+  });
 }
 
 // used for rankings
-var updateVassalAllyCountMultiple = function(playerIds) {
+var updateVassalAllyCountMultiple = async function(playerIds) {
 	check(playerIds, Array);
 	if (!playerIds.length) {
 		return;
 	}
 
-	var fut = Npm.require('fibers/future');
-  var futurePlayers = new fut();
-	var futureDailystats = new fut();
   var bulkPlayers = Players.rawCollection().initializeOrderedBulkOp();
 	var bulkDailystats = Dailystats.rawCollection().initializeOrderedBulkOp();
 	var hasBulkOp = false;
 
 	var find = {_id: {$in: playerIds}};
 	var options = {fields: {gameId:1, userId:1, team:1, vassals:1, allies_above:1, allies_below:1}};
-	Players.find(find, options).forEach(function(player) {
+	for (const player of await Players.find(find, options).fetchAsync()) {
 
 		var num_vassals = 0;
 		if (player.vassals) {
@@ -383,24 +373,11 @@ var updateVassalAllyCountMultiple = function(playerIds) {
     bulkDailystats.find(dsFind).upsert().updateOne({$set:dsSet, $setOnInsert:dsSetOnInsert});
 
 		hasBulkOp = true;
-	});
+	}
 
 	if (hasBulkOp) {
-		bulkPlayers.execute({}, function(error, result) {
-	    if (error) {
-	      console.error(error);
-	    }
-	    futurePlayers.return(result);
-	  });
-	  futurePlayers.wait();
-
-		bulkDailystats.execute({}, function(error, result) {
-	    if (error) {
-	      console.error(error);
-	    }
-	    futureDailystats.return(result);
-	  });
-	  futureDailystats.wait();
+		await executeBulk(bulkPlayers);
+		await executeBulk(bulkDailystats);
 	}
 
 };
@@ -411,17 +388,17 @@ dInit.updateVassalAllyCountMultiple = updateVassalAllyCountMultiple;
 
 
 // walk up tree to find king
-var getKingOf = function(playerId) {
+var getKingOf = async function(playerId) {
 	check(playerId, String);
 
-	var player = Players.findOne(playerId, {fields: {lord:1}});
+	var player = await Players.findOneAsync(playerId, {fields: {lord:1}});
 	if (player) {
 		if (player.lord) {
 			if (player.lord == player._id) {
 				console.error('Player cannot be their own lord.', player);
 				return false;
 			}
-			return getKingOf(player.lord);
+			return await getKingOf(player.lord);
 		} else {
 			return playerId;
 		}
@@ -433,13 +410,13 @@ var getKingOf = function(playerId) {
 
 // find king
 // return king's allies_below + king
-var getTeamOf = function(playerId) {
+var getTeamOf = async function(playerId) {
 	check(playerId, String);
 
-	var kingId = getKingOf(playerId);
+	var kingId = await getKingOf(playerId);
 
 	if (kingId) {
-		var king = Players.findOne(kingId, {fields: {allies_below:1}});
+		var king = await Players.findOneAsync(kingId, {fields: {allies_below:1}});
 		if (king) {
 			return _.union(king.allies_below, king._id);
 		} else {

@@ -185,7 +185,7 @@ if (Meteor.isServer) {
         let b = Players.insert({gameId: game._id, userId: 'u_' + Random.id(5),
           allies_above: [], allies_below: [], team: []});
 
-        dInit.updateVassalAllyCountMultiple([a, b]);
+        dTest.settle(dInit.updateVassalAllyCountMultiple([a, b]));
 
         let pa = Players.findOne(a);
         equal(pa.num_vassals, 2, 'num_vassals counts direct vassals');
@@ -198,7 +198,7 @@ if (Meteor.isServer) {
         equal(pb.num_vassals, 0, 'no vassals field counts as 0');
         equal(pb.num_allies_below, 0, 'empty allies_below');
 
-        dInit.updateVassalAllyCountMultiple([]);
+        dTest.settle(dInit.updateVassalAllyCountMultiple([]));
       } finally {
         Dailystats.remove({gameId: game._id});
         t.cleanup(game._id);
@@ -214,10 +214,10 @@ if (Meteor.isServer) {
             is_king: true, king: null, lord: null, vassals: [], allies_above: [], allies_below: [], team: []});
         };
         let lord = mk(), vassal = mk(), sub = mk();
-        dInit.set_lord_and_vassal(lord, vassal);
-        dInit.set_lord_and_vassal(vassal, sub);
+        dTest.settle(dInit.set_lord_and_vassal(lord, vassal));
+        dTest.settle(dInit.set_lord_and_vassal(vassal, sub));
 
-        dInit.updateVassalAllyCountMultiple([lord, vassal, sub]);
+        dTest.settle(dInit.updateVassalAllyCountMultiple([lord, vassal, sub]));
 
         let l = Players.findOne(lord), v = Players.findOne(vassal), s = Players.findOne(sub);
         equal(l.num_vassals, 1, 'lord has one direct vassal');
@@ -242,6 +242,57 @@ if (Meteor.isServer) {
     // The 2.16 soak found num_allies_below drifting: remove_lord_and_vassal
     // didn't read the team fields it recounted, and neither function recounted
     // the players above the lord or below the vassal.
+    // The nightly rebuild (relation_finder) works the tree out again from each
+    // player's lord. After any run of conquests it should find what the
+    // conquests left. Both became async in upgrade PR 12.
+    run('random conquests: the nightly rebuild finds the tree the conquests left', function() {
+      let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
+      let restores = [stub(Queues, 'add', function() { return true; })];
+      let first = null;
+      let sorted = function(list) { return JSON.stringify(_.sortBy(list || [], _.identity)); };
+      try {
+        for (let seed = 1; seed <= 60 && !first; seed++) {
+          let r = seed;
+          let rand = function(n) { r = (r * 1103515245 + 12345) % 2147483648; return r % n; };
+          let ids = _.range(6).map(function(i) {
+            return Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), username: 'p' + i,
+              is_king: true, king: null, lord: null, vassals: [], allies_above: [], allies_below: [], team: []});
+          });
+          let name = function(id) { return 'p' + ids.indexOf(id); };
+          let tree = function() {
+            return Players.find({_id: {$in: ids}}, {sort: {username: 1}}).map(function(p) {
+              // a king's own king field is left as it was by a conquest (null, or itself)
+              return [p.username, p.lord ? name(p.lord) : null, p.is_king, p.is_king ? null : name(p.king),
+                sorted(_.map(p.vassals, name)), sorted(_.map(p.allies_above, name)), sorted(_.map(p.allies_below, name))].join(' ');
+            }).join('\n');
+          };
+          let steps = [];
+          for (let step = 0; step < 15; step++) {
+            let w = ids[rand(ids.length)], l = ids[rand(ids.length)];
+            if (w == l || _.contains(Players.findOne(w).allies_below, l)) continue;
+            steps.push(name(w) + '>' + name(l));
+            dTest.settle(dInit.set_lord_and_vassal(w, l));
+          }
+          let afterConquests = tree();
+          // scramble everything but the lords, so the rebuild has to work it out
+          Players.update({_id: {$in: ids}}, {$set: {is_king: false, king: null, vassals: [], allies_above: ['x'], allies_below: ['y'], team: []}}, {multi: true});
+          Players.update({_id: {$in: ids}, lord: null}, {$set: {is_king: true}}, {multi: true});
+          dTest.settle(dInit.rebuildRelationships(game._id));
+          let rebuilt = tree();
+          if (rebuilt != afterConquests) {
+            first = 'seed ' + seed + ', after ' + steps.join(' ') + ':\n' + afterConquests + '\nrebuilt:\n' + rebuilt;
+          }
+          Players.remove({_id: {$in: ids}});
+        }
+        equal(first, null, 'the same tree');
+      } finally {
+        restoreAll(restores);
+        Alerts.remove({gameId: game._id});
+        GlobalAlerts.remove({gameId: game._id});
+        t.cleanup(game._id);
+      }
+    });
+
     run('random conquests keep the relationship lists and their counts in step', function() {
       let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
       let queued = [];
@@ -267,8 +318,8 @@ if (Meteor.isServer) {
             if (w == l || _.contains(winner.allies_below, l)) continue;
             steps.push(name(w) + '>' + name(l));
             queued = [];
-            dInit.set_lord_and_vassal(w, l);
-            queued.forEach(function(playerIds) { dInit.updateVassalAllyCountMultiple(playerIds); });
+            dTest.settle(dInit.set_lord_and_vassal(w, l));
+            queued.forEach(function(playerIds) { dTest.settle(dInit.updateVassalAllyCountMultiple(playerIds)); });
 
             let problems = [];
             let players = Players.find({_id: {$in: ids}}).fetch();

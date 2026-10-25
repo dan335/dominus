@@ -48,7 +48,7 @@ if (Meteor.isServer) {
       // lord takes vassal, the way a battle does, with its follow-up jobs recorded
       function conquer(lord, vassal) {
         return dTest.recordJobs(function() {
-          dInit.set_lord_and_vassal(ids[lord], ids[vassal]);
+          dTest.settle(dInit.set_lord_and_vassal(ids[lord], ids[vassal]));
         });
       }
 
@@ -226,7 +226,7 @@ if (Meteor.isServer) {
             runJob('enemy_on_building_check', {gameId: w.gameId});
           });
           equal(dTest.jobsNamed(jobs, 'runBattle').length, 0, 'no battle when it would loop');
-          assert(dInit.attackCreatesLoop(w.gameId, lordCastle.x, lordCastle.y), 'attackCreatesLoop says so');
+          assert(dTest.settle(dInit.attackCreatesLoop(w.gameId, lordCastle.x, lordCastle.y)), 'attackCreatesLoop says so');
           assert(Armies.findOne(army._id), 'army still there');
         });
 

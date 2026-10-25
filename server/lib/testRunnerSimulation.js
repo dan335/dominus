@@ -374,6 +374,8 @@ if (Meteor.isServer) {
       // runs at the same time, so it doesn't need to, and it mustn't pause Bull.
       replace(Queues, 'pauseAll', function() {});
       replace(Queues, 'resumeAll', function() {});
+      replace(Queues, 'pauseAllAsync', async function() {});
+      replace(Queues, 'resumeAllAsync', async function() {});
       replace(dInit, 'updateAllKingsAlliesWaitMs', 0);
     }
 
