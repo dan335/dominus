@@ -1,5 +1,7 @@
+// server-only, so the browser's Meteor.call waits for the server (see "Async
+// conversion" in CLAUDE.md)
 Meteor.methods({
-	buy_resource: function(gameId, type, quantity) {
+	buy_resource: async function(gameId, type, quantity) {
 		var self = this;
 
 		check(type, String);
@@ -10,7 +12,7 @@ Meteor.methods({
 			throw new Meteor.Error('Quantity must be above 0.');
 		}
 
-		var resource = Market.findOne({gameId:gameId, type:type}, {fields: {_id:1}});
+		var resource = await Market.findOneAsync({gameId:gameId, type:type}, {fields: {_id:1}});
 		if (!resource) {
 			throw new Meteor.Error('Resource not found.');
 		}
@@ -19,13 +21,13 @@ Meteor.methods({
 		fields.gold = 1;
 		fields[type] = 1;
 		let find = {gameId:gameId, userId:self.userId};
-		let player = Players.findOne(find, {fields:fields});
+		let player = await Players.findOneAsync(find, {fields:fields});
 
 		if (!player) {
 			throw new Meteor.Error('Player not found.');
 		}
 
-		var cost = dMarket.total_of_buy(gameId, type, quantity);
+		var cost = await dMarket.total_of_buyAsync(gameId, type, quantity);
 		if (isNaN(cost) || !isFinite(cost)) {
 			throw new Meteor.Error('Error.');
 		}
@@ -41,24 +43,22 @@ Meteor.methods({
 		var fields = {};
 		fields.gold = cost * -1;
 		fields[type] = quantity;
-		Players.update(player._id, {$inc:fields});
+		await Players.updateAsync(player._id, {$inc:fields});
 
-		if (!this.isSimulation) {
-			dMarket.update_market_price(gameId, type, quantity, true)
-			Queues.add('record_market_history', {gameId:gameId, quantity:quantity}, {attempts:10, backoff:{type:'fixed', delay:3000}, delay:0, timeout:1000*60*5}, false);
+		await dMarket.update_market_price(gameId, type, quantity, true)
+		await Queues.addAsyncOrLog('record_market_history', {gameId:gameId, quantity:quantity}, {attempts:10, backoff:{type:'fixed', delay:3000}, delay:0, timeout:1000*60*5}, false);
 
-			// save how much tax was collected
-			// tax is later distributed to castles
-			var sellCost = dMarket.total_of_sell(gameId, type, quantity);
-			var tax = parseFloat(cost - sellCost);
-			Games.update(gameId, {$inc: {taxesCollected:tax}});
-		}
+		// save how much tax was collected
+		// tax is later distributed to castles
+		var sellCost = await dMarket.total_of_sellAsync(gameId, type, quantity);
+		var tax = parseFloat(cost - sellCost);
+		await Games.updateAsync(gameId, {$inc: {taxesCollected:tax}});
 
 		return cost;
 	},
 
 
-	sell_resource: function(gameId, type, quantity) {
+	sell_resource: async function(gameId, type, quantity) {
 		var self = this;
 
 		check(type, String);
@@ -69,7 +69,7 @@ Meteor.methods({
 			throw new Meteor.Error('Quantity must be above 0.');
 		}
 
-		var resource = Market.findOne({gameId:gameId, type:type}, {fields: {_id:1}})
+		var resource = await Market.findOneAsync({gameId:gameId, type:type}, {fields: {_id:1}})
 		if (!resource) {
 			throw new Meteor.Error('Resource not found.');
 		}
@@ -77,7 +77,7 @@ Meteor.methods({
 		var fields = {gold:1};
 		fields[type] = 1;
 		let find = {gameId:gameId, userId:self.userId};
-		let player = Players.findOne(find, {fields:fields});
+		let player = await Players.findOneAsync(find, {fields:fields});
 
 		if (!player) {
 			throw new Meteor.Error('Player not found.');
@@ -88,7 +88,7 @@ Meteor.methods({
 			throw new Meteor.Error('Not enough resources.');
 		}
 
-		var total = dMarket.total_of_sell(gameId, type, quantity)
+		var total = await dMarket.total_of_sellAsync(gameId, type, quantity)
 		if (isNaN(total) || !isFinite(total)) {
 			throw new Meteor.Error('Error');
 		}
@@ -99,12 +99,10 @@ Meteor.methods({
 
 		var fields = {gold:total};
 		fields[type] = quantity * -1;
-		Players.update(player._id, {$inc:fields})
+		await Players.updateAsync(player._id, {$inc:fields})
 
-		if (!this.isSimulation) {
-			dMarket.update_market_price(gameId, type, quantity, false);
-			Queues.add('record_market_history', {gameId:gameId, quantity:quantity}, {attempts:10, backoff:{type:'fixed', delay:3000}, delay:0, timeout:1000*60*5}, false);
-		}
+		await dMarket.update_market_price(gameId, type, quantity, false);
+		await Queues.addAsyncOrLog('record_market_history', {gameId:gameId, quantity:quantity}, {attempts:10, backoff:{type:'fixed', delay:3000}, delay:0, timeout:1000*60*5}, false);
 
 		return total;
 	},

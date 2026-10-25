@@ -184,15 +184,15 @@ if (Meteor.isServer) {
           // paid in real time only a moment ago, but due by the game clock
           Players.update(w.players[0]._id, {$set: {lastIncomeUpdate: new Date()}});
           var gold = w.player(0).gold;
-          dIncome.collectCastleIncome();
+          dTest.settle(dIncome.collectCastleIncome());
           var p = w.player(0);
           assert(p.gold > gold, 'castle income paid, since the game clock says it is due');
           equal(p.lastIncomeUpdate.getTime(), future.getTime(), 'lastIncomeUpdate is the game time');
           gold = p.gold;
-          dIncome.collectCastleIncome();
+          dTest.settle(dIncome.collectCastleIncome());
           equal(w.player(0).gold, gold, 'not paid again at the same game time');
           dClock.advance(_gs.castles(w.gameId, 'incomeInterval') + 1);
-          dIncome.collectCastleIncome();
+          dTest.settle(dIncome.collectCastleIncome());
           assert(w.player(0).gold > gold, 'paid again once the interval has passed in game time');
 
           // a path that moved a minute ago by the game clock is not due yet

@@ -224,6 +224,36 @@ if (Meteor.isServer) {
         }
       });
 
+      // upgrade PR 10
+      run('dMarket: resourcesToGoldAsync gives what resourcesToGold gives, and refuses what it refuses', async function() {
+        var w = dTest.buildGameWorld({players: 1});
+        try {
+          var cases = [{}, {gold: 12.5}, {grain: 1}, {grain: 3, lumber: 0.25, ore: 7, wool: 1, clay: 2, glass: 9, gold: 4},
+            {grain: 1e6, gold: 0}, {wool: 0, clay: 0}, {grain: 5, notAResource: 99}];
+          _s.market.types.forEach(function(type) { var r = {}; r[type] = 3.3; cases.push(r); });
+          for (var resources of cases) {
+            equal(await dMarket.resourcesToGoldAsync(w.gameId, resources), dMarket.resourcesToGold(w.gameId, resources), JSON.stringify(resources));
+          }
+          equal(await dMarket.resourcesToGoldAsync('noSuchGame', {grain: 5, gold: 2}), 2, 'no such game: only the gold');
+          var refused = 0;
+          for (var bad of [[w.gameId, {grain: -1}], [w.gameId, {ore: 'x'}], [w.gameId, {wool: NaN}], [1, {grain: 1}]]) {
+            var syncError = null, asyncError = null;
+            try { dMarket.resourcesToGold.apply(null, bad); } catch (e) { syncError = e; }
+            try { await dMarket.resourcesToGoldAsync.apply(null, bad); } catch (e) { asyncError = e; }
+            equal(!!asyncError, !!syncError, JSON.stringify(bad) + ' refused by both or neither');
+            if (syncError) {
+              refused++;
+              equal(asyncError.message, syncError.message, JSON.stringify(bad) + ' with the same error');
+            } else {
+              equal(await dMarket.resourcesToGoldAsync.apply(null, bad), dMarket.resourcesToGold.apply(null, bad), JSON.stringify(bad) + ' gives the same');
+            }
+          }
+          assert(refused >= 1, 'some are refused (' + refused + ')');
+        } finally {
+          w.cleanup();
+        }
+      });
+
       run('dMarket: the async twins accept and refuse the same arguments, with the same errors', async function() {
         var w = dTest.buildGameWorld({players: 1});
         try {
@@ -318,6 +348,33 @@ if (Meteor.isServer) {
       });
 
       // --- adding jobs from async code (since upgrade PR 8) ---
+
+      // upgrade PR 10: the income jobs' bulk writes
+      run('income: dIncome.executeBulk writes a bulk op, and logs a failed one instead of throwing, as its callbacks did', function() {
+        var ids = ['execBulk_' + Random.id(6), 'execBulk_' + Random.id(6)];
+        try {
+          var bulk = Markethistory.rawCollection().initializeOrderedBulkOp();
+          bulk.insert({_id: ids[0], quantity: 1});
+          var logged = captureErrors(function() { return dIncome.executeBulk(bulk); });
+          equal(logged.length, 0, 'nothing logged');
+          equal(Markethistory.find({_id: ids[0]}).count(), 1, 'written');
+
+          // the second insert has the same _id, so the ordered bulk stops there
+          var failing = Markethistory.rawCollection().initializeOrderedBulkOp();
+          failing.insert({_id: ids[1], quantity: 1});
+          failing.insert({_id: ids[1], quantity: 2});
+          failing.insert({_id: ids[0] + 'x', quantity: 3});
+          var result = 'not settled';
+          logged = captureErrors(function() { return dIncome.executeBulk(failing).then(function(r) { result = r; }); });
+          equal(result, undefined, 'resolves');
+          equal(logged.length, 1, 'the error is logged');
+          assert(/E11000|duplicate key/.test(logged[0]), 'the duplicate key: ' + logged[0]);
+          equal(Markethistory.find({_id: ids[1]}).fetch().map(function(d) { return d.quantity; }).join(), '1', 'the writes before it are kept');
+          equal(Markethistory.find({_id: ids[0] + 'x'}).count(), 0, 'the ones after it are not made');
+        } finally {
+          Markethistory.remove({_id: {$in: ids.concat([ids[0] + 'x'])}});
+        }
+      });
 
       run('queue: Queues.addAsyncOrLog logs a job it can\'t add and resolves with false, as Queues.add only logged it', function() {
         var addAsync = Queues.addAsync;

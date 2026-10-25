@@ -335,7 +335,7 @@ if (Meteor.isServer) {
           let lords = makeLords(game, numLords);
           let f = villageFixture(game, 0, 0, lords);
 
-          dIncome.collectVillageIncome();
+          dTest.settle(dIncome.collectVillageIncome());
 
           let income = Villages.findOne(f.villageId).income;
           assert(income && income.grain > 0, 'village collected some income');
@@ -366,7 +366,7 @@ if (Meteor.isServer) {
         let v1 = villageFixture(game, 10, 10, lords);
         let v2 = villageFixture(game, 20, 20, lords);
 
-        dIncome.collectVillageIncome();
+        dTest.settle(dIncome.collectVillageIncome());
 
         let b = Players.findOne(bystander);
         assert(!b.incomeFromVassals && !b.incomeFromVillages, 'player without a village or vassals is untouched');
@@ -393,7 +393,7 @@ if (Meteor.isServer) {
         let recentDate = new Date();
         Villages.update(recent.villageId, {$set: {lastIncomeUpdate: recentDate}});
 
-        dIncome.collectVillageIncome();
+        dTest.settle(dIncome.collectVillageIncome());
 
         assert(!Villages.findOne(building.villageId).income, 'village under construction not paid');
         equal(time(Villages.findOne(recent.villageId).lastIncomeUpdate), recentDate.getTime(), 'recent village not paid again');
@@ -410,7 +410,7 @@ if (Meteor.isServer) {
       try {
         delete global.percentPerLord;
         villageFixture(game, 0, 0, makeLords(game, 1));
-        dIncome.collectVillageIncome();
+        dTest.settle(dIncome.collectVillageIncome());
         equal(typeof global.percentPerLord, 'undefined', 'no global percentPerLord');
       } finally {
         delete global.percentPerLord;

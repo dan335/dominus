@@ -45,7 +45,8 @@ dManager.startGame = function(game, isTest) {
 
   console.log('--- starting game '+ game.name +' ---');
 
-  dMarket.createMarket(game._id);
+  // async since upgrade PR 10; this function converts in PR 15
+  Promise.await(dMarket.createMarket(game._id));
 
   // get players who signed up
   let signups = Gamesignups.find({gameId:game._id}).fetch();

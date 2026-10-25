@@ -48,12 +48,12 @@ DDPRateLimiter.addRule(capitalsOnScreenSubRule, 5, 5000);
 
 
 // public so logged out spectators can watch
-Meteor.publish('capitalForHexInfo', function(id) {
+Meteor.publish('capitalForHexInfo', async function(id) {
 	check(id, Match.OneOf(String, null));
 	if (Match.test(id, String)) {
 		var self = this;
 		var query = Capitals.find(id, {fields:capitalRightPanelFields});
-		Mongo.Collection._publishCursor(query, self, 'right_panel_capitals');
+		await Mongo.Collection._publishCursor(query, self, 'right_panel_capitals');
 		return self.ready();
 	} else {
 		this.ready()

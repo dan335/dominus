@@ -49,7 +49,8 @@ dCastles.create = function(gameId, user_id, isTest) {
 
         // create capital if country was added
         if (countryId) {
-          var capital = dCapitals.createCapital(gameId, countryId);
+          // async since upgrade PR 10; this function converts in PR 11
+          var capital = Promise.await(dCapitals.createCapital(gameId, countryId));
           if (capital) {
             Mapmaker.buildingAdded(gameId, capital.x, capital.y);
           }
@@ -62,7 +63,8 @@ dCastles.create = function(gameId, user_id, isTest) {
 
       // create capital if country was added
       if (countryId) {
-        var capital = dCapitals.createCapital(gameId, countryId);
+        // async since upgrade PR 10; this function converts in PR 11
+        var capital = Promise.await(dCapitals.createCapital(gameId, countryId));
         if (capital) {
           Mapmaker.buildingAdded(gameId, capital.x, capital.y);
         }

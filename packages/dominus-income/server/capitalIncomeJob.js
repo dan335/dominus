@@ -1,20 +1,17 @@
-Future = Npm.require('fibers/future');
-
-
 if (process.env.DOMINUS_WORKER == 'true') {
-	Queues.collectCapitalIncome.process(Meteor.bindEnvironment(function(job) {
+	Queues.collectCapitalIncome.process(async function(job) {
 
     let bulkCapitals = Capitals.rawCollection().initializeOrderedBulkOp();
     let bulkPlayers = Players.rawCollection().initializeOrderedBulkOp();
     let hasBulkOp = false;
 		let hasBulkPlayerOp = false;
 
-    Games.find({hasStarted:true, hasEnded:false}, {fields: {_id:1}}).forEach(function(game) {
+    for (const game of await Games.find({hasStarted:true, hasEnded:false}, {fields: {_id:1}}).fetchAsync()) {
 
       const interval = _gs.capitals(game._id, 'incomeInterval');
       const cutoff = moment(dClock.now()).subtract(interval, 'ms').toDate();
       const capitalFields = {playerId:1, countryId:1};
-      Capitals.find({gameId:game._id, lastIncomeUpdate: {$lte:cutoff}}, {fields:capitalFields}).forEach(function(capital) {
+      for (const capital of await Capitals.find({gameId:game._id, lastIncomeUpdate: {$lte:cutoff}}, {fields:capitalFields}).fetchAsync()) {
 
 				// how muc income capital collected
 				let capitalIncome = {};
@@ -28,15 +25,15 @@ if (process.env.DOMINUS_WORKER == 'true') {
 				// income from villages
 				const villageFind = {countryId:capital.countryId, under_construction:false};
 				const villageOptions = {fields: {income:1}};
-				Villages.find(villageFind, villageOptions).forEach(function(village) {
+				for (const village of await Villages.find(villageFind, villageOptions).fetchAsync()) {
 					_s.market.types_plus_gold.forEach(function(type) {
 						capitalIncome[type] += village.income[type] * _s.capitals.villagePercentageIncome;
 						check(capitalIncome[type], validNumber);
 					})
-				});
+				}
 
 				// worth in gold
-				capitalIncome.worth = dMarket.resourcesToGold(game._id, capitalIncome);
+				capitalIncome.worth = await dMarket.resourcesToGoldAsync(game._id, capitalIncome);
 
 				// update capital with income
 				// always do this even if a player doesn't own capital
@@ -60,31 +57,15 @@ if (process.env.DOMINUS_WORKER == 'true') {
 					bulkPlayers.find({_id:capital.playerId}).updateOne({$inc:playerIncomeInc});
 					hasBulkPlayerOp = true;
 				}
-      });
-    });
+      }
+    }
 
 		if (hasBulkOp) {
-			var capFuture = new Future();
-      bulkCapitals.execute({}, function(error, result) {
-        if (error) {
-          console.error(error);
-        }
-        capFuture.return(result);
-      });
-      var result = capFuture.wait();
+			await dIncome.executeBulk(bulkCapitals);
 		}
 
 		if (hasBulkPlayerOp) {
-			var playerFuture = new Future();
-      bulkPlayers.execute({}, function(error, result) {
-        if (error) {
-          console.error(error);
-        }
-        playerFuture.return(result);
-      });
-      var result = playerFuture.wait();
+			await dIncome.executeBulk(bulkPlayers);
 		}
-
-		return Promise.resolve();
-  }));
+  });
 }
