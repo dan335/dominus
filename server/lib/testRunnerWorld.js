@@ -128,7 +128,7 @@ if (Meteor.isServer) {
     w.users.forEach(function(user) {
       for (var tries = 0; tries < 3 && !Players.findOne({gameId: w.gameId, userId: user._id}); tries++) {
         console.log('buildGameWorld: placing ' + user.username + ' again');
-        dCastles.createPlayer(w.gameId, user._id, user.username, false);
+        dTest.settle(dCastles.createPlayer(w.gameId, user._id, user.username, false));
       }
     });
 

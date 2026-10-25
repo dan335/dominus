@@ -3,28 +3,28 @@ dCastles = {};
 
 
 
-dCastles.create = function(gameId, user_id, isTest) {
+dCastles.create = async function(gameId, user_id, isTest) {
   check(user_id, String);
   check(gameId, String);
 
-  if (Castles.find({gameId:gameId, user_id:user_id}).count()) {
+  if (await Castles.find({gameId:gameId, user_id:user_id}).countAsync()) {
     console.error('user already has a castle', gameId, user_id, isTest)
     return false;
   }
 
-  let player = Players.findOne({gameId:gameId, userId:user_id}, {fields: {username:1}});
+  let player = await Players.findOneAsync({gameId:gameId, userId:user_id}, {fields: {username:1}});
   if (!player) {
     console.error('user does not have player in castles.create', gameId, user_id, isTest);
     return false;
   }
 
-  let game = Games.findOne(gameId, {fields: {isKingOfHill:1}});
+  let game = await Games.findOneAsync(gameId, {fields: {isKingOfHill:1}});
   if (!game) {
     console.error('No game found in dCastles.create');
     return false;
   }
 
-  let user = Meteor.users.findOne(user_id, {fields: {male:1}})
+  let user = await Meteor.users.findOneAsync(user_id, {fields: {male:1}})
   if (!user) {
     console.error('create_castle called but no user found for this id', gameId, user_id, isTest);
     return false;
@@ -40,7 +40,7 @@ dCastles.create = function(gameId, user_id, isTest) {
 
     if (game.isKingOfHill) {
 
-      var country = Countries.findOne({gameId:gameId});
+      var country = await Countries.findOneAsync({gameId:gameId});
 
       if (country) {
         var result = Mapmaker.addToCountry(gameId, country._id, isTest);
@@ -49,8 +49,7 @@ dCastles.create = function(gameId, user_id, isTest) {
 
         // create capital if country was added
         if (countryId) {
-          // async since upgrade PR 10; this function converts in PR 11
-          var capital = Promise.await(dCapitals.createCapital(gameId, countryId));
+          var capital = await dCapitals.createCapital(gameId, countryId);
           if (capital) {
             Mapmaker.buildingAdded(gameId, capital.x, capital.y);
           }
@@ -63,8 +62,7 @@ dCastles.create = function(gameId, user_id, isTest) {
 
       // create capital if country was added
       if (countryId) {
-        // async since upgrade PR 10; this function converts in PR 11
-        var capital = Promise.await(dCapitals.createCapital(gameId, countryId));
+        var capital = await dCapitals.createCapital(gameId, countryId);
         if (capital) {
           Mapmaker.buildingAdded(gameId, capital.x, capital.y);
         }
@@ -98,14 +96,14 @@ dCastles.create = function(gameId, user_id, isTest) {
     castle[type] = _gs.castles(gameId, 'startingGarrison.'+type);
   })
 
-  castle._id = Castles.insert(castle);
+  castle._id = await Castles.insertAsync(castle);
 
   if (!castle._id) {
     console.error('could not insert castle in dCastles.create');
     return false;
   }
 
-  Players.update(player._id, {$set: {x:coords.x, y:coords.y, castle_id:castle._id}});
+  await Players.updateAsync(player._id, {$set: {x:coords.x, y:coords.y, castle_id:castle._id}});
 
   Mapmaker.buildingAdded(gameId, coords.x, coords.y);
 
@@ -124,19 +122,17 @@ dCastles.createName = function() {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.createPlayer.process(Meteor.bindEnvironment(function(job) {
+  Queues.createPlayer.process(async function(job) {
     check(job.data.gameId, String);
 
-    let playerId = dCastles.createPlayer(job.data.gameId, job.data.userId, job.data.username, job.data.makePro);
+    let playerId = await dCastles.createPlayer(job.data.gameId, job.data.userId, job.data.username, job.data.makePro);
     if (playerId) {
-      Queues.add('removeDominus', {gameId:job.data.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, job.data.gameId);
-      Queues.add('initDailystatsForNewUser', {playerId:playerId, userId:job.data.userId, gameId:job.data.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, false);
-      Queues.add('setupEveryoneChatroom', {gameId:job.data.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, job.data.gameId);
-      Queues.add('generateTree', {gameId:job.data.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, job.data.gameId);
+      await Queues.addAsyncOrLog('removeDominus', {gameId:job.data.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, job.data.gameId);
+      await Queues.addAsyncOrLog('initDailystatsForNewUser', {playerId:playerId, userId:job.data.userId, gameId:job.data.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, false);
+      await Queues.addAsyncOrLog('setupEveryoneChatroom', {gameId:job.data.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, job.data.gameId);
+      await Queues.addAsyncOrLog('generateTree', {gameId:job.data.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, job.data.gameId);
     }
-
-    return Promise.resolve();
-  }));
+  });
 }
 
 
@@ -145,13 +141,13 @@ if (process.env.DOMINUS_WORKER == 'true') {
 // called from join game method when someone joins game after it has started
 // also called from startGame just before game has started
 // makePro = true will make player pro even if user is not pro
-dCastles.createPlayer = function(gameId, userId, username, makePro) {
+dCastles.createPlayer = async function(gameId, userId, username, makePro) {
   check(gameId, String);
   check(userId, String);
   check(username, String);
   check(makePro, Boolean);
 
-  let game = Games.findOne(gameId, {fields: {dominusAchieved:1, isProOnly:1, name:1}});
+  let game = await Games.findOneAsync(gameId, {fields: {dominusAchieved:1, isProOnly:1, name:1}});
 	if (!game) {
 		console.error('No game found in dCastles.createPlayer', userId, gameId)
 		return false;
@@ -163,13 +159,13 @@ dCastles.createPlayer = function(gameId, userId, username, makePro) {
   }
 
   // make sure user doesn't already have player for this Game
-  let alreadyInGame = Players.find({userId:userId, gameId:gameId}).count();
+  let alreadyInGame = await Players.find({userId:userId, gameId:gameId}).countAsync();
   if (alreadyInGame) {
 		console.error('Player is already in game in dCastles.createPlayer', userId, gameId)
     return false;
   }
 
-  let user = Meteor.users.findOne(userId, {fields:{male:1, pro:1, username:1, verifiedEmail:1}});
+  let user = await Meteor.users.findOneAsync(userId, {fields:{male:1, pro:1, username:1, verifiedEmail:1}});
 
 	if (!user) {
 		console.error('No user found in dCastles.createPlayer', userId, gameId)
@@ -284,17 +280,17 @@ dCastles.createPlayer = function(gameId, userId, username, makePro) {
     }
   }
 
-  player._id = Players.insert(player);
+  player._id = await Players.insertAsync(player);
 
   if (!player._id) {
     console.error('Error inserting player.', gameId, userId, username);
     return false;
   }
 
-  let castleId = dCastles.create(gameId, userId, false);
+  let castleId = await dCastles.create(gameId, userId, false);
 
   if (!castleId) {
-    Players.remove(player._id);
+    await Players.removeAsync(player._id);
     console.error('Error creating castle.', gameId, userId, username)
     return false;
   }

@@ -377,6 +377,100 @@ if (Meteor.isServer) {
         });
 
 
+        // change_username and the coords and minimap settings run as a
+        // simulation too. As with the markers: each is sync, and ends where
+        // the real calls do, less what only the server does (the alert, the
+        // tree job, and refusing a name another player has).
+        test('name and settings simulations: each is sync, and ends where the real calls do', function() {
+          var user = w.users[0]._id;
+          var me = w.players[0]._id;
+          var simulation = {userId: user, isSimulation: true, connection: null, unblock: function() {}, setUserId: function() {}};
+          var simulate = function(name, args) {
+            var returned = Meteor.server.method_handlers[name].apply(simulation, args);
+            assert(!dTest.isPromise(returned), name + ': the simulation is sync');
+            equal(returned, undefined, name + ' simulation returns nothing');
+          };
+          var real = function(name, args) {
+            dTest.ddp.resetRateLimits();
+            equal(clients[0].call.apply(null, [name].concat(args)), undefined, name + ' returns nothing');
+          };
+          var rooms = [];
+          var village = null;
+          var state = function() {
+            return JSON.stringify({
+              player: _.pick(w.player(0), 'username', 'sp_show_coords', 'sp_show_minimap'),
+              castle: w.castle(0).username,
+              village: Villages.findOne(village._id).username,
+              armies: Armies.find({playerId: me}).map(function(a) { return a.username; }),
+              rooms: rooms.map(function(id) { var r = Rooms.findOne(id); return [r.name, r.memberData]; })
+            });
+          };
+          var reset = function() {
+            Players.update(me, {$set: {username: usernames[0], sp_show_coords: false, sp_show_minimap: true}});
+            Castles.update({playerId: me}, {$set: {username: usernames[0]}});
+            Villages.update(village._id, {$set: {username: usernames[0]}});
+            Armies.update({playerId: me}, {$set: {username: usernames[0]}}, {multi: true});
+            Rooms.update(rooms[0], {$set: {name: 'King ' + usernames[0] + ' and Vassals'}});
+            Rooms.update({_id: {$in: rooms}}, {$set: {memberData: [{_id: me, username: usernames[0]}, {_id: w.players[1]._id, username: usernames[1]}]}}, {multi: true});
+          };
+          var name = 'Sim name ' + Random.id(4).replace(/[^a-zA-Z0-9]/g, 'x');
+
+          var play = function(call) {
+            reset();
+            call('show_coords', [me]);
+            call('hide_minimap', [me]);
+            var flags = state();
+            call('change_username', [me, '  ' + name + '%%']);
+            var renamed = state();
+            call('hide_coords', [me]);
+            call('show_minimap', [me]);
+            return [flags, renamed, state()];
+          };
+
+          try {
+            Rooms.remove({gameId: w.gameId, owner: me, type: 'king'});
+            rooms.push(Rooms.insert({gameId: w.gameId, type: 'king', owner: me, name: 'x', members: [me, w.players[1]._id], admins: [], memberData: []}));
+            rooms.push(Rooms.insert({gameId: w.gameId, type: 'normal', owner: w.players[1]._id, name: 'Chat', members: [me, w.players[1]._id], admins: [], memberData: []}));
+            var at = w.freeHex();
+            village = {_id: Villages.insert(_.extend({gameId: w.gameId, x: at.x, y: at.y, playerId: me, user_id: user, username: usernames[0],
+              name: 'Simville', level: 1, under_construction: false, created_at: new Date()}, dTest.soldierCounts({})))};
+            w.makeArmy(0, {footmen: 1});
+
+            // the tree job the rename adds is recorded, not run, so it can't change the rooms
+            var fromServer, fromSimulations;
+            var jobs = dTest.recordJobs(function() {
+              fromServer = play(real);
+              fromSimulations = play(simulate);
+            });
+            equal(_.pluck(jobs, 'name').join(), 'generateTree', 'the real rename adds the tree job; the simulation adds none');
+            equal(fromSimulations[0], fromServer[0], 'after showing the coords and hiding the minimap');
+            equal(fromSimulations[1], fromServer[1], 'after changing the name');
+            equal(fromSimulations[2], fromServer[2], 'after hiding the coords and showing the minimap');
+            var renamed = JSON.parse(fromServer[1]);
+            equal(JSON.stringify([renamed.player, renamed.castle, renamed.village, renamed.armies, renamed.rooms[0][0], renamed.rooms[1][1][0].username]),
+              JSON.stringify([{username: name, sp_show_coords: true, sp_show_minimap: false}, name, name, [name], 'King ' + name + ' and Vassals', name]),
+              'the name is copied everywhere');
+
+            // a refused simulation throws, as the real call does
+            reset();
+            [[me, 'ab'], [me, 'Danimal'], [me, usernames[0]], [w.players[1]._id, 'Someone Else']].forEach(function(args) {
+              var fromSimulation = dTest.throws(function() { return simulate('change_username', args); });
+              var fromReal = dTest.throws(function() { return real('change_username', args); });
+              assert(fromReal, JSON.stringify(args) + ' is refused');
+              equal(fromSimulation && fromSimulation.error, fromReal && fromReal.error, JSON.stringify(args) + ': refused the same way');
+            });
+            // only the server knows every player's name
+            equal(dTest.throws(function() { return real('change_username', [me, usernames[1]]); }).error,
+              'A player exists with this username, try another.', 'a taken name is refused by the server');
+            equal(dTest.throws(function() { return simulate('change_username', [me, usernames[1]]); }), null, 'but not by the simulation');
+          } finally {
+            reset();
+            Rooms.remove({_id: {$in: rooms}});
+            if (village) Villages.remove(village._id);
+          }
+        });
+
+
         // --- deleteGameAccount (last: it removes player 2) ---
 
         test('deleteGameAccount: you leave the game, with your castle and armies', function() {

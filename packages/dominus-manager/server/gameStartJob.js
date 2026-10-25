@@ -60,7 +60,8 @@ dManager.startGame = function(game, isTest) {
     if (signup.usedToken) {
       makePro = true;
     }
-    let playerId = dCastles.createPlayer(game._id, signup.userId, signup.username, makePro);
+    // async since upgrade PR 11; this function converts in PR 15
+    let playerId = Promise.await(dCastles.createPlayer(game._id, signup.userId, signup.username, makePro));
     if (playerId && !isTest) {
       Queues.add('initDailystatsForNewUser', {attempts:10, backoff:{type:'fixed', delay:3000}, playerId:playerId, userId:signup.userId, gameId:game._id}, {delay:0, timeout:1000*60*5}, playerId);
     }

@@ -74,7 +74,7 @@ if (Meteor.isServer) {
           equal(loggedOut.call('coords_to_id', w.gameId, 5000, 5000, 'hex'), false, 'no hex there: false');
           equal(loggedOut.call('coords_to_id', w.gameId, hex.x, hex.y, 'castle'), false, 'other types: false');
 
-          var expected = dVillages.resourcesFromSurroundingHexes(w.gameId, hex.x, hex.y, _s.villages.num_rings_village);
+          var expected = dTest.settle(dVillages.resourcesFromSurroundingHexes(w.gameId, hex.x, hex.y, _s.villages.num_rings_village));
           equal(JSON.stringify(loggedOut.call('getResourcesGatheredAtHex', w.gameId, hex.x, hex.y)), JSON.stringify(expected),
             'getResourcesGatheredAtHex');
 

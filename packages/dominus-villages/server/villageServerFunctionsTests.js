@@ -68,7 +68,7 @@ Tinytest.add('villages.buildAndDestroy', function(test) {
   test.equal(village.footmen, soldiers.footmen);
 
   // destroy
-  dVillages.destroyVillage(village._id);
+  Promise.await(dVillages.destroyVillage(village._id));
   test.equal(Villages.find({gameId:gameId, x:hex.x, y:hex.y}).count(), 0, 'village destroyed');
   test.equal(Armies.find({gameId:gameId, x:hex.x, y:hex.y}).count(), 1, 'army created after village destroyed');
 
@@ -81,6 +81,6 @@ Tinytest.add('villages.buildAndDestroy', function(test) {
   Meteor.call('createArmyFromBuilding', gameId, 'village', village._id, soldiers);
   test.equal(Villages.findOne({gameId:gameId}).footmen, 0, 'army removed from village');
   test.equal(Armies.find({gameId:gameId, x:hex.x, y:hex.y}).count(), 1, 'army created from village');
-  dVillages.destroyVillage(village._id);
+  Promise.await(dVillages.destroyVillage(village._id));
   test.equal(Villages.find({gameId:gameId, x:hex.x, y:hex.y}).count(), 0, 'village destroyed');
 });

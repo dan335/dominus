@@ -1,11 +1,11 @@
 dVillages = {};
 
 
-dVillages.finishBuildingVillage = function(villageId) {
+dVillages.finishBuildingVillage = async function(villageId) {
   check(villageId, String);
 
   var options = {fields:{x:1, y:1, playerId:1}};
-  var village = Villages.findOne(villageId, options);
+  var village = await Villages.findOneAsync(villageId, options);
   if (!village) {
     return false;
   }
@@ -15,7 +15,7 @@ dVillages.finishBuildingVillage = function(villageId) {
   _s.armies.types.forEach(function(type) {
     armyOptions.fields[type] = 1;
   })
-  Armies.find({x:village.x, y:village.y, playerId: village.playerId}, armyOptions).forEach(function(army) {
+  for (const army of await Armies.find({x:village.x, y:village.y, playerId: village.playerId}, armyOptions).fetchAsync()) {
     if (dArmies.isStopped(army._id)) {
 
       var inc = {};
@@ -23,14 +23,14 @@ dVillages.finishBuildingVillage = function(villageId) {
         inc[type] = army[type];
       })
 
-      Villages.update(villageId, {$inc:inc})
+      await Villages.updateAsync(villageId, {$inc:inc})
       dArmies.destroyArmy(army._id);
     }
-  });
+  }
 
   // increment level
   // remove under construction flag
-  Villages.update(villageId, {$set: {under_construction:false}, $inc: {level:1}});
+  await Villages.updateAsync(villageId, {$set: {under_construction:false}, $inc: {level:1}});
 
   // #TODO:170 send notification
 }
@@ -42,25 +42,24 @@ dVillages.finishBuildingVillage = function(villageId) {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.villageConstructionJob.process(Meteor.bindEnvironment(function(job) {
-    dVillages.villageConstructionJob(job.data.gameId);
-    return Promise.resolve();
-  }));
+  Queues.villageConstructionJob.process(async function(job) {
+    await dVillages.villageConstructionJob(job.data.gameId);
+  });
 }
 
 
-dVillages.villageConstructionJob = function(gameId) {
+dVillages.villageConstructionJob = async function(gameId) {
   var find = {under_construction:true, gameId:gameId};
   var options = {fields: {gameId:1, level:1, constructionStarted:1}};
-	Villages.find(find, options).forEach(function(village) {
+	for (const village of await Villages.find(find, options).fetchAsync()) {
     let path = 'cost.level'+(village.level+1)+'.timeToBuild';
     let timeToBuild = _gs.villages(village.gameId, path);
 		//var timeToBuild = _s.villages.cost['level'+(village.level+1)].timeToBuild;
 		var finishAt = moment(new Date(village.constructionStarted)).add(timeToBuild, 'ms');
 		if (moment(dClock.now()).isAfter(finishAt)) {
-			dVillages.finishBuildingVillage(village._id);
+			await dVillages.finishBuildingVillage(village._id);
 		}
-	})
+	}
 }
 
 

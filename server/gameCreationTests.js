@@ -181,7 +181,7 @@ if (Meteor.isServer) {
         Mapmaker.eraseMap(game._id);
         _addTestCountry(game._id);
 
-        let playerId = dCastles.createPlayer(game._id, user._id, user.username, false);
+        let playerId = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
         _testAssert(!!playerId, 'playerId returned');
         let p = Players.findOne(playerId);
         _testEqual(p.gold, _s.init.startingResources.gold, 'gold');
@@ -201,7 +201,7 @@ if (Meteor.isServer) {
         Mapmaker.eraseMap(game._id);
         _addTestCountry(game._id);
 
-        let playerId = dCastles.createPlayer(game._id, user._id, user.username, false);
+        let playerId = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
         _testAssert(!!playerId, 'playerId returned');
         let p = Players.findOne(playerId);
         _testEqual(p.gold, 10000, 'gold');
@@ -221,9 +221,9 @@ if (Meteor.isServer) {
         Mapmaker.eraseMap(game._id);
         _addTestCountry(game._id);
 
-        let id1 = dCastles.createPlayer(game._id, user._id, user.username, false);
+        let id1 = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
         _testAssert(!!id1, 'first succeeds');
-        let id2 = dCastles.createPlayer(game._id, user._id, user.username, false);
+        let id2 = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
         _testAssert(!id2, 'second returns false');
         _testEqual(Players.find({gameId: game._id}).count(), 1, 'one player');
         _testCleanup(game._id);
@@ -233,7 +233,7 @@ if (Meteor.isServer) {
       run('createPlayer rejects when dominusAchieved', function() {
         let game = _createTestGame({hasStarted: true, dominusAchieved: true});
         let user = _createTestUser();
-        let playerId = dCastles.createPlayer(game._id, user._id, user.username, false);
+        let playerId = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
         _testAssert(!playerId, 'returns false');
         _testCleanup(game._id);
         _testCleanupUser(user._id);
@@ -245,7 +245,7 @@ if (Meteor.isServer) {
         Mapmaker.eraseMap(game._id);
         _addTestCountry(game._id);
 
-        let playerId = dCastles.createPlayer(game._id, user._id, user.username, false);
+        let playerId = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
         let p = Players.findOne(playerId);
         _testAssert(p.x !== null, 'x set');
         _testAssert(p.y !== null, 'y set');
@@ -261,7 +261,7 @@ if (Meteor.isServer) {
       run('createPlayer rejects unverified email', function() {
         let game = _createTestGame({hasStarted: true});
         let user = _createTestUser({verifiedEmail: false});
-        let playerId = dCastles.createPlayer(game._id, user._id, user.username, false);
+        let playerId = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
         _testAssert(!playerId, 'returns false');
         _testCleanup(game._id);
         _testCleanupUser(user._id);
@@ -585,7 +585,7 @@ if (Meteor.isServer) {
           vassals: [], allies_above: [pId, 'ghost-missing-lord'], allies_below: [], team: [], castle_id: 'cV'});
         Players.update(pId, {$set: {vassals: [vId], allies_below: [vId]}});
 
-        dGame.deleteGameAccount(pId);
+        dTest.settle(dGame.deleteGameAccount(pId));
 
         let v = Players.findOne(vId, {fields: {is_king: 1, lord: 1}});
         _testAssert(!!v, 'vassal still exists');
