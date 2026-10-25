@@ -58,7 +58,7 @@ Template.settings_panel.events({
 		$(button).html('<i class="fa fa-refresh fa-spin"></i> Please Wait');
 
 		if (gameId) {
-			Meteor.call('activateProToken', gameId, function(error, result) {
+			dFunc.callWithCallback('activateProToken', [gameId], function(error, result) {
 				if (error) {
 					$(alert).show();
 					$(alert).html(error.error);
@@ -93,9 +93,9 @@ Template.settings_panel.events({
 		let playerId = Session.get('playerId');
 		let player = Players.findOne(playerId, {fields: {sp_show_coords:1}});
 		if (player.sp_show_coords) {
-			Meteor.call('hide_coords', playerId)
+			dFunc.callAndForget('hide_coords', playerId)
 		} else {
-			Meteor.call('show_coords', playerId)
+			dFunc.callAndForget('show_coords', playerId)
 		}
 	},
 
@@ -104,9 +104,9 @@ Template.settings_panel.events({
 		let playerId = Session.get('playerId');
 		let player = Players.findOne(playerId, {fields: {sp_show_minimap:1}});
 		if (player.sp_show_minimap) {
-			Meteor.call('hide_minimap', playerId)
+			dFunc.callAndForget('hide_minimap', playerId)
 		} else {
-			Meteor.call('show_minimap', playerId)
+			dFunc.callAndForget('show_minimap', playerId)
 		}
 	},
 
@@ -132,7 +132,7 @@ Template.settings_panel.events({
 			$(button).attr('disabled', true)
 			$(button).html('<i class="fa fa-refresh fa-spin"></i> Please Wait')
 
-			Meteor.apply('change_username', [playerId, username], {}, function(error, result) {
+			dFunc.callWithCallback('change_username', [playerId, username], function(error, result) {
 				if (error) {
 					$(alert).show()
 					$(alert).html(error.error)

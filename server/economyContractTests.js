@@ -354,6 +354,118 @@ if (Meteor.isServer) {
           dTest.assertUnchanged(w.gameId, before, 'a refused activation changed the game');
         });
 
+
+
+        // --- simulations ---
+
+        // The browser runs send_gold_to, buildVillage, upgradeVillage,
+        // set_unit_image and activateProToken as a simulation first, a sync
+        // copy of the change behind this.isSimulation; the server runs the
+        // async part the method returns. These run the simulation here, on
+        // the server's collections, and check that it is sync and ends where
+        // the real calls do, less what only the server does: the game's tax,
+        // the alerts, a village's country, and the army that joins it. As in
+        // server/playerContractTests.js, the handler is called with the
+        // invocation as this.
+        test('castle, village and store simulations: each is sync, and ends where the real calls do', function() {
+          var at = grainHex();
+          var invocation = function(i) {
+            return {userId: w.users[i]._id, isSimulation: true, connection: null, unblock: function() {}, setUserId: function() {}};
+          };
+          var simulate = function(i, name, args) {
+            var returned = Meteor.server.method_handlers[name].apply(invocation(i), args);
+            assert(!dTest.isPromise(returned), name + ': the simulation is sync');
+            return returned;
+          };
+          var real = function(i, name, args) {
+            dTest.ddp.resetRateLimits();
+            return clients[i].call.apply(null, [name].concat(args));
+          };
+          var removeVillages = function() {
+            Villages.find({gameId: w.gameId}).forEach(function(v) {
+              Villages.remove(v._id);
+              Mapmaker.buildingRemoved(w.gameId, v.x, v.y);
+            });
+          };
+          var state = function() {
+            var resources = function(i) { return _.pick(w.player(i), _s.market.types_plus_gold.concat(['pro'])); };
+            return JSON.stringify({
+              p0: resources(0), p1: resources(1),
+              user: _.pick(Meteor.users.findOne(w.users[0]._id), 'proTokens'),
+              image: w.castle(0).image,
+              villages: Villages.find({gameId: w.gameId}).map(function(v) {
+                return _.omit(v, ['_id', 'name', 'created_at', 'constructionStarted', 'lastIncomeUpdate', 'countryId'].concat(_s.armies.types));
+              })
+            });
+          };
+          var reset = function() {
+            w.removeArmies();
+            removeVillages();
+            w.setResources(0, allResources(1000));
+            Players.update(w.players[0]._id, {$set: {gold: 1000, allies_below: [w.players[1]._id], pro: false}});
+            w.setResources(1, {gold: 10});
+            Meteor.users.update(w.users[0]._id, {$set: {proTokens: 1, purchases: {castles: ['castle_02_keep']}}});
+            Castles.update(w.castles[0]._id, {$set: {image: _s.castles.startingImage}});
+            w.makeArmy(0, {footmen: 2}, at);
+          };
+
+          var play = function(call) {
+            reset();
+            var returned = [];
+            returned.push(call(0, 'send_gold_to', [w.gameId, w.players[1]._id, '100']));
+            returned.push(call(0, 'set_unit_image', [w.castles[0]._id, 'castles', 'castle_02_keep', w.gameId]));
+            returned.push(call(0, 'activateProToken', [w.gameId]));
+            assert(Villages.findOne(call(0, 'buildVillage', [w.gameId, at.x, at.y])), 'buildVillage returns the village');
+            var built = state();
+            var village = Villages.findOne({gameId: w.gameId});
+            Villages.update(village._id, {$set: {under_construction: false, level: 1}});
+            returned.push(call(0, 'upgradeVillage', [w.gameId, village._id]));
+            return [JSON.stringify(returned), built, state()];
+          };
+
+          try {
+            var fromServer = play(real);
+            var fromSimulations = play(simulate);
+            equal(fromSimulations[0], fromServer[0], 'what each returns');
+            equal(fromServer[0], JSON.stringify([100 - 100 * _s.income.sendToVassalTax, true, undefined, true]), 'which is');
+            equal(fromSimulations[1], fromServer[1], 'after sending gold, setting the image, activating pro and building a village');
+            equal(fromSimulations[2], fromServer[2], 'after upgrading the village');
+            var built = JSON.parse(fromServer[1]);
+            equal(built.p0.pro + ',' + built.user.proTokens + ',' + built.image + ',' + built.villages.length,
+              'true,0,castle_02_keep,1', 'the calls did something');
+
+            // a refused simulation throws, as the real call does
+            reset();
+            var theirs = insertVillage(1, {level: 1});
+            var refusals = [
+              [0, 'send_gold_to', [w.gameId, w.players[2]._id, 10]],
+              [0, 'send_gold_to', [w.gameId, w.players[1]._id, 'lots']],
+              [0, 'set_unit_image', [w.castles[0]._id, 'castles', 'castle_03_skull', w.gameId]],
+              [0, 'set_unit_image', [w.castles[0]._id, 'banners', 'castle_02_keep', w.gameId]],
+              [2, 'activateProToken', [w.gameId]],
+              [1, 'buildVillage', [w.gameId, at.x, at.y]],
+              // someone else's: the method gate refuses a village that doesn't exist
+              [0, 'upgradeVillage', [w.gameId, theirs._id]]
+            ];
+            refusals.forEach(function(r) {
+              var fromSimulation = dTest.throws(function() { return simulate(r[0], r[1], r[2]); });
+              var fromReal = dTest.throws(function() { return real(r[0], r[1], r[2]); });
+              assert(fromReal, r[1] + ' ' + JSON.stringify(r[2]) + ' is refused');
+              equal(fromSimulation && fromSimulation.error, fromReal && fromReal.error, r[1] + ' ' + JSON.stringify(r[2]) + ': refused the same way');
+            });
+
+            // the server's part is a promise
+            var server = _.extend(invocation(0), {isSimulation: false});
+            var returned = Meteor.server.method_handlers.upgradeVillage.apply(server, [w.gameId, 'noSuchVillage']);
+            assert(dTest.isPromise(returned), 'the server\'s part is a promise');
+            equal(dTest.throws(function() { return returned; }).error, 'No village found.', 'that is refused');
+          } finally {
+            w.removeArmies();
+            removeVillages();
+            Meteor.users.update(w.users[0]._id, {$unset: {purchases: 1, proTokens: 1}});
+          }
+        });
+
       } finally {
         clients.forEach(function(client) { client.close(); });
         dTest.waitForJobs();

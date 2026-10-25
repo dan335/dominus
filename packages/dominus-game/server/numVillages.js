@@ -10,7 +10,7 @@ Meteor.startup(function() {
 	if (process.env.DOMINUS_WORKER == 'true') {
 
     let query = Villages.find({}, {fields: {gameId:1}});
-    query.observe({
+    query.observeAsync({
 
       added: function(doc) {
         if (_.has(numVillages, doc.gameId)) {
@@ -29,6 +29,8 @@ Meteor.startup(function() {
           console.error('tried to remove non-existant gameId from numVillages');
         }
       }
+    }).catch(function(error) {
+      console.error('could not watch villages for numVillages', error);
     });
 
   }
@@ -37,6 +39,13 @@ Meteor.startup(function() {
 
 
 var updateCount = _.debounce(function() {
+  writeCount().catch(function(error) {
+    console.error(error);
+  });
+}, 1000);
+
+
+var writeCount = async function() {
   var bulk = Games.rawCollection().initializeUnorderedBulkOp();
 	var hasBulkOp = false;
 
@@ -47,10 +56,6 @@ var updateCount = _.debounce(function() {
   })
 
   if (hasBulkOp) {
-		bulk.execute({}, function(error, result) {
-	    if (error) {
-	      console.error(error);
-	    }
-	  });
+		await bulk.execute();
 	}
-}, 1000);
+};

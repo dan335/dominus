@@ -112,7 +112,7 @@ Template.rp_village_upgrade.events({
       $(alert).hide()
       $(button).html('Upgrading Village...')
 
-      Meteor.apply('upgradeVillage', [Session.get('gameId'), template.data._id], {}, function(error, result) {
+      dFunc.callWithCallback('upgradeVillage', [Session.get('gameId'), template.data._id], function(error, result) {
           $(button).html(buttonText)
           if (error) {
               $(alert).html(error.error)

@@ -235,7 +235,7 @@ Template.rp_info_army.events({
 		$(button).attr('disabled', true)
 		$(button).html('Please Wait')
 
-		Meteor.apply('buildVillage', [Session.get('gameId'), self.x, self.y], {throwStubExceptions:true}, function(error, result) {
+		dFunc.callWithCallback('buildVillage', [Session.get('gameId'), self.x, self.y], function(error, result) {
 			if (error) {
 				$(alert).show()
 				$(alert).html(error.error)

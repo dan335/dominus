@@ -1,66 +1,63 @@
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.deleteGameAccount.process(Meteor.bindEnvironment(function(job) {
+  Queues.deleteGameAccount.process(async function(job) {
 
     check(job.data.playerId, String);
     check(job.data.gameId, String);
     check(job.data.username, String);
 
-    dGame.deleteGameAccount(job.data.playerId);
+    await dGame.deleteGameAccount(job.data.playerId);
     dAlerts.gAlert_accountDeleted(job.data.gameId, job.data.username);
-
-    return Promise.resolve();
-  }));
+  });
 }
 
 
 
-dGame.deleteGameAccount = function(playerId) {
-  let player = Players.findOne(playerId);
+dGame.deleteGameAccount = async function(playerId) {
+  let player = await Players.findOneAsync(playerId);
 
   if (!player) {
     return false;
   }
 
-  Villages.find({playerId:playerId}, {fields:{_id:1}}).forEach(function(village) {
-		dVillages.destroyVillage(village._id)
-	});
+  for (const village of await Villages.find({playerId:playerId}, {fields:{_id:1}}).fetchAsync()) {
+		await dVillages.destroyVillage(village._id)
+	}
 
-  Armies.find({playerId:playerId}, {fields:{_id:1}}).forEach(function(army) {
+  for (const army of await Armies.find({playerId:playerId}, {fields:{_id:1}}).fetchAsync()) {
 		dArmies.destroyArmy(army._id);
-	});
+	}
 
-	Markers.remove({playerId:playerId});
-	MarkerGroups.remove({playerId:playerId});
+	await Markers.removeAsync({playerId:playerId});
+	await MarkerGroups.removeAsync({playerId:playerId});
 
   // fix chat
-	Roomchats.remove({playerId:playerId});
-	Rooms.find({members:playerId}).forEach(function(room) {
+	await Roomchats.removeAsync({playerId:playerId});
+	for (const room of await Rooms.find({members:playerId}).fetchAsync()) {
 		// remove from admins and members
-		Rooms.update(room._id, {$pull: {admins:playerId, members:playerId, memberData:{_id:playerId}}});
+		await Rooms.updateAsync(room._id, {$pull: {admins:playerId, members:playerId, memberData:{_id:playerId}}});
 
 		// is user owner?
 		// give owner to someone else
 		if (room.owner == playerId) {
-			// async since upgrade PR 8; this function converts in PR 11
-			Promise.await(dChat.removeOwnerFromRoom(player.gameId, room._id));
+			await dChat.removeOwnerFromRoom(player.gameId, room._id);
 		}
-	});
+	}
 
   // fix tree
 	if (player.lord) {
-		var lord = Players.findOne(player.lord, {fields:{_id:1}});
+		var lord = await Players.findOneAsync(player.lord, {fields:{_id:1}});
 		if (lord) {
 			// give vassals to lord
       if (player.vassals) {
-        player.vassals.forEach(function(vassal_id) {
-  				var vassal = Players.findOne(vassal_id);
+        for (const vassal_id of player.vassals) {
+  				var vassal = await Players.findOneAsync(vassal_id);
   				if (vassal) {
   					dInit.remove_lord_and_vassal(player._id, vassal._id);
   					dInit.set_lord_and_vassal(lord._id, vassal._id);
   				}
-  			});
+  			}
       }
 
 			// remove from lord
@@ -73,40 +70,40 @@ dGame.deleteGameAccount = function(playerId) {
 			// still counted by checkForDominus, which permanently blocks any dominus
 			// (unwinnable game). Promote them to kings, same as the no-lord branch.
 			if (player.vassals) {
-				player.vassals.forEach(function(vassal_id) {
-					var vassal = Players.findOne(vassal_id, {fields:{_id:1}});
+				for (const vassal_id of player.vassals) {
+					var vassal = await Players.findOneAsync(vassal_id, {fields:{_id:1}});
 					if (vassal) {
 						dInit.remove_lord_and_vassal(player._id, vassal._id);
 					}
-				});
+				}
 			}
 		}
 	} else {
 		// make vassals kings
     if (player.vassals) {
-      player.vassals.forEach(function(vassal_id) {
-  			var vassal = Players.findOne(vassal_id, {fields:{_id:1}});
+      for (const vassal_id of player.vassals) {
+  			var vassal = await Players.findOneAsync(vassal_id, {fields:{_id:1}});
   			if (vassal) {
   				dInit.remove_lord_and_vassal(player._id, vassal._id);
   			}
-  		});
+  		}
     }
 	}
 
-  Castles.remove({playerId:playerId});
+  await Castles.removeAsync({playerId:playerId});
 
 	// if user doesn't have a castle then x,y will not be set
 	if (player.gameId && _.isNumber(player.x) && _.isNumber(player.y)) {
 		Mapmaker.buildingRemoved(player.gameId, player.x, player.y);
 	}
 
-	Players.remove({_id:player._id});
-  Dailystats.remove({playerId:player._id});
+	await Players.removeAsync({_id:player._id});
+  await Dailystats.removeAsync({playerId:player._id});
 
 	// this can't be a job
 	// might pick the wrong dominus if multiple people are deleted
 	dManager.checkForDominus(player.gameId);
 
-  Queues.add('setupEveryoneChatroom', {gameId:player.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, player.gameId);
-  Queues.add('generateTree', {gameId:player.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, player.gameId);
+  await Queues.addAsyncOrLog('setupEveryoneChatroom', {gameId:player.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, player.gameId);
+  await Queues.addAsyncOrLog('generateTree', {gameId:player.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, player.gameId);
 }

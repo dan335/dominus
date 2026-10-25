@@ -15,7 +15,7 @@ Template.rp_destroy_village_confirm.events({
 
 		$('#destroy_village_button_yes').attr('disabled', true)
 		$('#destroy_village_button_yes').html('Please Wait');
-		Meteor.apply('destroyVillage', [villageId], {}, function(error, result) {
+		dFunc.callWithCallback('destroyVillage', [villageId], function(error, result) {
 			if (error) {
 				console.error(error);
 			}

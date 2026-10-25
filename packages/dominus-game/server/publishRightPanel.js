@@ -29,7 +29,7 @@ _s.armies.types.forEach(function(type) {
 
 
 // public so logged out spectators can watch
-Meteor.publish('rightPanelPlayers', function(playerId) {
+Meteor.publish('rightPanelPlayers', async function(playerId) {
 	check(playerId, Match.OneOf(String, null));
 	if (Match.test(playerId, String)) {
 		var sub = this
@@ -50,7 +50,7 @@ Meteor.publish('rightPanelPlayers', function(playerId) {
 			lastIncomeUpdate:1
 		}
 		var cur = Players.find(playerId, {fields: fields})
-		Mongo.Collection._publishCursor(cur, sub, 'right_panel_players')
+		await Mongo.Collection._publishCursor(cur, sub, 'right_panel_players')
 		return sub.ready()
 	} else {
 		this.ready()
@@ -67,12 +67,12 @@ DDPRateLimiter.addRule(rightPanelPlayersSubRule, 5, 5000);
 
 
 
-Meteor.publish('castleForHexInfo', function(id) {
+Meteor.publish('castleForHexInfo', async function(id) {
 	check(id, Match.OneOf(String, null));
 	if (Match.test(id, String)) {
 		var sub = this
 		var cur = Castles.find(id, {fields:castle_fields});
-		Mongo.Collection._publishCursor(cur, sub, 'right_panel_castle')
+		await Mongo.Collection._publishCursor(cur, sub, 'right_panel_castle')
 		return sub.ready()
 	} else {
 		this.ready()
@@ -90,12 +90,12 @@ DDPRateLimiter.addRule(castleForHexInfoSubRule, 5, 5000);
 
 
 
-Meteor.publish('armyForHexInfo', function(id) {
+Meteor.publish('armyForHexInfo', async function(id) {
 	check(id, Match.OneOf(String, null));
 	if (Match.test(id, String)) {
 		var sub = this
 		var cur = Armies.find(id, {fields:army_fields})
-		Mongo.Collection._publishCursor(cur, sub, 'right_panel_armies')
+		await Mongo.Collection._publishCursor(cur, sub, 'right_panel_armies')
 		return sub.ready()
 	} else {
 		this.ready()
@@ -112,12 +112,12 @@ DDPRateLimiter.addRule(armyForHexInfoSubRule, 5, 5000);
 
 
 
-Meteor.publish('villageForHexInfo', function(id) {
+Meteor.publish('villageForHexInfo', async function(id) {
 	check(id, Match.OneOf(String, null));
 	if (Match.test(id, String)) {
 		var sub = this
 		var cur = Villages.find(id, {fields:village_fields})
-		Mongo.Collection._publishCursor(cur, sub, 'right_panel_villages')
+		await Mongo.Collection._publishCursor(cur, sub, 'right_panel_villages')
 		return sub.ready()
 	} else {
 		this.ready()
@@ -135,14 +135,14 @@ DDPRateLimiter.addRule(villageForHexInfoSubRule, 5, 5000);
 
 
 
-Meteor.publish('rightPanelTree', function(playerId) {
+Meteor.publish('rightPanelTree', async function(playerId) {
 	check(playerId, Match.OneOf(String, null));
 	if (Match.test(playerId, String)) {
-		let player = Players.findOne(playerId, {fields: {allies_above:1}});
+		let player = await Players.findOneAsync(playerId, {fields: {allies_above:1}});
 		if (player) {
 			var fields = {name:1, x:1, y:1, castle_id:1, lord:1, username:1}
 			var cur = Players.find({_id: {$in:player.allies_above || []}}, {fields: fields})
-			Mongo.Collection._publishCursor(cur, this, 'right_panel_tree_players')
+			await Mongo.Collection._publishCursor(cur, this, 'right_panel_tree_players')
 		}
 	}
 	this.ready();

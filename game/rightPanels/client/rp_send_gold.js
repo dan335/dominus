@@ -33,7 +33,7 @@ Template.rp_send_gold.events({
 
 			var castle = Castles.findOne(selected.id, {fields: {playerId:1}})
 
-			Meteor.apply('send_gold_to', [Session.get('gameId'), castle.playerId, $(input).val()], {}, function(error, result) {
+			dFunc.callWithCallback('send_gold_to', [Session.get('gameId'), castle.playerId, $(input).val()], function(error, result) {
 				$(button).attr('disabled', false)
 				$(button).html(button_html)
 				

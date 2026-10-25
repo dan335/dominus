@@ -21,13 +21,12 @@ Meteor.methods({
 
 
 // return the resources that a village here would gather
-getResourcesGatheredAtHex: function(gameId, x, y) {
+getResourcesGatheredAtHex: async function(gameId, x, y) {
   check(x, Match.Integer);
   check(y, Match.Integer);
   check(gameId, String);
 
-  // sync until the villages domain converts (upgrade PR 11)
-  var resources = dVillages.resourcesFromSurroundingHexes(gameId, x, y, _s.villages.num_rings_village);
+  var resources = await dVillages.resourcesFromSurroundingHexes(gameId, x, y, _s.villages.num_rings_village);
   return resources;
 },
 })

@@ -26,7 +26,7 @@ var collectVillageIncome = async function() {
 
 				// #TODO this could be removed and cache village's income
 				// includes large hex multipler
-				const villageIncome = dVillages.resourcesFromSurroundingHexes(game._id, village.x, village.y, _s.villages.num_rings_village);
+				const villageIncome = await dVillages.resourcesFromSurroundingHexes(game._id, village.x, village.y, _s.villages.num_rings_village);
 				villageIncome.gold = _s.villages.gold_gained_at_village;
 
 				// check numbers

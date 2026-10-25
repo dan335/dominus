@@ -18,7 +18,7 @@ if (Meteor.isServer) {
     var byName = {Players: Players, Castles: Castles, Villages: Villages, Armies: Armies, Armypaths: Armypaths,
       Capitals: Capitals, Market: Market, Battles2: Battles2, Roomchats: Roomchats, Rooms: Rooms, Alerts: Alerts,
       Games: Games, Settings: Settings, Forumtopics: Forumtopics, Forumposts: Forumposts, users: Meteor.users,
-      Markers: Markers, MarkerGroups: MarkerGroups, Gamesignups: Gamesignups};
+      Markers: Markers, MarkerGroups: MarkerGroups, Gamesignups: Gamesignups, Hexes: Hexes};
     var collection = byName[collectionName] || _.find(dTest.gameCollections(), function(c) { return c._name == collectionName; });
     if (!collection) throw new Error('no collection ' + collectionName);
     return collection;
@@ -126,14 +126,14 @@ if (Meteor.isServer) {
     },
 
     // the free hex nearest to x,y that an army can stand on, at least
-    // minDistance away
-    freeHexNear: function(gameId, x, y, minDistance) {
+    // minDistance away, and of the type given (grain, ...) if one is
+    freeHexNear: function(gameId, x, y, minDistance, type) {
       refuseInProduction();
       var taken = {};
       Castles.find({gameId: gameId}).forEach(function(c) { taken[c.x + '_' + c.y] = true; });
       Villages.find({gameId: gameId}).forEach(function(v) { taken[v.x + '_' + v.y] = true; });
       var best = null;
-      Hexes.find({gameId: gameId, hasBuilding: {$ne: true}}, {fields: {x: 1, y: 1}}).forEach(function(h) {
+      Hexes.find(_.extend({gameId: gameId, hasBuilding: {$ne: true}}, type ? {type: type} : {}), {fields: {x: 1, y: 1}}).forEach(function(h) {
         var d = Hx.hexDistance(x, y, h.x, h.y);
         if (taken[h.x + '_' + h.y] || d < (minDistance || 1)) return;
         if (!best || d < best.distance) best = {x: h.x, y: h.y, distance: d};
@@ -156,10 +156,17 @@ if (Meteor.isServer) {
       var player = Players.findOne(playerId);
       var id = Villages.insert(_.extend({gameId: player.gameId, x: x, y: y, playerId: player._id, user_id: player.userId,
         username: player.username, name: 'E2E village', level: 1, under_construction: false, created_at: new Date(),
-        income: dVillages.resourcesFromSurroundingHexes(player.gameId, x, y, _s.villages.num_rings_village)},
+        income: dTest.settle(dVillages.resourcesFromSurroundingHexes(player.gameId, x, y, _s.villages.num_rings_village))},
         dTest.soldierCounts({})));
       Mapmaker.buildingAdded(player.gameId, x, y);
       return id;
+    },
+
+    // makes vassalId the vassal of lordId, as winning a battle does
+    makeVassal: function(lordId, vassalId) {
+      refuseInProduction();
+      dInit.set_lord_and_vassal(lordId, vassalId);
+      return Players.findOne(lordId, {fields: {allies_below: 1}}).allies_below;
     },
 
     // sends an army to x,y, through addArmyPath as its owner

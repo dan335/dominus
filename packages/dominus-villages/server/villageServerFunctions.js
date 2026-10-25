@@ -1,15 +1,14 @@
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.destroyVillage.process(Meteor.bindEnvironment(function(job) {
-    dVillages.destroyVillage(job.data.villageId);
-    return Promise.resolve();
-  }));
+  Queues.destroyVillage.process(async function(job) {
+    await dVillages.destroyVillage(job.data.villageId);
+  });
 }
 
 
 
-dVillages.destroyVillage = function(villageId) {
+dVillages.destroyVillage = async function(villageId) {
   check(villageId, String);
 
   var find = {_id:villageId};
@@ -18,7 +17,7 @@ dVillages.destroyVillage = function(villageId) {
     options.fields[type] = 1;
   })
 
-  var village = Villages.findOne(find, options);
+  var village = await Villages.findOneAsync(find, options);
   if (!village) {
     return false;
   }
@@ -40,8 +39,8 @@ dVillages.destroyVillage = function(villageId) {
     }
   }
 
-  Villages.remove(villageId);
-  Markers.remove({unitType:'village', unitId:villageId});
+  await Villages.removeAsync(villageId);
+  await Markers.removeAsync({unitType:'village', unitId:villageId});
   Mapmaker.buildingRemoved(village.gameId, village.x, village.y);
 
   if (army) {
@@ -55,7 +54,7 @@ dVillages.destroyVillage = function(villageId) {
 
 
 // does include large hex multiplier
-dVillages.resourcesFromSurroundingHexes = function(gameId, x, y, numRings) {
+dVillages.resourcesFromSurroundingHexes = async function(gameId, x, y, numRings) {
   check(gameId, String);
   check(x, Match.Integer);
   check(y, Match.Integer);
@@ -68,7 +67,7 @@ dVillages.resourcesFromSurroundingHexes = function(gameId, x, y, numRings) {
 		income[type] = 0;
 	});
 
-	var hexes = Hexes.find({gameId:gameId, x:{$gte: x-numRings, $lte: x+numRings}, y:{$gte: y-numRings, $lte: y+numRings}}, {fields: {x:1, y:1, type:1, large:1}});
+	var hexes = await Hexes.find({gameId:gameId, x:{$gte: x-numRings, $lte: x+numRings}, y:{$gte: y-numRings, $lte: y+numRings}}, {fields: {x:1, y:1, type:1, large:1}}).fetchAsync();
 
 	hexes.forEach(function(hex) {
 		var h = _.find(hex_array, function(arr) {
