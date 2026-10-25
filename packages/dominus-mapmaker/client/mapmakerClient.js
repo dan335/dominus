@@ -25,7 +25,7 @@ Mapmaker = {
       var alert = $('.moveArmyAlert');
       alert.hide();
 
-      Meteor.call('addArmyPath', Session.get('gameId'), coordX, coordY, selected.id, function(error, result) {
+      dFunc.callWithCallback('addArmyPath', [Session.get('gameId'), coordX, coordY, selected.id], function(error, result) {
         if (error) {
           alert.show();
           if (error.error == 'validation-error') {

@@ -396,7 +396,7 @@ if (Meteor.isServer) {
 
             var army = w.makeArmy(0, {catapults: 1});
             assert(dTest.waitFor(function() { return mine.findOne(army._id); }, 5000), 'added');
-            dArmies.destroyArmy(army._id);
+            dTest.settle(dArmies.destroyArmy(army._id));
             assert(dTest.waitFor(function() { return !mine.findOne(army._id); }, 5000), 'removed');
 
             var chatId = Roomchats.insert({room_id: f.roomNormal, gameId: G, created_at: new Date(), user_id: uid(0), playerId: pid(0), text: 'live'});

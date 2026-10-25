@@ -135,7 +135,8 @@ dArmies.moveArmiesJob = function(done) {
           }}, {multi:true});
           //bulkMarkers.find({unitId:path.armyId}).updateOne({$set:{x:hex.x, y:hex.y, countryId: hex.countryId}});
 
-          dArmies.enterNewHexCheck(path.gameId, path.armyId, true);
+          // async since upgrade PR 13a; this function converts in PR 13b
+          Promise.await(dArmies.enterNewHexCheck(path.gameId, path.armyId, true));
 
         } else {
 

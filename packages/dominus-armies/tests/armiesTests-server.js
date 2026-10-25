@@ -29,7 +29,7 @@ Tinytest.add('armies.create', function(test) {
 
   var soldiers = {'footmen':1};
 
-  var army = dArmies.create(player._id, soldiers, 0, 0);
+  var army = Promise.await(dArmies.create(player._id, soldiers, 0, 0));
   var army = Armies.findOne();
   test.notEqual(army, false);
 
@@ -50,19 +50,19 @@ Tinytest.add('armies.speed', function(test) {
   Mapmaker.addCountry(gameId, true);
 
   var soldiers = {'footmen':1};
-  var army = dArmies.create(player._id, soldiers, 0, 0);
+  var army = Promise.await(dArmies.create(player._id, soldiers, 0, 0));
   test.equal(Armies.findOne(army._id).speed, (60 / _s.armies.stats.footmen.speed) * _s.armies.armyTravelMultiplier);
 
   var soldiers = {'cavalry':1};
-  var army = dArmies.create(player._id, soldiers, 0, 0);
+  var army = Promise.await(dArmies.create(player._id, soldiers, 0, 0));
   test.equal(Armies.findOne(army._id).speed, (60 / _s.armies.stats.cavalry.speed) * _s.armies.armyTravelMultiplier);
 
   var soldiers = {'cavalry':1, 'footmen':1};
-  var army = dArmies.create(player._id, soldiers, 0, 0);
+  var army = Promise.await(dArmies.create(player._id, soldiers, 0, 0));
   test.equal(Armies.findOne(army._id).speed, (60 / _s.armies.stats.footmen.speed) * _s.armies.armyTravelMultiplier);
 
   var soldiers = {'cavalry':1, 'footmen':1, 'catapults':1};
-  var army = dArmies.create(player._id, soldiers, 0, 0);
+  var army = Promise.await(dArmies.create(player._id, soldiers, 0, 0));
   test.equal(Armies.findOne(army._id).speed, (60 / _s.armies.stats.catapults.speed) * _s.armies.armyTravelMultiplier);
 })
 
@@ -85,12 +85,12 @@ Tinytest.add('armies.splitCombineLastMoveAt', function(test) {
 
   // create army
   var soldiers = {footmen:1, cavalry:1};
-  var army = dArmies.create(player._id, soldiers, 0, 0);
+  var army = Promise.await(dArmies.create(player._id, soldiers, 0, 0));
   test.equal(Armies.findOne(army._id).speed, (60 / _s.armies.stats.footmen.speed) * _s.armies.armyTravelMultiplier, 'test speed');
   var last_move_at = army.last_move_at;
 
   // split
-  var newArmyId = dArmies.split(gameId, army._id, {cavalry:1});
+  var newArmyId = Promise.await(dArmies.split(gameId, army._id, {cavalry:1}));
   test.equal(Armies.findOne(army._id).speed, (60 / _s.armies.stats.footmen.speed) * _s.armies.armyTravelMultiplier, 'test army speed');
   test.equal(Armies.findOne(newArmyId).speed, (60 / _s.armies.stats.cavalry.speed) * _s.armies.armyTravelMultiplier, 'test new army speed');
   test.equal(Armies.findOne(newArmyId).cavalry, 1, 'cav should be 1');
@@ -103,7 +103,7 @@ Tinytest.add('armies.splitCombineLastMoveAt', function(test) {
   var pathId0 = Meteor.call('addArmyPath', gameId, hex.x, hex.y, newArmyId);
 
   // combine
-  Meteor.server.method_handlers['armies.combineArmies'].call({userId: 'wee'}, {gameId:gameId, armyId: army._id});
+  Promise.await(Meteor.server.method_handlers['armies.combineArmies'].call({userId: 'wee'}, {gameId:gameId, armyId: army._id}));
   //Meteor.server.method_handlers['armies.combineArmies'].call({userId: 'wee'}, {gameId:gameId, armyId: newArmyId});
   test.equal(Armies.find().count(), 1, 'one army after combining');
   var a = Armies.findOne();

@@ -1,6 +1,172 @@
-if (Meteor.isServer) {
-  Future = Npm.require('fibers/future');
-}
+var coordinatesError = function() {
+  return new ValidationError([
+    {
+      name: 'coordinate',
+      type: 'X and Y must be integers.',
+      details: {}
+    }
+  ]);
+};
+
+// check max number of paths
+var checkNumPaths = function(numPaths) {
+  if (numPaths > _s.armies.maxPaths) {
+    throw new ValidationError([
+      {
+        name: 'maxPaths',
+        type: 'At move limit. ' + _s.armies.maxPaths + ' moves max.',
+        details: {}
+      }
+    ]);
+  }
+};
+
+// make sure this isnt' a duplicate of last one
+// also get last index
+var nextPathIndex = function(lastPath, x, y) {
+  if (lastPath) {
+
+    if (lastPath.x == x && lastPath.y == y) {
+      throw new ValidationError([
+        {
+          name: 'armies.addPath',
+          type: 'Duplicate destination.',
+          details: {}
+        }
+      ]);
+    }
+
+    return lastPath.index+1;
+  } else {
+    return 0;
+  }
+};
+
+var newPath = function(gameId, x, y, index, armyId, userId) {
+  return {
+    gameId:gameId,
+    x:x,
+    y:y,
+    index:index,
+    armyId:armyId,
+    user_id:userId,
+    createdAt:dClock.now(),
+    paused:false,     // used to pause army movement
+    countryIds:null,  // array of country ids to use in pathfinding
+    hexes:null,        // path for army to follow
+    distance:null,    // filled in later
+    time:null,        // filled in later
+    speed:null,        // filled in later
+    dirtyMoveTotals:false
+  };
+};
+
+var clearRoute = {time:null, distance:null, hexes:null, countryIds:null};
+
+// The writes that reorder an army's paths, as a list of
+// {find, modifier, multi}. The simulation makes them one by one and the
+// server as one ordered bulk op, so both end the same.
+var applyPathWrites = function(writes) {
+  writes.forEach(function(w) {
+    Armypaths.update(w.find, w.modifier, {multi:w.multi});
+  });
+};
+
+var applyPathWritesAsync = async function(writes) {
+  if (!writes.length) {
+    return;
+  }
+  var bulk = Armypaths.rawCollection().initializeOrderedBulkOp();
+  writes.forEach(function(w) {
+    if (w.multi) {
+      bulk.find(w.find).update(w.modifier);
+    } else {
+      bulk.find(w.find).updateOne(w.modifier);
+    }
+  });
+  try {
+    await bulk.execute();
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+// re-number the paths left after one is removed. When the first path was
+// removed, a path without its own last_move_at takes the army's:
+// armyLastMoveAt(p) returns {value} for it, or null to leave it out (the
+// server reads it from the army, the simulation doesn't)
+var removePathWrites = function(path, rest, armyLastMoveAt) {
+  var writes = [];
+  var index = 0;
+  rest.forEach(function(p) {
+    var set = {index:index};
+
+    if (path.index == 0) {
+      if (p.last_move_at) {
+        set.last_move_at = p.last_move_at;
+      } else {
+        var lastMoveAt = armyLastMoveAt(p);
+        if (lastMoveAt) {
+          set.last_move_at = lastMoveAt.value;
+        }
+      }
+    }
+
+    // re-pathfind path before and after
+    if (index == path.index - 1 || index == path.index) {
+      set.hexes = null;
+      set.countryIds = null;
+      set.distance = null;
+      set.time = null;
+    }
+
+    writes.push({find:{_id:p._id}, modifier:{$set:set}, multi:false});
+
+    index++;
+  });
+  return writes;
+};
+
+// swap a path with the one before it; last_move_at is the first path's when
+// this one becomes first
+var decreasePathWrites = function(path, userId, last_move_at) {
+  // move path down
+  var findThis = {index:path.index, user_id:userId, armyId:path.armyId};
+  var set = {last_move_at:last_move_at, index:path.index-1};
+
+  // move other path up
+  var findOther = {_id:{$ne:path._id}, index:path.index-1, user_id:userId, armyId:path.armyId};
+
+  // re-path
+  let indexes = _.range(path.index-3, path.index+2);
+  let findPath = {user_id:userId, armyId:path.armyId, index: {$in:indexes}};
+
+  return [
+    {find:findThis, modifier:{$set:set}, multi:false},
+    {find:findOther, modifier:{$set:{index:path.index}}, multi:false},
+    {find:findPath, modifier:{$set:clearRoute}, multi:true},
+  ];
+};
+
+// swap a path with the one after it
+var increasePathWrites = function(path, userId) {
+  // move this path up
+  var find = {index:path.index, user_id:userId, armyId:path.armyId};
+
+  // move other path down
+  var find2 = {_id:{$ne:path._id}, index:path.index+1, user_id:userId, armyId:path.armyId};
+
+  // re-path
+  let indexes = _.range(path.index-2, path.index+3);
+  let find3 = {user_id:userId, armyId:path.armyId, index: {$in:indexes}};
+
+  return [
+    {find:find, modifier:{$set:{index:path.index+1}}, multi:false},
+    {find:find2, modifier:{$set:{index:path.index, last_move_at:path.last_move_at}}, multi:true},
+    {find:find3, modifier:{$set:clearRoute}, multi:true},
+  ];
+};
+
 
 Meteor.methods({
   addArmyPath: function(gameId, x, y, armyId) {
@@ -16,63 +182,31 @@ Meteor.methods({
 
     // check x,y
     if (!dFunc.isInt(x) || !dFunc.isInt(y)) {
-      throw new ValidationError([
-        {
-          name: 'coordinate',
-          type: 'X and Y must be integers.',
-          details: {}
-        }
-      ]);
+      throw coordinatesError();
     }
 
-    // only the owner may move an army -- the move jobs look paths up by armyId
-    // only, so a path added to someone else's army would move it
-    var army;
-    if (!self.isSimulation) {
-      army = Armies.findOne({_id:armyId, gameId:gameId, user_id:self.userId}, {fields: {last_move_at:1, speed:1}});
+    var find = {armyId:armyId, user_id:self.userId};
+
+    if (self.isSimulation) {
+      checkNumPaths(Armypaths.find(find).count());
+      var index = nextPathIndex(Armypaths.findOne(find, {sort:{index:-1}}), x, y);
+      // the server adds the army's speed and last_move_at
+      return Armypaths.insert(newPath(gameId, x, y, index, armyId, self.userId));
+    }
+
+    return (async () => {
+      // only the owner may move an army -- the move jobs look paths up by armyId
+      // only, so a path added to someone else's army would move it
+      var army = await Armies.findOneAsync({_id:armyId, gameId:gameId, user_id:self.userId}, {fields: {last_move_at:1, speed:1}});
       if (!army) {
         throw new Meteor.Error('not-authorized', 'You do not own this army.');
       }
-    }
 
-    // check max number of paths
-    let numPaths = Armypaths.find({armyId:armyId, user_id:self.userId}).count();
-    if (numPaths > _s.armies.maxPaths) {
-      throw new ValidationError([
-        {
-          name: 'maxPaths',
-          type: 'At move limit. ' + _s.armies.maxPaths + ' moves max.',
-          details: {}
-        }
-      ]);
-    }
+      checkNumPaths(await Armypaths.find(find).countAsync());
+      var index = nextPathIndex(await Armypaths.findOneAsync(find, {sort:{index:-1}}), x, y);
 
-    // make sure this isnt' a duplicate of last one
-    // also get last index
-    var index;
-    var last_move_at = null;
-    var find = {armyId:armyId, user_id:self.userId};
-    var lastPath = Armypaths.findOne(find, {sort:{index:-1}});
-    if (lastPath) {
-
-      if (lastPath.x == x && lastPath.y == y) {
-        throw new ValidationError([
-          {
-            name: 'armies.addPath',
-            type: 'Duplicate destination.',
-            details: {}
-          }
-        ]);
-      }
-
-      index = lastPath.index+1;
-    } else {
-      index = 0;
-    }
-
-    if (!self.isSimulation) {
       // make sure hex exists
-      if (!Hexes.find({gameId:gameId, x:x, y:y}).count()) {
+      if (!await Hexes.find({gameId:gameId, x:x, y:y}).countAsync()) {
         throw new ValidationError([
           {
             name: 'armies.addPath',
@@ -81,35 +215,16 @@ Meteor.methods({
           }
         ]);
       }
-    }
 
-    var path =  {
-      gameId:gameId,
-      x:x,
-      y:y,
-      index:index,
-      armyId:armyId,
-      user_id:self.userId,
-      createdAt:dClock.now(),
-      paused:false,     // used to pause army movement
-      countryIds:null,  // array of country ids to use in pathfinding
-      hexes:null,        // path for army to follow
-      distance:null,    // filled in later
-      time:null,        // filled in later
-      speed:null,        // filled in later
-      dirtyMoveTotals:false
-    }
+      var path = newPath(gameId, x, y, index, armyId, self.userId);
 
-    // path always gets army speed
-    // reset last_move_at when aremy moves, is created or add index 0 path
-    if (!self.isSimulation) {
+      // path always gets army speed
+      // reset last_move_at when aremy moves, is created or add index 0 path
       path.last_move_at = army.last_move_at;
       path.speed = army.speed;
-    }
 
-    path._id = Armypaths.insert(path);
-
-    return path._id;
+      return await Armypaths.insertAsync(path);
+    })();
   },
 
 
@@ -123,77 +238,50 @@ Meteor.methods({
       throw new Meteor.Error('not-authorized', 'You must be logged in.');
     }
 
-    if (!self.isSimulation) {
-      var future = new Future();
-      var bulk = Armypaths.rawCollection().initializeOrderedBulkOp();
-      var hasBulk = false;
-    }
-
     // get armyId and index
     var find = {user_id:this.userId, _id:pathId};
-    var path = Armypaths.findOne(find);
-    if (path) {
-      var armyId = path.armyId;
-      let gameId = path.gameId;
-      //var last_move_at = path.last_move_at || new Date();
+    var options = {sort:{index:1}};
 
-      Armypaths.remove({_id:pathId, user_id:self.userId});
+    if (self.isSimulation) {
+      var path = Armypaths.findOne(find);
+      if (path) {
+        Armypaths.remove({_id:pathId, user_id:self.userId});
 
-      // reorder
-      var index = 0;
-      var find = {armyId:armyId, user_id:self.userId};
-      var options = {sort:{index:1}};
-      Armypaths.find(find, options).forEach(function(p) {
-        var set = {index:index};
+        // reorder
+        var rest = Armypaths.find({armyId:path.armyId, user_id:self.userId}, options).fetch();
+        applyPathWrites(removePathWrites(path, rest, function() { return null; }));
+      }
+      return;
+    }
 
-        if (path.index == 0) {
-          if (p.last_move_at) {
-            set.last_move_at = p.last_move_at;
-          } else {
-            // get last_move_at from army
-            if (!self.isSimulation) {
-              var find = {_id:armyId};
-              var options = {fields:{last_move_at:1}};
-              var army = Armies.findOne(find, options);
-              if (army) {
-                set.last_move_at = army.last_move_at;
-              } else {
-                console.error('no army found in removeArmyPath', find);
-              }
+    return (async () => {
+      var path = await Armypaths.findOneAsync(find);
+      if (path) {
+        var armyId = path.armyId;
+        await Armypaths.removeAsync({_id:pathId, user_id:self.userId});
+
+        // reorder
+        var rest = await Armypaths.find({armyId:armyId, user_id:self.userId}, options).fetchAsync();
+
+        // get last_move_at from army, for each path that needs it, as before
+        var armyLastMoveAt = {};
+        for (const p of rest) {
+          if (path.index == 0 && !p.last_move_at) {
+            var armyFind = {_id:armyId};
+            var army = await Armies.findOneAsync(armyFind, {fields:{last_move_at:1}});
+            if (army) {
+              armyLastMoveAt[p._id] = {value:army.last_move_at};
+            } else {
+              console.error('no army found in removeArmyPath', armyFind);
             }
           }
         }
 
-        // re-pathfind path before and after
-        if (index == path.index - 1 || index == path.index) {
-          set.hexes = null;
-          set.countryIds = null;
-          set.distance = null;
-          set.time = null;
-        }
-
-        if (self.isSimulation) {
-          Armypaths.update(p._id, {$set:set});
-        } else {
-          bulk.find({_id:p._id}).updateOne({$set:set});
-          hasBulk = true;
-        }
-
-        index++;
-      })
-
-      if (!self.isSimulation) {
-        if (hasBulk) {
-          bulk.execute({}, function(error, result) {
-      	    if (error) {
-      	      console.error(error);
-      	    }
-      	    future.return(result);
-      	  });
-      	  future.wait();
-        }
+        await applyPathWritesAsync(removePathWrites(path, rest, function(p) {
+          return armyLastMoveAt[p._id] || null;
+        }));
       }
-    }
+    })();
   },
 
 
@@ -207,69 +295,64 @@ Meteor.methods({
       throw new Meteor.Error('not-authorized', 'You must be logged in.');
     }
 
-    if (!self.isSimulation) {
-      var future = new Future();
-      var bulk = Armypaths.rawCollection().initializeOrderedBulkOp();
-    }
+    var pathFind = {_id:pathId, user_id:self.userId};
+    var fields = {last_move_at:1};
+    var otherFind = function(path) {
+      return {user_id:self.userId, armyId:path.armyId, index:path.index-1};
+    };
 
-    // get path
-    var path = Armypaths.findOne({_id:pathId, user_id:self.userId});
-    if (!path) {
-      throw new Meteor.Error('no path found in decreasePathIndex');
-    }
+    if (self.isSimulation) {
+      // get path
+      var path = Armypaths.findOne(pathFind);
+      if (!path) {
+        throw new Meteor.Error('no path found in decreasePathIndex');
+      }
 
-    // abort if this is first path
-    if (path.index == 0) {
+      // abort if this is first path
+      if (path.index == 0) {
+        return;
+      }
+
+      // if this is now first path figure out last_move_at time
+      var last_move_at = null;
+      if (path.index == 1) {
+        var otherPath = Armypaths.findOne(otherFind(path), {fields:fields});
+        if (!otherPath) {
+          console.error('no otherPath found in decreasePathIndex');
+          return false;
+        }
+        last_move_at = otherPath.last_move_at;
+      }
+
+      applyPathWrites(decreasePathWrites(path, self.userId, last_move_at));
       return;
     }
 
-    // if this is now first path figure out last_move_at time
-    var last_move_at = null;
-    if (path.index == 1) {
-      var fields = {last_move_at:1};
-      var otherPath = Armypaths.findOne({user_id:self.userId, armyId:path.armyId, index:path.index-1}, {fields:fields});
-      if (!otherPath) {
-        console.error('no otherPath found in decreasePathIndex');
-        return false;
+    return (async () => {
+      // get path
+      var path = await Armypaths.findOneAsync(pathFind);
+      if (!path) {
+        throw new Meteor.Error('no path found in decreasePathIndex');
       }
-      last_move_at = otherPath.last_move_at;
-    }
 
-    // move path down
-    var findThis = {index:path.index, user_id:self.userId, armyId:path.armyId};
-    var set = {last_move_at:last_move_at, index:path.index-1};
-    if (self.isSimulation) {
-      Armypaths.update(findThis, {$set:set});
-    } else {
-      bulk.find(findThis).updateOne({$set:set});
-    }
+      // abort if this is first path
+      if (path.index == 0) {
+        return;
+      }
 
-    // move other path up
-    var findOther = {_id:{$ne:path._id}, index:path.index-1, user_id:self.userId, armyId:path.armyId};
-    if (self.isSimulation) {
-      Armypaths.update(findOther, {$set:{index:path.index}});
-    } else {
-      bulk.find(findOther).updateOne({$set:{index:path.index}});
-    }
-
-    // re-path
-    let indexes = _.range(path.index-3, path.index+2);
-    let findPath = {user_id:self.userId, armyId:path.armyId, index: {$in:indexes}};
-    if (self.isSimulation) {
-      Armypaths.update(findPath, {$set: {time:null, distance:null, hexes:null, countryIds:null}}, {multi:true});
-    } else {
-      bulk.find(findPath).update({$set: {time:null, distance:null, hexes:null, countryIds:null}});
-    }
-
-    if (!self.isSimulation) {
-      bulk.execute({}, function(error, result) {
-        if (error) {
-          console.error(error);
+      // if this is now first path figure out last_move_at time
+      var last_move_at = null;
+      if (path.index == 1) {
+        var otherPath = await Armypaths.findOneAsync(otherFind(path), {fields:fields});
+        if (!otherPath) {
+          console.error('no otherPath found in decreasePathIndex');
+          return false;
         }
-        future.return(result);
-      });
-      future.wait();
-    }
+        last_move_at = otherPath.last_move_at;
+      }
+
+      await applyPathWritesAsync(decreasePathWrites(path, self.userId, last_move_at));
+    })();
   },
 
 
@@ -283,63 +366,53 @@ Meteor.methods({
       throw new Meteor.Error('not-authorized', 'You must be logged in.');
     }
 
-    if (!self.isSimulation) {
-      var future = new Future();
-      var bulk = Armypaths.rawCollection().initializeOrderedBulkOp();
-    }
+    var pathFind = {_id:pathId, user_id:self.userId};
+    var lastFind = function(path) {
+      return {armyId:path.armyId, user_id:self.userId};
+    };
 
-    // get path
-    var path = Armypaths.findOne({_id:pathId, user_id:self.userId});
-    if (!path) {
-      throw new Meteor.Error('no path found in increasePathIndex');
-    }
+    if (self.isSimulation) {
+      // get path
+      var path = Armypaths.findOne(pathFind);
+      if (!path) {
+        throw new Meteor.Error('no path found in increasePathIndex');
+      }
 
-    // get path with highest index, last path
-    var find = {armyId:path.armyId, user_id:self.userId};
-    var lastPath = Armypaths.findOne(find, {sort:{index:-1}});
-    if (!lastPath) {
-      throw new Meteor.Error('no lastpath found in increasePathIndex');
-    }
+      // get path with highest index, last path
+      var lastPath = Armypaths.findOne(lastFind(path), {sort:{index:-1}});
+      if (!lastPath) {
+        throw new Meteor.Error('no lastpath found in increasePathIndex');
+      }
 
-    // if this is already last path abort
-    if (lastPath._id == path._id) {
+      // if this is already last path abort
+      if (lastPath._id == path._id) {
+        return;
+      }
+
+      applyPathWrites(increasePathWrites(path, self.userId));
       return;
     }
 
-    // move this path up
-    var find = {index:path.index, user_id:self.userId, armyId:path.armyId};
-    if (self.isSimulation) {
-      Armypaths.update(find, {$inc:{index:1}});
-    } else {
-      bulk.find(find).updateOne({$set:{index:path.index+1}});
-    }
+    return (async () => {
+      // get path
+      var path = await Armypaths.findOneAsync(pathFind);
+      if (!path) {
+        throw new Meteor.Error('no path found in increasePathIndex');
+      }
 
-    // move other path down
-    var find2 = {_id:{$ne:path._id}, index:path.index+1, user_id:self.userId, armyId:path.armyId};
-    if (self.isSimulation) {
-      Armypaths.update(find2, {$set:{index:path.index, last_move_at:path.last_move_at}});
-    } else {
-      bulk.find(find2).update({$set:{index:path.index, last_move_at:path.last_move_at}});
-    }
+      // get path with highest index, last path
+      var lastPath = await Armypaths.findOneAsync(lastFind(path), {sort:{index:-1}});
+      if (!lastPath) {
+        throw new Meteor.Error('no lastpath found in increasePathIndex');
+      }
 
-    // re-path
-    let indexes = _.range(path.index-2, path.index+3);
-    let find3 = {user_id:self.userId, armyId:path.armyId, index: {$in:indexes}};
-    if (self.isSimulation) {
-      Armypaths.update(find3, {$set: {time:null, distance:null, hexes:null, countryIds:null}}, {multi:true});
-    } else {
-      bulk.find(find3).update({$set: {time:null, distance:null, hexes:null, countryIds:null}});
-    }
+      // if this is already last path abort
+      if (lastPath._id == path._id) {
+        return;
+      }
 
-    if (!self.isSimulation) {
-      bulk.execute({}, function(error, result) {
-        if (error) {
-          console.error(error);
-        }
-        future.return(result);
-      });
-      future.wait();
-    }
+      await applyPathWritesAsync(increasePathWrites(path, self.userId));
+    })();
   },
 
 
@@ -351,7 +424,13 @@ Meteor.methods({
     }
     var find = {armyId:armyId, user_id:this.userId};
     var options = {$set: {paused:true}};
-    Armypaths.update(find, options, {multi:true});
+    if (this.isSimulation) {
+      Armypaths.update(find, options, {multi:true});
+      return;
+    }
+    return (async () => {
+      await Armypaths.updateAsync(find, options, {multi:true});
+    })();
   },
 
   resumeMovement: function(armyId) {
@@ -361,7 +440,13 @@ Meteor.methods({
     }
     var find = {armyId:armyId, user_id:this.userId};
     var options = {$set: {paused:false}};
-    Armypaths.update(find, options, {multi:true});
+    if (this.isSimulation) {
+      Armypaths.update(find, options, {multi:true});
+      return;
+    }
+    return (async () => {
+      await Armypaths.updateAsync(find, options, {multi:true});
+    })();
   },
 })
 

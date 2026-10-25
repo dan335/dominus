@@ -78,7 +78,8 @@ Meteor.startup(function() {
 
 					// if no soldiers delete army
 					if (!numSoldiers) {
-						dArmies.destroyArmy(res._id);
+						// async since upgrade PR 13a; this file converts in PR 17
+						Promise.await(dArmies.destroyArmy(res._id));
 					}
 				});
 			}

@@ -593,6 +593,154 @@ if (Meteor.isServer) {
         });
 
 
+        // --- simulations (upgrade PR 13a) ---
+
+        test('army and path simulations: each is sync, and ends where the real calls do', function() {
+          var invocation = function(i) {
+            return {userId: w.users[i]._id, isSimulation: true, connection: null, unblock: function() {}, setUserId: function() {}};
+          };
+          // as the current method call, since hireArmy and createArmyFromBuilding
+          // ask Meteor.userId()
+          var simulate = function(i, name, args) {
+            // (kept out of withValue's return, which would wait for a promise)
+            var inv = invocation(i);
+            var returned;
+            DDP._CurrentMethodInvocation.withValue(inv, function() {
+              returned = Meteor.server.method_handlers[name].apply(inv, args);
+            });
+            assert(!dTest.isPromise(returned), name + ': the simulation is sync');
+            return returned;
+          };
+          var real = function(i, name, args) {
+            dTest.ddp.resetRateLimits();
+            return clients[i].call.apply(null, [name].concat(args));
+          };
+          // what the simulations leave out: the army createArmyFromBuilding
+          // makes, the armies combining removes, and the speed and
+          // last_move_at addArmyPath copies from the army
+          var paths = function(armyId, omit) {
+            return pathsOf(armyId).map(function(p) { return _.omit(p, ['_id', 'armyId', 'createdAt'].concat(omit || [])); });
+          };
+          var armyState = function(armyId) {
+            var a = Armies.findOne(armyId);
+            return a && _.pick(a, _s.armies.types.concat(['x', 'y', 'speed', 'moveTime', 'last_move_at']));
+          };
+          var hex = w.freeHex();
+          var hexes = [w.freeHex([hex])];
+          hexes.push(w.freeHex([hex, hexes[0]]));
+          var fixed = new Date(2026, 9, 25, 12, 0, 0);
+
+          var play = function(call) {
+            w.removeArmies();
+            dClock.set(fixed);
+            setResources(0, {gold: 1000, grain: 1000, lumber: 1000, ore: 1000, wool: 1000, clay: 1000, glass: 1000});
+            setCastleSoldiers(0, {footmen: 5, archers: 3});
+            var steps = [];
+            var step = function(name, value) {
+              steps.push(name + ' ' + JSON.stringify(value));
+            };
+
+            step('hireArmy', [call(0, 'hireArmy', [w.gameId, soldierCounts({footmen: 2, pikemen: 1}), w.castles[0]._id, 'castle']),
+              soldiersOf(w.castle(0)), _.pick(w.player(0), _s.market.types_plus_gold)]);
+
+            call(0, 'createArmyFromBuilding', [w.gameId, 'castle', w.castles[0]._id, soldierCounts({footmen: 4, archers: 1})]);
+            step('createArmyFromBuilding', soldiersOf(w.castle(0)));
+
+            var a = makeArmy(0, {footmen: 3}, hex);
+            var b = makeArmy(0, {archers: 2}, hex);
+            Armies.update(b._id, {$set: {last_move_at: new Date(fixed.getTime() + 60000)}});
+            insertPaths(a, 2);
+            step('armies.combineArmies', [call(0, 'armies.combineArmies', [{gameId: w.gameId, armyId: a._id}]), armyState(a._id), paths(a._id)]);
+            Armies.remove(b._id);
+
+            step('addArmyPath', [Armypaths.findOne(call(0, 'addArmyPath', [w.gameId, hexes[0].x, hexes[0].y, a._id])).index,
+              Armypaths.findOne(call(0, 'addArmyPath', [w.gameId, hexes[1].x, hexes[1].y, a._id])).index,
+              paths(a._id, ['speed', 'last_move_at'])]);
+
+            step('armies.stopMoving', [call(0, 'armies.stopMoving', [{armyId: a._id}]), paths(a._id)]);
+
+            var ids = insertPaths(a, 5);
+            step('removeArmyPath first', [call(0, 'removeArmyPath', [ids[0]]), paths(a._id)]);
+            step('removeArmyPath middle', [call(0, 'removeArmyPath', [ids[3]]), paths(a._id)]);
+            step('decreasePathIndex', [call(0, 'decreasePathIndex', [ids[4]]), paths(a._id)]);
+            step('decreasePathIndex to first', [call(0, 'decreasePathIndex', [ids[2]]), paths(a._id)]);
+            step('decreasePathIndex first', [call(0, 'decreasePathIndex', [ids[2]]), paths(a._id)]);
+            step('increasePathIndex', [call(0, 'increasePathIndex', [ids[2]]), paths(a._id)]);
+            step('increasePathIndex last', [call(0, 'increasePathIndex', [_.last(pathsOf(a._id))._id]), paths(a._id)]);
+            step('pauseMovement', [call(0, 'pauseMovement', [a._id]), paths(a._id)]);
+            step('resumeMovement', [call(0, 'resumeMovement', [a._id]), paths(a._id)]);
+            return steps;
+          };
+
+          try {
+            var fromServer = play(real);
+            var fromSimulations = play(simulate);
+            equal(fromSimulations.length, fromServer.length, 'as many steps');
+            fromServer.forEach(function(s, n) {
+              equal(fromSimulations[n], s, 'step ' + n);
+            });
+            assert(/^hireArmy \[true,/.test(fromServer[0]), 'hireArmy returned true: ' + fromServer[0]);
+
+            // a refused simulation throws, as the real call does
+            w.removeArmies();
+            setResources(0, {gold: 0, grain: 0, ore: 0});
+            setCastleSoldiers(0, {footmen: 2});
+            var mine = makeArmy(0, {footmen: 1}, hex);
+            var mineIds = insertPaths(mine, 1);
+            Armypaths.update(mineIds[0], {$set: {x: hexes[0].x, y: hexes[0].y}});
+            var theirs = makeArmy(1, {footmen: 1}, hexes[1]);
+            var theirIds = insertPaths(theirs, 2);
+            var refusals = [
+              [0, 'hireArmy', [w.gameId, soldierCounts({footmen: 1}), w.castles[0]._id, 'castle']],
+              [0, 'hireArmy', [w.gameId, soldierCounts({footmen: 1}), w.castles[1]._id, 'castle']],
+              [0, 'createArmyFromBuilding', [w.gameId, 'castle', w.castles[0]._id, soldierCounts({footmen: 3})]],
+              [0, 'createArmyFromBuilding', [w.gameId, 'castle', w.castles[0]._id, soldierCounts({})]],
+              [0, 'createArmyFromBuilding', [w.gameId, 'castle', w.castles[1]._id, soldierCounts({footmen: 1})]],
+              [0, 'armies.combineArmies', [{gameId: w.gameId, armyId: theirs._id}]],
+              [0, 'addArmyPath', [w.gameId, hexes[0].x, hexes[0].y, mine._id]],
+              [0, 'addArmyPath', [w.gameId, 1.5, hexes[0].y, mine._id]],
+              [0, 'decreasePathIndex', [theirIds[1]]],
+              [0, 'increasePathIndex', [theirIds[0]]]
+            ];
+            var before = dTest.snapshot(w.gameId);
+            refusals.forEach(function(r) {
+              var fromSimulation = dTest.throws(function() { return simulate(r[0], r[1], r[2]); });
+              var fromReal = dTest.throws(function() { return real(r[0], r[1], r[2]); });
+              var name = r[1] + ' ' + JSON.stringify(r[2]);
+              assert(fromReal, name + ' is refused');
+              equal(fromSimulation && fromSimulation.error, fromReal && fromReal.error, name + ': refused the same way');
+              equal(JSON.stringify(fromSimulation && fromSimulation.details), JSON.stringify(fromReal && fromReal.details), name + ': with the same details');
+            });
+            dTest.assertUnchanged(w.gameId, before, 'a refused call changed the game');
+
+            // the server's part is a promise
+            var server = _.extend(invocation(0), {isSimulation: false});
+            var returned = Meteor.server.method_handlers.removeArmyPath.apply(server, ['noSuchPath']);
+            assert(dTest.isPromise(returned), 'the server\'s part is a promise');
+            equal(dTest.settle(returned), undefined, 'that finds nothing to remove');
+          } finally {
+            dClock.reset();
+            w.removeArmies();
+          }
+        });
+
+        test('hireArmy: a market buy that is refused stops the hire (as before Meteor 2.16)', function() {
+          setResources(0, {gold: 100000, grain: 1000, ore: 40});
+          setCastleSoldiers(0, {footmen: 5});
+          var buy = Meteor.server.method_handlers.buy_resource;
+          Meteor.server.method_handlers.buy_resource = async function() {
+            throw new Meteor.Error('Not enough gold.');
+          };
+          try {
+            var before = dTest.snapshot(w.gameId);
+            expectError(function() { return hire(0, {footmen: 1}); }, 'Not enough gold.', null, 'the buy is refused');
+            dTest.assertUnchanged(w.gameId, before, 'a refused hire changed the game');
+          } finally {
+            Meteor.server.method_handlers.buy_resource = buy;
+          }
+        });
+
+
         // --- rate limits ---
 
         test('hireArmy: a 7th call within 5 seconds is refused with too-many-requests', function() {

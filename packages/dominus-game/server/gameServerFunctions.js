@@ -26,7 +26,7 @@ dGame.deleteGameAccount = async function(playerId) {
 	}
 
   for (const army of await Armies.find({playerId:playerId}, {fields:{_id:1}}).fetchAsync()) {
-		dArmies.destroyArmy(army._id);
+		await dArmies.destroyArmy(army._id);
 	}
 
 	await Markers.removeAsync({playerId:playerId});

@@ -171,14 +171,14 @@ if (Meteor.isServer) {
     // an army for player i (default: at their castle), after its jobs ran
     w.makeArmy = function(i, soldiers, at) {
       at = at || {x: w.castle(i).x, y: w.castle(i).y};
-      var army = dArmies.create(w.players[i]._id, soldiers || {footmen: 3}, at.x, at.y);
+      var army = dTest.settle(dArmies.create(w.players[i]._id, soldiers || {footmen: 3}, at.x, at.y));
       if (!army) throw new Error('FAIL: could not create a test army');
       dTest.waitForJobs();
       return Armies.findOne(army._id);
     };
 
     w.removeArmies = function() {
-      Armies.find({gameId: w.gameId}).forEach(function(a) { dArmies.destroyArmy(a._id); });
+      Armies.find({gameId: w.gameId}).forEach(function(a) { dTest.settle(dArmies.destroyArmy(a._id)); });
     };
 
     w.cleanup = function() {

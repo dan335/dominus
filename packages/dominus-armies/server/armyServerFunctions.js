@@ -1,15 +1,14 @@
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.enterNewHexCheck.process(Meteor.bindEnvironment(function(job) {
-    dArmies.enterNewHexCheck(job.data.gameId, job.data.armyId, job.data.checkForMerge);
-    return Promise.resolve();
-  }));
+  Queues.enterNewHexCheck.process(async function(job) {
+    await dArmies.enterNewHexCheck(job.data.gameId, job.data.armyId, job.data.checkForMerge);
+  });
 }
 
 
 
-dArmies.create = function(playerId, soldiers, x, y, last_move_at) {
+dArmies.create = async function(playerId, soldiers, x, y, last_move_at) {
   var self = this;
 
   check(playerId, String);
@@ -21,7 +20,7 @@ dArmies.create = function(playerId, soldiers, x, y, last_move_at) {
   last_move_at = typeof last_move_at !== 'undefined' ? last_move_at : dClock.now();
 
   var fields = {male:1, gameId:1, playerId:1, userId:1, username:1, x:1, y:1, allies_above:1, allies_below:1, castle_id:1, is_dominus:1};
-  var player = Players.findOne(playerId, {fields:fields});
+  var player = await Players.findOneAsync(playerId, {fields:fields});
 
   var countryId = Mapmaker.coordsToCountryId(player.gameId, x, y);
   if (!countryId) {
@@ -73,14 +72,14 @@ dArmies.create = function(playerId, soldiers, x, y, last_move_at) {
     return false;
   }
 
-  army._id = Armies.insert(army);
+  army._id = await Armies.insertAsync(army);
 
   if (!army._id) {
     console.error('error inserting army');
     return false;
   }
 
-  Queues.add('enterNewHexCheck', {gameId:player.gameId, armyId:army._id, checkForMerge:false}, {attempts:10, backoff:{type:'fixed', delay:3000}, delay:0, timeout:1000*60*5}, false);
+  await Queues.addAsyncOrLog('enterNewHexCheck', {gameId:player.gameId, armyId:army._id, checkForMerge:false}, {attempts:10, backoff:{type:'fixed', delay:3000}, delay:0, timeout:1000*60*5}, false);
 
   return army;
 }
@@ -88,14 +87,14 @@ dArmies.create = function(playerId, soldiers, x, y, last_move_at) {
 
 
 
-dArmies.isStopped = function(armyId) {
+dArmies.isStopped = async function(armyId) {
   check(armyId, String);
 
-  return Armypaths.find({armyId:armyId}).count() == 0;
+  return await Armypaths.find({armyId:armyId}).countAsync() == 0;
 }
 
 
-dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
+dArmies.enterNewHexCheck = async function(gameId, army_id, checkForMerge) {
   check(army_id, String);
   check(checkForMerge, Boolean);
   check(gameId, String);
@@ -105,25 +104,28 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
     armyFields[type] = 1;
   })
 
-  var army = Armies.findOne(army_id, {fields: armyFields});
+  var army = await Armies.findOneAsync(army_id, {fields: armyFields});
   if (!army) {
     console.error('no army found in enterNewHexCheck');
     return false;
   }
 
-  var armies = Armies.find({gameId:gameId, x:army.x, y:army.y}, {fields: armyFields});
-
-  var capital = Capitals.findOne({gameId:gameId, x:army.x, y:army.y});
+  // the armies on the hex, read again each time they are looked at, as the
+  // cursor this replaces did
+  var armiesFind = {gameId:gameId, x:army.x, y:army.y};
+  var armiesHere = function() {
+    return Armies.find(armiesFind, {fields: armyFields}).fetchAsync();
+  };
 
   var playerFields = {userId:1, gameId:1, is_dominus:1, team:1, lord:1, allies_above:1, allies_below:1, king:1, vassals:1};
-  let player = Players.findOne(army.playerId, {fields:playerFields});
+  let player = await Players.findOneAsync(army.playerId, {fields:playerFields});
   if (!player) {
     console.error('no user found in enterNewHexCheck');
   }
 
-  var castle = Castles.findOne({gameId:gameId, x:army.x, y:army.y}, {fields: {playerId:1}});
-  var village = Villages.findOne({gameId:gameId, x:army.x, y:army.y}, {fields: {playerId:1}});
-  var capital = Capitals.findOne({gameId:gameId, x:army.x, y:army.y}, {fields: {playerId:1}});
+  var castle = await Castles.findOneAsync({gameId:gameId, x:army.x, y:army.y}, {fields: {playerId:1}});
+  var village = await Villages.findOneAsync({gameId:gameId, x:army.x, y:army.y}, {fields: {playerId:1}});
+  var capital = await Capitals.findOneAsync({gameId:gameId, x:army.x, y:army.y}, {fields: {playerId:1}});
 
   if (castle) {
     var castleRelation = dInit.getPlayersRelationship(player, castle.playerId);
@@ -134,7 +136,7 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
   }
 
   // if is stopped
-  if (checkForMerge && dArmies.isStopped(army_id)) {
+  if (checkForMerge && await dArmies.isStopped(army_id)) {
 
     var hasMerged = false
 
@@ -151,25 +153,25 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
 
     // my castle
     if (castle && castleRelation == 'mine') {
-      Castles.update(castle._id, {$inc:inc});
-      dArmies.destroyArmy(army_id);
+      await Castles.updateAsync(castle._id, {$inc:inc});
+      await dArmies.destroyArmy(army_id);
       hasMerged = true;
       joinedCastle = castle._id;
-      Markers.remove({unitType:'army', unitId:army._id});
+      await Markers.removeAsync({unitType:'army', unitId:army._id});
     }
 
     // my village
     if (!hasMerged && village && villageRelation == 'mine') {
-      Villages.update(village._id, {$inc:inc});
-      dArmies.destroyArmy(army_id);
+      await Villages.updateAsync(village._id, {$inc:inc});
+      await dArmies.destroyArmy(army_id);
       hasMerged = true;
       joinedVillage = village._id;
-      Markers.remove({unitType:'army', unitId:army._id});
+      await Markers.removeAsync({unitType:'army', unitId:army._id});
     }
 
     // my armies
     if (!hasMerged) {
-      armies.forEach(function(otherArmy) {
+      for (const otherArmy of await armiesHere()) {
         if (army._id != otherArmy._id) {
           if (!hasMerged) {
 
@@ -177,7 +179,7 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
             if (relation == 'mine') {
 
               // make sure other army is stopped
-              if (dArmies.isStopped(otherArmy._id)) {
+              if (await dArmies.isStopped(otherArmy._id)) {
 
                 // new army should get the lastest last_move_at to prevent cheat
                 let latest = moment(new Date(otherArmy.last_move_at));
@@ -186,8 +188,8 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
                   latest = armyLastMove;
                 }
 
-                Armies.update(otherArmy._id, {$inc:inc, $set: {speed:null, last_move_at:latest.toDate()}});
-                dArmies.destroyArmy(army_id);
+                await Armies.updateAsync(otherArmy._id, {$inc:inc, $set: {speed:null, last_move_at:latest.toDate()}});
+                await dArmies.destroyArmy(army_id);
 
                 // we still need to check for enemies
                 // replace unit with combined one
@@ -196,13 +198,13 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
                 joinedArmy = otherArmy._id;
 
                 // update markers
-                Markers.update({unitType:'army', unitId:army_id}, {$set:{unitId:otherArmy._id}}, {multi:true});
+                await Markers.updateAsync({unitType:'army', unitId:army_id}, {$set:{unitId:otherArmy._id}}, {multi:true});
               }
             }
 
           }
         }
-      })
+      }
     }
 
     // send alert
@@ -245,7 +247,7 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
   }
 
   if (onAllyBuilding != army.onAllyBuilding){
-    Armies.update(army._id, {$set:{onAllyBuilding:onAllyBuilding}});
+    await Armies.updateAsync(army._id, {$set:{onAllyBuilding:onAllyBuilding}});
   }
 
   // past moves
@@ -254,7 +256,7 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
     var pastMoves = army.pastMoves || []
     pastMoves.unshift({x:army.x, y:army.y, moveDate:dClock.now()});
     pastMoves = pastMoves.slice(0, _s.armies.pastMovesToShow);
-    Armies.update(army._id, {$set: {pastMoves:pastMoves}});
+    await Armies.updateAsync(army._id, {$set: {pastMoves:pastMoves}});
   }
 
   // battles
@@ -267,17 +269,17 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
     if (capital.playerId != player._id) {
       startBattle = true;
     } else {
-      armies.forEach(function(otherArmy) {
+      for (const otherArmy of await armiesHere()) {
         if (otherArmy.playerId != player._id) {
           startBattle = true;
         }
-      })
+      }
     }
   }
 
   // check for armies
   if (!startBattle) {
-    armies.forEach(function(otherArmy) {
+    for (const otherArmy of await armiesHere()) {
       if (army.playerId != otherArmy.playerId) {
 
         var someoneIsDominus = false;
@@ -285,7 +287,7 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
         if (player.is_dominus) {
           someoneIsDominus = true;
         } else {
-          var otherPlayer = Players.findOne(otherArmy.playerId, {fields: {is_dominus:1}});
+          var otherPlayer = await Players.findOneAsync(otherArmy.playerId, {fields: {is_dominus:1}});
           if (otherPlayer.is_dominus) {
             someoneIsDominus = true;
           }
@@ -302,7 +304,7 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
           }
         }
       }
-    });
+    }
   }
 
   // enemy castles
@@ -324,19 +326,19 @@ dArmies.enterNewHexCheck = function(gameId, army_id, checkForMerge) {
   }
 
   if (startBattle) {
-    Queues.add('runBattle', {gameId:gameId, x:army.x, y:army.y}, {delay:0, timeout:1000*60*5}, gameId+'_'+army.x+'_'+army.y);
+    await Queues.addAsyncOrLog('runBattle', {gameId:gameId, x:army.x, y:army.y}, {delay:0, timeout:1000*60*5}, gameId+'_'+army.x+'_'+army.y);
   }
 }
 
 
-dArmies.destroyArmy = function(armyId) {
+dArmies.destroyArmy = async function(armyId) {
   check(armyId, String);
   var fields = {playerId:1};
-  var army = Armies.findOne(armyId, {fields:fields});
+  var army = await Armies.findOneAsync(armyId, {fields:fields});
   if (army) {
-    Armies.remove(armyId);
-    Markers.remove({unitType:'army', unitId:armyId});
-    Armypaths.remove({armyId:armyId});
+    await Armies.removeAsync(armyId);
+    await Markers.removeAsync({unitType:'army', unitId:armyId});
+    await Armypaths.removeAsync({armyId:armyId});
   }
 }
 
@@ -346,7 +348,7 @@ dArmies.destroyArmy = function(armyId) {
 
 // both armies get the lastMoveAt time that the first army had
 // the time of their next move doesn't change
-dArmies.split = function(gameId, armyId, newArmySoldiers) {
+dArmies.split = async function(gameId, armyId, newArmySoldiers) {
   check(armyId, String);
   check(gameId, String);
 
@@ -363,7 +365,7 @@ dArmies.split = function(gameId, armyId, newArmySoldiers) {
     fields[type] = 1;
   })
 
-  var army = Armies.findOne({_id:armyId}, {fields: fields});
+  var army = await Armies.findOneAsync({_id:armyId}, {fields: fields});
   if (!army) {
     console.error('no army found in dArmies.split');
     return false;
@@ -400,7 +402,7 @@ dArmies.split = function(gameId, armyId, newArmySoldiers) {
     return false;
   }
 
-  var newArmy = dArmies.create(army.playerId, newArmySoldiers, army.x, army.y, army.last_move_at);
+  var newArmy = await dArmies.create(army.playerId, newArmySoldiers, army.x, army.y, army.last_move_at);
   if (!newArmy) {
     console.error('Could not create new army in dArmies.split');
     return false;
@@ -411,13 +413,13 @@ dArmies.split = function(gameId, armyId, newArmySoldiers) {
     set[type] = army[type] - newArmySoldiers[type];
   })
 
-  Armies.update(army._id, {$set: set});
+  await Armies.updateAsync(army._id, {$set: set});
 
   return newArmy._id;
 }
 
 
-dArmies.joinBuilding = function(armyId) {
+dArmies.joinBuilding = async function(armyId) {
   check(armyId, String);
 
   var fields = {x:1, y:1, playerId:1, gameId:1};
@@ -425,7 +427,7 @@ dArmies.joinBuilding = function(armyId) {
     fields[type] = 1;
   });
 
-  var army = Armies.findOne({_id:armyId}, {fields: fields});
+  var army = await Armies.findOneAsync({_id:armyId}, {fields: fields});
   if (!army) {
     return false;
   }
@@ -435,20 +437,20 @@ dArmies.joinBuilding = function(armyId) {
     inc[type] = army[type]
   });
 
-  var castle = Castles.findOne({playerId:army.playerId, x:army.x, y:army.y}, {fields: {_id:1}});
+  var castle = await Castles.findOneAsync({playerId:army.playerId, x:army.x, y:army.y}, {fields: {_id:1}});
   if (castle) {
 
-    Castles.update(castle._id, {$inc:inc});
-    dArmies.destroyArmy(armyId);
+    await Castles.updateAsync(castle._id, {$inc:inc});
+    await dArmies.destroyArmy(armyId);
     return {buildingId:castle._id, buildingType:'castle'};
 
   } else {
 
-    var village = Villages.findOne({playerId:army.playerId, x:army.x, y:army.y}, {fields: {_id:1}});
+    var village = await Villages.findOneAsync({playerId:army.playerId, x:army.x, y:army.y}, {fields: {_id:1}});
     if (village) {
 
-      Villages.update(village._id, {$inc:inc});
-      dArmies.destroyArmy(armyId);
+      await Villages.updateAsync(village._id, {$inc:inc});
+      await dArmies.destroyArmy(armyId);
       return {buildingId:village._id, buildingType:'village'};
 
     } else {

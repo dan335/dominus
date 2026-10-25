@@ -4,6 +4,13 @@ Meteor.methods({
     if (!this.userId) {
       throw new Meteor.Error('not-authorized', 'You must be logged in.');
     }
-    Armypaths.remove({user_id:this.userId, armyId:params.armyId});
+    var find = {user_id:this.userId, armyId:params.armyId};
+    if (this.isSimulation) {
+      Armypaths.remove(find);
+      return;
+    }
+    return (async () => {
+      await Armypaths.removeAsync(find);
+    })();
   }
 });
