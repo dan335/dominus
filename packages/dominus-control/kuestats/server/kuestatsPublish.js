@@ -1,9 +1,9 @@
-Meteor.publish('kuestats', function() {
+Meteor.publish('kuestats', async function() {
   if (!this.userId) {
     return this.ready();
   }
 
-  var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
+  var user = await Meteor.users.findOneAsync(this.userId, {fields:{admin:1}});
   if (!user || !user.admin) {
     return this.ready();
   }
@@ -12,12 +12,12 @@ Meteor.publish('kuestats', function() {
 })
 
 
-Meteor.publish('jobworkstats', function() {
+Meteor.publish('jobworkstats', async function() {
   if (!this.userId) {
     return this.ready();
   }
 
-  var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
+  var user = await Meteor.users.findOneAsync(this.userId, {fields:{admin:1}});
   if (!user || !user.admin) {
     return this.ready();
   }

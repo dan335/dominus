@@ -13,7 +13,7 @@ Template.control_games.events({
 
   'click #removeGameButton': function(event, template) {
     event.preventDefault();
-    Meteor.call('removeGame', this._id);
+    dFunc.callAndForget('removeGame', this._id);
   },
 
   'click #editGameButton': function(event, template) {

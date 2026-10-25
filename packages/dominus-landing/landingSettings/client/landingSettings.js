@@ -164,7 +164,7 @@ Template.landingSettings.events({
 
     nameInput.value = nameInput.value.replace(/[^a-zA-Z0-9_\s]+/g, "");
 
-    Meteor.apply('changeMainUsername', [nameInput.value], {throwStubExceptions:false}, function(error, result) {
+    dFunc.callWithCallback('changeMainUsername', [nameInput.value], function(error, result) {
       if (error) {
         $(alert).show();
         $(alert).html(error.error);
@@ -180,11 +180,11 @@ Template.landingSettings.events({
 
   'click #genderMaleButton': function(event, template) {
     event.preventDefault();
-    Meteor.call('setGender', true);
+    dFunc.callAndForget('setGender', true);
   },
 
   'click #genderFemaleButton': function(event, template) {
     event.preventDefault();
-    Meteor.call('setGender', false);
+    dFunc.callAndForget('setGender', false);
   },
 });

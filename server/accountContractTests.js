@@ -210,6 +210,194 @@ if (Meteor.isServer) {
           equal(Charges.find({user_id: p.id}).count(), 0, 'no charges recorded');
         });
 
+        // Stripe is faked: StripeAPI is a global (mrgalaxy:stripe), and the
+        // fake answers each charge itself, so nothing leaves the machine
+        function withFakeStripe(refuse, fn) {
+          var charges = [];
+          var original = global.StripeAPI;
+          global.StripeAPI = function(key) {
+            return {charges: {create: function(options, callback) {
+              charges.push(options);
+              setTimeout(function() {
+                if (refuse) callback(new Error('test: card declined'));
+                else callback(null, {id: 'ch_fake_' + charges.length, livemode: false});
+              }, 5);
+            }}};
+          };
+          try {
+            fn(charges);
+          } finally {
+            global.StripeAPI = original;
+          }
+          return charges;
+        }
+
+        test('store checkouts: with Stripe faked, a charge records the purchase', function() {
+          var p = person({proTokens: 0});
+          var email = AccountsEmail.extract(p.doc());
+          var player = Players.insert({gameId: 'acct_game_' + Random.id(4), userId: p.id, username: p.user.username, pro: false});
+          try {
+            var ids = [];
+            var charges = withFakeStripe(false, function() {
+              ids.push(p.client.call('stripeProCheckout', 'singleGame', {id: 'tok_1'}));
+              equal(p.doc().proTokens, 1, 'a single game buys a pro token');
+              ids.push(p.client.call('stripeProCheckout', 'allGames', {id: 'tok_2'}));
+              equal(p.doc().pro, true, 'all games makes the account pro');
+              equal(Players.findOne(player).pro, true, 'and its players');
+              ids.push(p.client.call('stripeDonationCheckout', 500, {id: 'tok_3'}));
+              ids.push(p.client.call('stripePurchaseCheckout', 300, 'castles', 'castle_03_skull', {id: 'tok_4'}));
+              equal(JSON.stringify(p.doc().purchases), '{"castles":["castle_03_skull"]}', 'the castle is bought');
+              ids.push(p.client.call('stripePurchaseCheckout', 300, 'castles', 'no_such_castle', {id: 'tok_5'}));
+              equal(JSON.stringify(p.doc().purchases), '{"castles":["castle_03_skull"]}', 'an unknown item is charged but not added');
+            });
+
+            equal(JSON.stringify(charges.map(function(c) { return [c.amount, c.currency, c.card, c.description === email]; })),
+              '[[200,"usd","tok_1",true],[1200,"usd","tok_2",true],[500,"usd","tok_3",true],[300,"usd","tok_4",true],[300,"usd","tok_5",true]]',
+              'what Stripe was asked to charge');
+            var saved = Charges.find({user_id: p.id}, {sort: {stripe_charge_id: 1}}).fetch();
+            equal(JSON.stringify(_.pluck(saved, '_id').sort()), JSON.stringify(ids.slice().sort()), 'each call returns its charge id');
+            equal(JSON.stringify(saved.map(function(c) {
+              return [c.stripe_charge_id, c.type, c.amount, c.storeType || null, c.storeId || null, c.user_email === email,
+                c.user_username === p.user.username, c.livemode];
+            })), JSON.stringify([
+              ['ch_fake_1', 'pro_singleGame_purchase', 200, null, null, true, true, false],
+              ['ch_fake_2', 'pro_allGames_purchase', 1200, null, null, true, true, false],
+              ['ch_fake_3', 'donation', 500, null, null, true, true, false],
+              ['ch_fake_4', 'store_purchase', 300, 'castles', 'castle_03_skull', true, true, false],
+              ['ch_fake_5', 'store_purchase', 300, 'castles', 'no_such_castle', true, true, false]
+            ]), 'the charges recorded');
+          } finally {
+            Players.remove(player);
+          }
+        });
+
+        test('store checkouts: with Stripe faked, a refused card returns false and changes nothing', function() {
+          var p = person({proTokens: 0});
+          var before = JSON.stringify(_.omit(p.doc(), 'presence'));
+          var results = [];
+          var charges = withFakeStripe(true, function() {
+            results.push(p.client.call('stripeProCheckout', 'singleGame', {id: 'tok_1'}));
+            results.push(p.client.call('stripeProCheckout', 'allGames', {id: 'tok_2'}));
+            results.push(p.client.call('stripeDonationCheckout', 500, {id: 'tok_3'}));
+            results.push(p.client.call('stripePurchaseCheckout', 300, 'castles', 'castle_03_skull', {id: 'tok_4'}));
+          });
+          equal(charges.length, 4, 'Stripe was asked four times');
+          equal(results.join(), 'false,false,false,false', 'each returns false');
+          equal(Charges.find({user_id: p.id}).count(), 0, 'no charges recorded');
+          equal(JSON.stringify(_.omit(p.doc(), 'presence')), before, 'the account is unchanged');
+          var nobody = withFakeStripe(false, function() {
+            expectError(function() { return loggedOut.call('stripeDonationCheckout', 500, {id: 'tok'}); }, 'not-authorized', null, 'logged out: refused by the method gate');
+          });
+          equal(nobody.length, 0, 'a logged out caller never reaches Stripe');
+        });
+
+        // S3 is faked: dLanding.knox is replaced by a client that answers
+        // each upload itself. The resize runs ImageMagick, so the test needs it.
+        var imageMagick = (function() {
+          try {
+            return Npm.require('child_process').spawnSync('convert', ['-version']).status === 0;
+          } catch (e) {
+            return false;
+          }
+        })();
+        // a 2x2 red PNG
+        var PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDasKb6QAAAABJRU5ErkJggg==';
+
+        function withFakeS3(status, fn) {
+          var s3 = {puts: [], deletes: []};
+          var original = dLanding.knox;
+          dLanding.knox = {
+            put: function(destination, headers) {
+              var put = {destination: destination, headers: headers, bytes: null};
+              s3.puts.push(put);
+              var onResponse = null;
+              return {
+                on: function(event, fn) { if (event == 'response') onResponse = fn; },
+                end: function(buffer) {
+                  put.bytes = buffer.length;
+                  setTimeout(function() { onResponse({statusCode: status}); }, 5);
+                }
+              };
+            },
+            deleteFile: function(file, callback) {
+              s3.deletes.push(file);
+              setTimeout(function() { callback(null, {statusCode: 204}); }, 5);
+            }
+          };
+          try {
+            fn(s3);
+          } finally {
+            dLanding.knox = original;
+          }
+          return s3;
+        }
+
+        test('uploadAvatarToS3 and deleteAvatar: with S3 faked, the avatar is resized, uploaded and saved, then deleted', function() {
+          if (!imageMagick) return 'skip';
+          var p = person();
+          var path = Meteor.settings.public.s3.avatarPath;
+          var first, second;
+          var s3 = withFakeS3(200, function(s3) {
+            equal(p.client.call('uploadAvatarToS3', PNG, 'image/png', PNG.length), true, 'returns true');
+            first = p.doc().avatarFilename;
+            assert(first && first.indexOf(p.user.username.replace(/\W/g, '')) === 0 && /\.png$/.test(first),
+              'named after the user, with the type\'s extension: ' + first);
+            equal(s3.deletes.length, 0, 'nothing to delete the first time');
+
+            equal(p.client.call('uploadAvatarToS3', PNG, 'image/jpeg', PNG.length), true, 'a second upload');
+            second = p.doc().avatarFilename;
+            assert(second != first && /\.jpg$/.test(second), 'a new name: ' + second);
+            equal(JSON.stringify(s3.deletes), JSON.stringify([path + first]), 'the old avatar is deleted');
+
+            equal(p.client.call('deleteAvatar'), undefined, 'deleteAvatar returns nothing');
+            equal(p.doc().avatarFilename, null, 'no avatar now');
+          });
+          equal(JSON.stringify(s3.puts.map(function(put) { return [put.destination, put.headers['Content-Type'], put.headers['Cache-Control']]; })),
+            JSON.stringify([[path + first, 'image/jpg', 'max-age=31557600'], [path + second, 'image/jpg', 'max-age=31557600']]), 'what was uploaded');
+          assert(s3.puts.every(function(put) { return put.bytes > 0 && put.headers['Content-Length'] === put.bytes; }), 'the resized image, with its length');
+          equal(JSON.stringify(s3.deletes), JSON.stringify([path + first, path + second]), 'both deleted in the end');
+        });
+
+        // The old avatar is deleted from S3 before the new one is read and
+        // uploaded, so when that fails the account still names a file that
+        // is gone. The conversion keeps that order.
+        test('known bug: uploadAvatarToS3, with S3 faked: a refused upload or an image that isn\'t one returns false and keeps the avatar\'s name, but deletes its file', function() {
+          if (!imageMagick) return 'skip';
+          var p = person({avatarFilename: 'kept.png'});
+          var s3 = withFakeS3(500, function() {
+            equal(p.client.call('uploadAvatarToS3', PNG, 'image/png', PNG.length), false, 'S3 refused it: false');
+          });
+          equal(s3.puts.length, 1, 'it was tried');
+          equal(p.doc().avatarFilename, 'kept.png', 'the avatar is kept');
+          equal(JSON.stringify(s3.deletes), JSON.stringify([Meteor.settings.public.s3.avatarPath + 'kept.png']), 'but its file was deleted first');
+          var broken = withFakeS3(200, function() {
+            var error = console.error;
+            console.error = function() {};
+            try {
+              equal(p.client.call('uploadAvatarToS3', 'data:image/png;base64,bm90IGFuIGltYWdl', 'image/png', 12), false, 'not an image: false');
+            } finally {
+              console.error = error;
+            }
+          });
+          equal(broken.puts.length, 0, 'nothing uploaded');
+          equal(p.doc().avatarFilename, 'kept.png', 'the avatar is still kept');
+          equal(broken.deletes.length, 1, 'and its file deleted again');
+        });
+
+        test('addToMailingList job: adds an address once, and a second signup with the same address changes nothing', function() {
+          if (!Queues.addToMailingList.handler) return 'skip';
+          var email = 'acct_' + Random.id(6).toLowerCase() + '@example.com';
+          try {
+            dTest.runJob('addToMailingList', {name: 'First Name', email: email});
+            dTest.runJob('addToMailingList', {name: 'Second Name', email: email});
+            var docs = MailingList.find({email: email}).fetch();
+            equal(docs.length, 1, 'one entry');
+            equal(docs[0].name + '|' + docs[0].skip + '|' + (docs[0].added instanceof Date), 'First Name|false|true', 'the first name, not skipped, dated');
+          } finally {
+            MailingList.remove({email: email});
+          }
+        });
+
         test('deleteEntireAccount: removes the account and its signups, and leaves every game', function() {
           var userId = w.users[1]._id;
           var client = dTest.ddp.connect(userId);
@@ -390,6 +578,94 @@ if (Meteor.isServer) {
           admin.client.call('removeGame', gameId);
           equal(Games.find(gameId).count(), 0, 'game removed');
           equal(Gamesignups.find({gameId: gameId}).count(), 0, 'its signups removed');
+        });
+
+        test('landing and control simulations: each is sync, and ends where the real calls do', function() {
+          var admin = person({admin: true});
+          var p = person({proTokens: 1, male: false});
+          var q = person({verifiedEmail: false});
+          var invocation = function(userId) {
+            return {userId: userId, isSimulation: true, connection: null, unblock: function() {}, setUserId: function() {}};
+          };
+          var clientOf = {};
+          clientOf[admin.id] = admin.client;
+          clientOf[p.id] = p.client;
+          clientOf[q.id] = q.client;
+          var simulate = function(userId, name, args) {
+            var returned = Meteor.server.method_handlers[name].apply(invocation(userId), args);
+            assert(!dTest.isPromise(returned), name + ': the simulation is sync');
+            equal(returned, undefined, name + ' simulation returns nothing');
+          };
+          var real = function(userId, name, args) {
+            clientOf[userId].call.apply(null, [name].concat(args));
+          };
+          var title = 'Sim game ' + Random.id(4);
+          var newName = 'simname_' + Random.id(5).replace(/[^a-zA-Z0-9]/g, 'x');
+          var gameId = function() { var g = Games.findOne({name: {$in: [title, title + ' edited']}}); return g && g._id; };
+          var tp = topic({lastPostUserId: p.id, lastPostUsername: p.user.username});
+          var state = function() {
+            var id = gameId();
+            var user = function(u) { return _.pick(u.doc(), 'username', 'male', 'verifiedEmail', 'proTokens'); };
+            return JSON.stringify({
+              game: id ? _.omit(Games.findOne(id), '_id', 'createdAt') : null,
+              signups: id ? Gamesignups.find({gameId: id}).map(function(s) { return _.omit(s, '_id', 'gameId', 'createdAt'); }) : [],
+              p: user(p), q: user(q), topic: Forumtopics.findOne(tp._id).lastPostUsername
+            });
+          };
+          var reset = function() {
+            Meteor.users.update(p.id, {$set: {username: p.user.username, male: false, proTokens: 1}});
+            Meteor.users.update(q.id, {$set: {verifiedEmail: false}});
+            Forumtopics.update(tp._id, {$set: {lastPostUsername: p.user.username}});
+          };
+
+          var play = function(call) {
+            reset();
+            call(admin.id, 'addOrEditGame', [title, 'a test', 20, '2030-01-02 03:04', true, false, false, true, false, false]);
+            made.games.push(gameId());
+            call(p.id, 'signupForGame', [null, gameId(), '  Sim Signup!  ']);
+            call(p.id, 'changeMainUsername', [newName + '%']);
+            call(p.id, 'setGender', [true]);
+            call(q.id, 'onEmailVerified', []);
+            var signedUp = state();
+            call(p.id, 'cancelSignupForGame', [null, gameId()]);
+            call(admin.id, 'addOrEditGame', [title + ' edited', 'b', 30, '2030-01-02 03:04', false, false, false, false, false, false, gameId()]);
+            var edited = state();
+            call(admin.id, 'removeGame', [gameId()]);
+            return [signedUp, edited, state()];
+          };
+
+          var fromServer = play(real);
+          var fromSimulations = play(simulate);
+          equal(fromSimulations[0], fromServer[0], 'after making a game, signing up and changing the account');
+          equal(fromSimulations[1], fromServer[1], 'after cancelling and editing');
+          equal(fromSimulations[2], fromServer[2], 'after removing the game');
+          var signedUp = JSON.parse(fromServer[0]);
+          equal(JSON.stringify(signedUp.signups), JSON.stringify([{userId: p.id, username: 'Sim Signup', usedToken: true}]), 'the signup used a token');
+          equal(JSON.stringify(signedUp.p), JSON.stringify({username: newName, male: true, verifiedEmail: true, proTokens: 0}), 'renamed, male, token spent');
+          equal(signedUp.q.verifiedEmail + '|' + signedUp.topic, 'true|' + newName, 'verified, topic renamed');
+          var edited = JSON.parse(fromServer[1]);
+          equal(edited.game.name + '|' + edited.game.maxPlayers + '|' + edited.p.proTokens + '|' + edited.signups.length,
+            title + ' edited|30|1|0', 'edited, the token given back');
+          equal(JSON.parse(fromServer[2]).game, null, 'removed');
+
+          // refused simulations throw, as the real calls do
+          var refusal = function(userId, name, args) {
+            var error = dTest.throws(function() { return Meteor.server.method_handlers[name].apply(invocation(userId), args); });
+            return error && error.error;
+          };
+          reset();
+          var game = openGame();
+          equal(refusal(p.id, 'addOrEditGame', ['Nope', '', 20, '2030-01-02 03:04', false, false, false, false, false, false]),
+            'control.games.addGame', 'not a moderator');
+          equal(refusal(p.id, 'removeGame', [game._id]), 'control.games.addGame', 'removing, not a moderator');
+          equal(refusal(p.id, 'signupForGame', [null, 'nope', 'Some Name']), 'noGameFound', 'no game');
+          equal(refusal(q.id, 'signupForGame', [null, game._id, 'Some Name']), 'Please verify your email before signing up for a game.', 'unverified');
+          equal(refusal(p.id, 'signupForGame', [null, game._id, 'x!']), 'Username must be at least 3 characters long.', 'short name');
+          equal(refusal(p.id, 'cancelSignupForGame', [null, game._id]), 'noSignupFound', 'nothing to cancel');
+          equal(refusal(null, 'cancelSignupForGame', [null, game._id]), 'not-authorized', 'logged out');
+          equal(refusal(p.id, 'changeMainUsername', [p.doc().username]), 'You are already named ' + p.doc().username, 'same name');
+          assert(Games.findOne(game._id), 'the game is still there');
+          equal(Gamesignups.find({gameId: game._id}).count(), 0, 'no signups');
         });
 
         test('job queue tools: an admin pauses, resumes and runs a job', function() {

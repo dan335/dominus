@@ -13,10 +13,10 @@ DDPRateLimiter.addRule(landingResultTitlesSubRule, 5, 5000);
 
 
 
-Meteor.publish('landingResult', function(gameId) {
+Meteor.publish('landingResult', async function(gameId) {
   check(gameId, Match.OneOf(String, null));
   var query = Games.find(gameId, {}, {disableOplog:true});
-  Mongo.Collection._publishCursor(query, this, 'gameresult');
+  await Mongo.Collection._publishCursor(query, this, 'gameresult');
   return this.ready();
 });
 

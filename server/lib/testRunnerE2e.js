@@ -18,7 +18,7 @@ if (Meteor.isServer) {
     var byName = {Players: Players, Castles: Castles, Villages: Villages, Armies: Armies, Armypaths: Armypaths,
       Capitals: Capitals, Market: Market, Battles2: Battles2, Roomchats: Roomchats, Rooms: Rooms, Alerts: Alerts,
       Games: Games, Settings: Settings, Forumtopics: Forumtopics, Forumposts: Forumposts, users: Meteor.users,
-      Markers: Markers, MarkerGroups: MarkerGroups};
+      Markers: Markers, MarkerGroups: MarkerGroups, Gamesignups: Gamesignups};
     var collection = byName[collectionName] || _.find(dTest.gameCollections(), function(c) { return c._name == collectionName; });
     if (!collection) throw new Error('no collection ' + collectionName);
     return collection;
@@ -80,6 +80,25 @@ if (Meteor.isServer) {
           castle: {_id: castle._id, x: castle.x, y: castle.y, name: castle.name}};
       });
       return out;
+    },
+
+    // A game that starts a week from now, open for signups. The name gets
+    // "E2E " in front. opts are the game's fields, e.g. {isProOnly: true}.
+    futureGame: function(name, opts) {
+      refuseInProduction();
+      var game = _.extend({name: 'E2E ' + name, desc: 'An e2e game.', maxPlayers: 10,
+        startAt: moment().add(7, 'days').toDate(), createdAt: new Date(), hasStarted: false, isStarting: false,
+        hasEnded: false, hasClosed: false, numPlayers: 0, isRelaxed: false, isSpeed: false, isCrazyFast: false,
+        isProOnly: false, isKingOfHill: false, isNoLargeResources: false}, opts || {});
+      game._id = Games.insert(game);
+      _gs.cacheGame(game);
+      return game._id;
+    },
+
+    // sets fields on a user, e.g. {proTokens: 1}
+    setUser: function(userId, fields) {
+      refuseInProduction();
+      return Meteor.users.update(userId, {$set: fields});
     },
 
     // a document, for checking what a click did

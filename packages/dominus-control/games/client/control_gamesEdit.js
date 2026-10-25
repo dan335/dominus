@@ -38,7 +38,7 @@ Template.control_gamesEdit.events({
     var pathArray = path.split('/');
     var gameId = pathArray[3];
 
-    Meteor.apply(
+    dFunc.callWithCallback(
       'addOrEditGame',
       [
         name.value,
@@ -53,7 +53,6 @@ Template.control_gamesEdit.events({
         isNoLargeResources,
         gameId
       ],
-      {},
       function(error, result) {
         if (error) {
 

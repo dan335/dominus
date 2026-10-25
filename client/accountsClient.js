@@ -5,7 +5,7 @@ Accounts.onEmailVerificationLink(function (token, done) {
   Accounts.verifyEmail(token, function (error) {
     if (! error) {
       Accounts._loginButtonsSession.set('justVerifiedEmail', true);
-      Meteor.call('onEmailVerified');
+      dFunc.callAndForget('onEmailVerified');
     }
 
     done();

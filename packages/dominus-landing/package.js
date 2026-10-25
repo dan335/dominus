@@ -24,6 +24,9 @@ Package.onUse(function(api) {
     'dominus-init',
     'mongo',
     'reactive-var',
+    // Session was the app's global, which a dev build defines only once the
+    // app's own script runs: a resumed login could call onLogin before that
+    'session',
     'dominus-game',   // for deleteGameAccount
     'forum-base',     // change forum username in changeMainUsername function
     'classcraft:knox@0.9.11',

@@ -1,12 +1,12 @@
-Meteor.publish('overallRankingsRegular', function() {
+Meteor.publish('overallRankingsRegular', async function() {
   let query = Meteor.users.find({"rankingRegular.numGames": {$gt:0}, "rankingRegular.overallRank": {$gt:0}}, {limit:250, sort: {"rankingRegular.overallRank":1}, fields:{username:1, rankingRegular:1}}, {disableOplog:true, pollingIntervalMs:1000*60*30})
-  Mongo.Collection._publishCursor(query, this, 'overallrankingsregular')
+  await Mongo.Collection._publishCursor(query, this, 'overallrankingsregular')
   return this.ready();
 });
 
-Meteor.publish('overallRankingsPro', function() {
+Meteor.publish('overallRankingsPro', async function() {
   let query = Meteor.users.find({"rankingPro.numGames": {$gt:0}, "rankingPro.overallRank": {$gt:0}}, {limit:250, sort: {"rankingPro.overallRank":1}, fields:{username:1, rankingPro:1}}, {disableOplog:true, pollingIntervalMs:1000*60*30})
-  Mongo.Collection._publishCursor(query, this, 'overallrankingspro')
+  await Mongo.Collection._publishCursor(query, this, 'overallrankingspro')
   return this.ready();
 })
 
