@@ -50,7 +50,7 @@ Tinytest.add('init.setLordVassal', function(test) {
   player1._id = Players.insert(player1);
   player2._id = Players.insert(player2);
 
-  dInit.set_lord_and_vassal(player1._id, player2._id);
+  Promise.await(dInit.set_lord_and_vassal(player1._id, player2._id));
   player1 = Players.findOne(player1._id);
   player2 = Players.findOne(player2._id);
 

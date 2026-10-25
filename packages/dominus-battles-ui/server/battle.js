@@ -162,7 +162,8 @@ BattleJob.prototype.processBattleResults = function() {
             var lord = Players.findOne(army.becameVassalOfPlayerId, {fields:{_id:1}});
             var vassal = Players.findOne(army.playerId, {fields:{_id:1}});
             if (lord && vassal) {
-              dInit.set_lord_and_vassal(lord._id, vassal._id);
+              // async since upgrade PR 12; this function converts in PR 14
+              Promise.await(dInit.set_lord_and_vassal(lord._id, vassal._id));
             }
           }
         }

@@ -544,7 +544,7 @@ if (Meteor.isServer) {
         GlobalAlerts.remove({gameId: game._id});
 
         // simulate midnight: rebuild relationships then check dominus
-        dInit.rebuildRelationships(game._id);
+        dTest.settle(dInit.rebuildRelationships(game._id));
         dManager.checkForDominus(game._id);
 
         // dominus should be unchanged, no false alerts

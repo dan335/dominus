@@ -165,7 +165,7 @@ if (Meteor.isServer) {
     // makes vassalId the vassal of lordId, as winning a battle does
     makeVassal: function(lordId, vassalId) {
       refuseInProduction();
-      dInit.set_lord_and_vassal(lordId, vassalId);
+      dTest.settle(dInit.set_lord_and_vassal(lordId, vassalId));
       return Players.findOne(lordId, {fields: {allies_below: 1}}).allies_below;
     },
 

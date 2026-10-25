@@ -54,14 +54,14 @@ dGame.deleteGameAccount = async function(playerId) {
         for (const vassal_id of player.vassals) {
   				var vassal = await Players.findOneAsync(vassal_id);
   				if (vassal) {
-  					dInit.remove_lord_and_vassal(player._id, vassal._id);
-  					dInit.set_lord_and_vassal(lord._id, vassal._id);
+  					await dInit.remove_lord_and_vassal(player._id, vassal._id);
+  					await dInit.set_lord_and_vassal(lord._id, vassal._id);
   				}
   			}
       }
 
 			// remove from lord
-			dInit.remove_lord_and_vassal(lord._id, player._id);
+			await dInit.remove_lord_and_vassal(lord._id, player._id);
 		} else {
 			// player.lord points at a lord that no longer exists (e.g. that lord was
 			// deleted first, or a pre-existing dangling pointer). Without this branch
@@ -73,7 +73,7 @@ dGame.deleteGameAccount = async function(playerId) {
 				for (const vassal_id of player.vassals) {
 					var vassal = await Players.findOneAsync(vassal_id, {fields:{_id:1}});
 					if (vassal) {
-						dInit.remove_lord_and_vassal(player._id, vassal._id);
+						await dInit.remove_lord_and_vassal(player._id, vassal._id);
 					}
 				}
 			}
@@ -84,7 +84,7 @@ dGame.deleteGameAccount = async function(playerId) {
       for (const vassal_id of player.vassals) {
   			var vassal = await Players.findOneAsync(vassal_id, {fields:{_id:1}});
   			if (vassal) {
-  				dInit.remove_lord_and_vassal(player._id, vassal._id);
+  				await dInit.remove_lord_and_vassal(player._id, vassal._id);
   			}
   		}
     }

@@ -9,35 +9,34 @@
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.enemy_on_building_check.process(Meteor.bindEnvironment(function(job) {
-		enemy_on_building_check(job.data.gameId);
-    return Promise.resolve();
-  }));
+  Queues.enemy_on_building_check.process(async function(job) {
+		await enemy_on_building_check(job.data.gameId);
+  });
 }
 
 
-var enemy_on_building_check = function(gameId) {
-	Castles.find({gameId:gameId}, {fields: {playerId:1, user_id:1, x:1, y:1}}).forEach(function(building) {
-		check_for_enemies_here(gameId, building, 'castle');
-	})
+var enemy_on_building_check = async function(gameId) {
+	for (const building of await Castles.find({gameId:gameId}, {fields: {playerId:1, user_id:1, x:1, y:1}}).fetchAsync()) {
+		await check_for_enemies_here(gameId, building, 'castle');
+	}
 
-	Villages.find({gameId:gameId}, {fields: {playerId:1, user_id:1, x:1, y:1}}).forEach(function(building) {
-		check_for_enemies_here(gameId, building, 'village')
-	})
+	for (const building of await Villages.find({gameId:gameId}, {fields: {playerId:1, user_id:1, x:1, y:1}}).fetchAsync()) {
+		await check_for_enemies_here(gameId, building, 'village')
+	}
 }
 
 
-var check_for_enemies_here = function(gameId, building, type) {
+var check_for_enemies_here = async function(gameId, building, type) {
 	check(gameId, String);
 	check(type, String);
   check(building.x, validNumber);
   check(building.y, validNumber);
   check(building.playerId, String);
 
-	var armies = Armies.find({gameId:gameId, x:building.x, y:building.y, playerId: {$ne: building.playerId}}, {fields: {playerId:1}})
-	if (armies.count() > 0) {
-		armies.forEach(function(army) {
-			var relation = dInit.getRelationshipServer(army.playerId, building.playerId);
+	var armies = await Armies.find({gameId:gameId, x:building.x, y:building.y, playerId: {$ne: building.playerId}}, {fields: {playerId:1}}).fetchAsync()
+	if (armies.length > 0) {
+		for (const army of armies) {
+			var relation = await dInit.getRelationshipServer(army.playerId, building.playerId);
 
 			if (type == 'village') {
 				var canAttack = ['enemy', 'enemy_ally']
@@ -48,11 +47,11 @@ var check_for_enemies_here = function(gameId, building, type) {
 			}
 
 			if (_.contains(canAttack, relation)) {
-				if (!dInit.attackCreatesLoop(gameId, building.x, building.y)) {
-					Queues.add('runBattle', {gameId:gameId, x:building.x, y:building.y}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, gameId+'_'+building.x+'_'+building.y);
+				if (!await dInit.attackCreatesLoop(gameId, building.x, building.y)) {
+					await Queues.addAsyncOrLog('runBattle', {gameId:gameId, x:building.x, y:building.y}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, gameId+'_'+building.x+'_'+building.y);
 				}
 			}
-		})
+		}
 	}
 }
 
@@ -61,46 +60,45 @@ var check_for_enemies_here = function(gameId, building, type) {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.enemies_together_check.process(Meteor.bindEnvironment(function(job) {
-		enemies_together_check(job.data.gameId);
-    return Promise.resolve();
-  }));
+  Queues.enemies_together_check.process(async function(job) {
+		await enemies_together_check(job.data.gameId);
+  });
 }
 
 // loop through every army and check if there are any enemies on the same hex, if so they fight
-var enemies_together_check = function(gameId) {
+var enemies_together_check = async function(gameId) {
 
-	Armies.find({gameId:gameId}, {fields: {playerId:1, x:1, y:1}}).forEach(function(army) {
+	for (const army of await Armies.find({gameId:gameId}, {fields: {playerId:1, x:1, y:1}}).fetchAsync()) {
 
 		// find armies here except this one
-		Armies.find({gameId:gameId, x:army.x, y:army.y, _id: {$ne: army._id}, playerId: {$ne: army.playerId}}, {fields: {playerId:1}}).forEach(function(other_army) {
+		for (const other_army of await Armies.find({gameId:gameId, x:army.x, y:army.y, _id: {$ne: army._id}, playerId: {$ne: army.playerId}}, {fields: {playerId:1}}).fetchAsync()) {
 
 			// make sure army still exists
-			var a = Armies.findOne(army._id, {fields: {playerId:1}})
+			var a = await Armies.findOneAsync(army._id, {fields: {playerId:1}})
 			if (a) {
 
 				// if one of them is dominus then they fight
-				var player = Players.findOne(a.playerId, {fields: {is_dominus:1}})
-				var otherPlayer = Players.findOne(other_army.playerId, {fields: {is_dominus:1}})
+				var player = await Players.findOneAsync(a.playerId, {fields: {is_dominus:1}})
+				var otherPlayer = await Players.findOneAsync(other_army.playerId, {fields: {is_dominus:1}})
 				if (player && otherPlayer) {
 					if (player.is_dominus || otherPlayer.is_dominus) {
 						// dominus' armies can attack any army
-						Queues.add('runBattle', {gameId:gameId, x:army.x, y:army.y}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, gameId+'_'+army.x+'_'+army.y);
+						await Queues.addAsyncOrLog('runBattle', {gameId:gameId, x:army.x, y:army.y}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, gameId+'_'+army.x+'_'+army.y);
 
 					} else {
-						var relation = dInit.getRelationshipServer(player._id, otherPlayer._id);
+						var relation = await dInit.getRelationshipServer(player._id, otherPlayer._id);
 						var canAttack = ['enemy', 'enemy_ally']
 						if (_.contains(canAttack, relation)) {
 
-							if (!dInit.attackCreatesLoop(gameId, army.x, army.y)) {
-								Queues.add('runBattle', {gameId:gameId, x:army.x, y:army.y}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, gameId+'_'+army.x+'_'+army.y);
+							if (!await dInit.attackCreatesLoop(gameId, army.x, army.y)) {
+								await Queues.addAsyncOrLog('runBattle', {gameId:gameId, x:army.x, y:army.y}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, gameId+'_'+army.x+'_'+army.y);
 							}
 						}
 					}
 				}
 			}
-		})
-	})
+		}
+	}
 }
 
 
@@ -108,30 +106,29 @@ var enemies_together_check = function(gameId) {
 // has an army on the castle of someone who has an army here. Every lookup is
 // scoped to the game, otherwise a castle or army at the same coordinates in
 // another open game could skip a real battle or miss a real loop.
-dInit.attackCreatesLoop = function(gameId, x, y) {
+dInit.attackCreatesLoop = async function(gameId, x, y) {
 	check(gameId, String);
 	var isLoop = false
 
-	var castleHere = Castles.findOne({gameId:gameId, x:x, y:y}, {fields: {playerId:1}})
+	var castleHere = await Castles.findOneAsync({gameId:gameId, x:x, y:y}, {fields: {playerId:1}})
 	if (castleHere) {
 
-		var armiesHere = Armies.find({gameId:gameId, x:x, y:y}, {fields: {playerId:1}})
-		armiesHere.forEach(function(armyHere) {
+		for (const armyHere of await Armies.find({gameId:gameId, x:x, y:y}, {fields: {playerId:1}}).fetchAsync()) {
 
 			// don't check armies on their own castle
 			if (castleHere.playerId != armyHere.playerId) {
 
 				// get their castle
-				var castle = Castles.findOne({playerId:armyHere.playerId}, {fields: {x:1, y:1}})
+				var castle = await Castles.findOneAsync({playerId:armyHere.playerId}, {fields: {x:1, y:1}})
 				if (castle) {
 
 					// is there an army at their castle owned by castleHere
-					if (Armies.find({gameId:gameId, x:castle.x, y:castle.y, playerId:castleHere.playerId}).count() > 0) {
+					if (await Armies.find({gameId:gameId, x:castle.x, y:castle.y, playerId:castleHere.playerId}).countAsync() > 0) {
 						isLoop = true
 					}
 				}
 			}
-		})
+		}
 	}
 
 	return isLoop

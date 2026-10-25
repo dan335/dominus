@@ -11,13 +11,11 @@
 // TODO: make sure this is safe to run mltiple at once, use prototype!?
 // job queue needs to be stopped while running this
 // so that another job doesn't change someone's allies while it's running
-const Future = Npm.require('fibers/future');
 
 if (process.env.DOMINUS_WORKER == 'true') {
-	Queues.updateAllKingsAllies.process(Meteor.bindEnvironment(function(job) {
-		dInit.updateAllKingsAlliesJob(job.data.gameId);
-		return Promise.resolve();
-	}));
+	Queues.updateAllKingsAllies.process(async function(job) {
+		await dInit.updateAllKingsAlliesJob(job.data.gameId);
+	});
 }
 
 
@@ -27,12 +25,19 @@ if (process.env.DOMINUS_WORKER == 'true') {
 // its own, so one bad game can't stop the others.
 dInit.updateAllKingsAlliesWaitMs = 1000*5;
 
-dInit.updateAllKingsAlliesJob = function(gameId) {
+// gives jobs that are running when the queues pause a few seconds to finish
+dInit.waitForRunningJobs = function() {
+	return new Promise(function(resolve) {
+		setTimeout(resolve, dInit.updateAllKingsAlliesWaitMs);
+	});
+};
+
+dInit.updateAllKingsAlliesJob = async function(gameId) {
 	let gameIds;
 	if (gameId) {
 		gameIds = [gameId];
 	} else {
-		gameIds = Games.find({hasStarted:true, hasEnded:false}, {fields: {_id:1}}).map(function(game) {
+		gameIds = (await Games.find({hasStarted:true, hasEnded:false}, {fields: {_id:1}}).fetchAsync()).map(function(game) {
 			return game._id;
 		});
 	}
@@ -41,26 +46,26 @@ dInit.updateAllKingsAlliesJob = function(gameId) {
 		return;
 	}
 
-	Meteor.call('pauseJobQueue');
+	await Queues.pauseAllAsync(false);
 
 	try {
 		// wait a couple seconds for jobs to finish
-		Meteor._sleepForMs(dInit.updateAllKingsAlliesWaitMs);
+		await dInit.waitForRunningJobs();
 
-		gameIds.forEach(function(id) {
+		for (const id of gameIds) {
 			try {
 				// update allies for game
-				dInit.rebuildRelationships(id);
+				await dInit.rebuildRelationships(id);
 
 				dManager.checkForDominus(id);
 
-				Queues.add('cleanupAllKingChatrooms', {gameId:id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, id);
+				await Queues.addAsyncOrLog('cleanupAllKingChatrooms', {gameId:id}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, id);
 			} catch (error) {
 				console.error('updateAllKingsAllies failed for game ' + id, error);
 			}
-		});
+		}
 	} finally {
-		Meteor.call('resumeJobQueue');
+		await Queues.resumeAllAsync();
 	}
 };
 
@@ -69,11 +74,11 @@ dInit.updateAllKingsAlliesJob = function(gameId) {
 
 // rebuild all king relationships for a game
 // used by updateAllKingsAllies job and tests
-dInit.rebuildRelationships = function(gameId) {
-	Players.find({gameId:gameId, is_king:true}).forEach(function(player) {
+dInit.rebuildRelationships = async function(gameId) {
+	for (const player of await Players.find({gameId:gameId, is_king:true}).fetchAsync()) {
 		var rf = new relation_finder(player._id);
-		rf.start();
-	});
+		await rf.start();
+	}
 };
 
 
@@ -81,31 +86,33 @@ relation_finder = function(playerId) {
 	check(playerId, String);
 
 	this.playerId = playerId;
-	this.player = Players.findOne(playerId, {fields: {lord:1, gameId:1}});
-
-	if (!this.player) {
-		console.error("Can't find user in relation_finder");
-		return false;
-	}
 	this.num_branches = 1;
 	this.team = [];
 	//this.update_cache = [];
-	this.gameId = this.player.gameId;
 
 	this.bulk = Players.rawCollection().initializeOrderedBulkOp();
 }
 
 
-relation_finder.prototype.start = function() {
+// the player is read here: a constructor can't wait for the database
+relation_finder.prototype.start = async function() {
 	var self = this;
-	self.find_top(self.player);
+	self.player = await Players.findOneAsync(self.playerId, {fields: {lord:1, gameId:1}});
+
+	if (!self.player) {
+		console.error("Can't find user in relation_finder");
+		return false;
+	}
+	self.gameId = self.player.gameId;
+
+	await self.find_top(self.player);
 };
 
 
-relation_finder.prototype.find_top = function(player) {
+relation_finder.prototype.find_top = async function(player) {
 
 	var self = this;
-	var lord = Players.findOne(player.lord, {fields: {lord:1}});
+	var lord = await Players.findOneAsync(player.lord, {fields: {lord:1}});
 	if (lord) {
 		if (player._id == lord._id) {
 			console.error('player: '+player.username);
@@ -113,47 +120,47 @@ relation_finder.prototype.find_top = function(player) {
 			console.error("infinite loop");
 			return false;
 		}
-		self.find_top(lord);
+		await self.find_top(lord);
 	} else {
-		self.traverse_down(player);
+		await self.traverse_down(player);
 	}
 };
 
 // find all the branch ends
 // add to team
 // keep track of num_branches so that we know when we're totally done
-relation_finder.prototype.traverse_down = function(player) {
+relation_finder.prototype.traverse_down = async function(player) {
 	var self = this;
 
 	// if this is not me add to team
 	self.team.push(player._id);
 
-	var vassals = Players.find({lord:player._id}, {fields: {lord:1}});
+	var vassals = await Players.find({lord:player._id}, {fields: {lord:1}}).fetchAsync();
 
 	// get direct vassal ids
-	vassalIds = _.pluck(vassals.fetch(), '_id');
+	var vassalIds = _.pluck(vassals, '_id');
 
 	// set vassals and defaults
 	let set = {is_king:false, vassals:vassalIds, allies_below:[], allies_above:[], team:[]};
 	self.bulk.find({_id:player._id}).updateOne({$set:set});
 
 
-	if (vassals.count() === 0) {
+	if (vassals.length === 0) {
 		// reached end
 		self.num_branches--;
-		self.traverse_up(player, []);
+		await self.traverse_up(player, []);
 	} else {
 
-		self.num_branches += vassals.count() - 1;
-		vassals.forEach(function(vassal) {
-			self.traverse_down(vassal);
-		});
+		self.num_branches += vassals.length - 1;
+		for (const vassal of vassals) {
+			await self.traverse_down(vassal);
+		}
 	}
 };
 
 
 // traverse through everyone on team up to the king
-relation_finder.prototype.traverse_up = function(player, allies_below_array) {
+relation_finder.prototype.traverse_up = async function(player, allies_below_array) {
 
 	var self = this;
 
@@ -165,21 +172,21 @@ relation_finder.prototype.traverse_up = function(player, allies_below_array) {
 	})
 
 	// traverse up
-	var lord = Players.findOne(player.lord, {fields:{lord:1}});
+	var lord = await Players.findOneAsync(player.lord, {fields:{lord:1}});
 	if (lord) {
 		// add self
 		allies_below_array.push(player._id);
 
 		// process lord
-		self.traverse_up(lord, allies_below_array);
+		await self.traverse_up(lord, allies_below_array);
 	} else {
-		self.reached_top(player);
+		await self.reached_top(player);
 	}
 };
 
 
 // at king
-relation_finder.prototype.reached_top = function(player) {
+relation_finder.prototype.reached_top = async function(player) {
 	var self = this;
 
 	if (self.num_branches === 0) {
@@ -188,15 +195,12 @@ relation_finder.prototype.reached_top = function(player) {
 
 		self.bulk.find({_id:player._id}).updateOne({$set: {is_king:true}});
 
-		var future = new Future();
-		self.bulk.execute({}, function(error, result) {
-	    if (error) {
-	      console.error(error);
-	    }
-	    future.return(result);
-	  });
-		future.wait();
+		try {
+			await self.bulk.execute();
+		} catch (error) {
+			console.error(error);
+		}
 
-		Queues.add('updateVassalAllyCountMultiple', {playerIds:self.team}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, false);
+		await Queues.addAsyncOrLog('updateVassalAllyCountMultiple', {playerIds:self.team}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, false);
 	}
 };

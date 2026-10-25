@@ -598,23 +598,24 @@ Queues._waitFor = function(promise) {
 // Pause every queue on every worker (Bull global pause, stored in Redis).
 // isManual marks a pause made from the admin panel, which the stuck-pause
 // safety net below leaves alone. If any queue fails to pause, everything is
-// resumed again and this throws, so a failed pause never leaves the game
+// resumed again and this rejects, so a failed pause never leaves the game
 // half-stopped.
-Queues.pauseAll = function(isManual) {
-  Settings.upsert({}, {$set: {isPaused:true, pausedAt:new Date(), manualPause:!!isManual}});
+Queues.pauseAllAsync = async function(isManual) {
+  await Settings.upsertAsync({}, {$set: {isPaused:true, pausedAt:new Date(), manualPause:!!isManual}});
 
   let errors = [];
-  Queues.queueNames.forEach(function(jobName) {
-    let error = Queues._waitFor(Queues[jobName].pause());
-    if (error) {
-      errors.push(jobName + ': ' + error.message);
+  for (const jobName of Queues.queueNames) {
+    try {
+      await Queues[jobName].pause();
+    } catch (error) {
+      errors.push(jobName + ': ' + (error || new Error('unknown error')).message);
     }
-  });
+  }
 
   if (errors.length) {
     console.error('--- could not pause job queue, resuming ---', errors);
     try {
-      Queues.resumeAll();
+      await Queues.resumeAllAsync();
     } catch (error) {
       // the safety net retries the resume
     }
@@ -624,22 +625,34 @@ Queues.pauseAll = function(isManual) {
 
 
 // Resume every queue. Tries all of them even if one fails. If any failed,
-// Settings keeps isPaused so the safety net retries, and this throws.
-Queues.resumeAll = function() {
+// Settings keeps isPaused so the safety net retries, and this rejects.
+Queues.resumeAllAsync = async function() {
   let errors = [];
-  Queues.queueNames.forEach(function(jobName) {
-    let error = Queues._waitFor(Queues[jobName].resume());
-    if (error) {
-      errors.push(jobName + ': ' + error.message);
+  for (const jobName of Queues.queueNames) {
+    try {
+      await Queues[jobName].resume();
+    } catch (error) {
+      errors.push(jobName + ': ' + (error || new Error('unknown error')).message);
     }
-  });
+  }
 
   if (errors.length) {
     console.error('--- could not resume job queue ---', errors);
     throw new Meteor.Error('resume-failed', errors.join('; '));
   }
 
-  Settings.upsert({}, {$set: {isPaused:false}, $unset: {pausedAt:'', manualPause:''}});
+  await Settings.upsertAsync({}, {$set: {isPaused:false}, $unset: {pausedAt:'', manualPause:''}});
+};
+
+
+// sync twins for code that hasn't converted yet (the admin methods and the
+// safety net below); the final sweep (upgrade PR 18) removes them
+Queues.pauseAll = function(isManual) {
+  return Promise.await(Queues.pauseAllAsync(isManual));
+};
+
+Queues.resumeAll = function() {
+  return Promise.await(Queues.resumeAllAsync());
 };
 
 
