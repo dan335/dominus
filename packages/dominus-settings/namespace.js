@@ -15,22 +15,20 @@ let settingsFields = {
   isNoLargeResources:1
 };
 
-// settings might be different per game
-// when server starts observe games and fill in cachedSettings
-// with settings per game
+// settings might be different per game. On the server every game is kept in
+// a cache (cachedGames, below), so reading a setting never waits on the
+// database: _gs stays synchronous through the Meteor 3 upgrade, where a
+// server-side findOne no longer works without await.
+let cacheMiss = null;
 _gs = {
   getGame: function(gameId) {
     let game = null;
 
     if (gameId) {
       if (Meteor.isServer) {
-        game = _.find(cachedGames, function(cachedGame) {
-          return cachedGame._id == gameId;
-        });
-
-        // games that are not running are not cached
+        game = _.has(cachedGames, gameId) ? cachedGames[gameId] : null;
         if (!game) {
-          game = Games.findOne(gameId, {fields:settingsFields});
+          game = cacheMiss(gameId);
         }
       } else {
         game = Games.findOne(gameId);
@@ -52,26 +50,74 @@ _gs = {
 if (Meteor.isServer) {
   cachedGames = {};
 
-  // exposed for server/bugFixTests.js
+  // exposed for server/asyncFoundationTests.js and server/bugFixTests.js
   _gs._cachedGames = cachedGames;
+  _gs._settingsFields = settingsFields;
 
   let cacheGame = function(game) {
     if (game) {
-      cachedGames[game._id] = game;
+      cachedGames[game._id] = _.pick(game, ['_id'].concat(_.keys(settingsFields)));
     }
   };
 
-  let query = Games.find({hasStarted:true, hasEnded:false}, {fields:settingsFields});
-  query.observe({
-    added: function(game) {
-      cacheGame(game);
-    },
-    changed: function(game, oldGame) {
-      cacheGame(game);
-    },
-    removed: function(game) {
-      delete cachedGames[game._id];
+  // A game that isn't in the cache: a new game that the observer below hasn't
+  // seen yet, or a gameId that isn't a game. Every caller that can see a
+  // brand-new game should have awaited _gs.ensureGame first, so this logs
+  // where it was called from, once per game. On Meteor 2.16 the sync findOne
+  // still works; on Meteor 3 it throws, and the game reads as {}.
+  let missesLogged = {};
+  _gs._missesLogged = missesLogged;
+  cacheMiss = function(gameId) {
+    if (!missesLogged[gameId]) {
+      missesLogged[gameId] = true;
+      console.error('_gs: game ' + gameId + ' is not in the settings cache; await _gs.ensureGame(gameId) first\n' +
+        new Error('settings cache miss').stack);
     }
+    let game = null;
+    try {
+      game = Games.findOne(gameId, {fields:settingsFields});
+    } catch (error) {
+      return null;
+    }
+    cacheGame(game);
+    return game;
+  };
+
+  // adds a game to the cache right away, for the code that inserts it
+  _gs.cacheGame = cacheGame;
+
+  // makes sure a game is in the cache before its settings are read
+  _gs.ensureGame = async function(gameId) {
+    if (typeof gameId !== 'string' || _.has(cachedGames, gameId)) {
+      return;
+    }
+    cacheGame(await Games.findOneAsync(gameId, {fields:settingsFields}));
+  };
+
+  // Fills the cache with every game, then keeps it up to date. Games are only
+  // removed by hand (control panel, tests), so the cache holds every game the
+  // database has; a game is a few booleans. _gs.ready resolves once the cache
+  // is full; the worker waits for it before it takes jobs (dominus-queue).
+  // Meteor 3's observe may deliver its first documents after it returns, so
+  // the cache is filled by a query first.
+  _gs._fill = async function() {
+    await Games.find({}, {fields:settingsFields}).forEachAsync(cacheGame);
+  };
+  _gs.ready = (async function() {
+    await _gs._fill();
+    await Games.find({}, {fields:settingsFields}).observeAsync({
+      added: function(game) {
+        cacheGame(game);
+      },
+      changed: function(game, oldGame) {
+        cacheGame(game);
+      },
+      removed: function(game) {
+        delete cachedGames[game._id];
+      }
+    });
+  })().catch(function(error) {
+    console.error('_gs: could not fill the settings cache', error);
   });
 }
 

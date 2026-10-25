@@ -118,6 +118,28 @@ packages/dominus-<feature>/
 
 Uses Bull 4 (Redis-backed queue) with 40+ job types for async game mechanics: army movement, income collection, battle resolution, map baking. Jobs are defined in `*Job.js` files within packages. `DOMINUS_WORKER=true` env var enables background processing. Every handler runs through `Queues.runJob` (`dominus-queue/queue.js`): Bull counts a job done when its work is done, so a queue runs at most its concurrency of jobs at once (1 unless the handler passes more to `.process`). A handler that throws is logged and its job still completes; jobs are never retried (`Queues.add` sets `attempts: 1`), and a job past its `timeout` fails in Bull but keeps its uniqueId until its work ends. Don't wait on Bull's own wait for active jobs (`queue.pause(true)` without `doNotWaitActive`, `queue.close()`): under fibers it aborts Node; use `Queues.pauseLocal()` and `Queues.whenIdle()`. SyncedCron (`quave:synced-cron`, pinned to 2.1.0 in `dominus-init/package.js`: later versions skip a tick while an earlier one has no `finishedAt`, and exit the process on SIGTERM and on an unhandled rejection) handles distributed scheduling; its ticks are recorded in the `cronHistory` collection.
 
+### Async conversion (Meteor upgrade, stage 2)
+
+The server code is moving from fibers to `async`/`await`, one domain per PR, while the app stays on Meteor 2.16. See `/mnt/project-files/reports/meteor-upgrade-plan.md` for the plan.
+
+- **The missing-await check.** `node tests/async/check-await.js` must report no findings. `tests/run-server-tests.sh` runs it, and `tests/async/README.md` explains it.
+  - Await or return every promise, or `.catch()` it.
+  - Write `void fooAsync()` when nothing should wait on purpose.
+  - Don't give an async callback to `forEach`/`_.each`; use `for...of` or a cursor's `forEachAsync`, which waits for it.
+- **Settings stay sync.** `_gs.*` reads a server cache that holds every game (`dominus-settings/namespace.js`).
+  - Code that inserts a game calls `_gs.cacheGame`.
+  - Code that can see a game made on another server first awaits `_gs.ensureGame(gameId)`. `Queues.runJob` does this for any job whose data has a `gameId`.
+  - The worker takes no jobs until `_gs.ready` resolves.
+  - A cache miss logs an error with its stack, once per game.
+- **Methods** (`both/*Methods.js` run on client and server):
+  - The method body becomes `async`.
+  - Any client-only simulation stays sync behind `if (this.isSimulation)`.
+  - A method with no useful simulation loses its client stub.
+  - As each method converts, its client callers move from `Meteor.call` to `Meteor.callAsync`.
+  - Shared helpers the client calls sync get a server `…Async` twin, as with `dMarket.total_of_buyAsync`.
+- **Order.** Callers can go first. On 2.16, an async function can still make sync Meteor calls after an `await`. `node tests/async/async-graph.js` shows how far converting a domain ripples into others.
+- **Tests.** Test files keep their own sync setup calls until the final sweep. They add `await`, or `dTest.settle`, only where they call converted functions.
+
 ### Tech Stack
 
 - **Framework**: Meteor.js with Blaze templating

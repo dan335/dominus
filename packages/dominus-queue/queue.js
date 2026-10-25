@@ -124,6 +124,15 @@ Queues.runJob = function(jobName, handler) {
       // promise callback switches while Bull waits on that promise.
       setImmediate(function() { Fiber(function() {
         Queues.running[key] = {jobName:jobName, jobId:job.id, uniqueId:uniqueId, startedAt:new Date(start)};
+        // a job for a game that was just made, on another server, may come
+        // before that server's insert reaches this one's settings cache
+        if (job.data && typeof job.data.gameId === 'string') {
+          try {
+            Queues._waitForResult(_gs.ensureGame(job.data.gameId));
+          } catch (error) {
+            console.error('job ' + jobName + ': could not read game ' + job.data.gameId + ' into the settings cache', error);
+          }
+        }
         try {
           const result = handler(job);
           if (result && typeof result.then === 'function') {
@@ -303,8 +312,11 @@ Queues.create = function(jobName) {
     this.handler = handler;
     this.concurrency = concurrency;
     const queue = this;
-    // resolves when the queue closes; rejects if it can't start
-    return Queues.dropBull2Keys(jobName).catch(function(error) {
+    // resolves when the queue closes; rejects if it can't start. No job runs
+    // before the settings cache holds every game (_gs.ready never rejects).
+    return Promise.resolve(_gs.ready).then(function() {
+      return Queues.dropBull2Keys(jobName);
+    }).catch(function(error) {
       console.error('could not check job queue ' + jobName + ' for Bull 2 keys:', error);
     }).then(function() {
       return bullProcess.call(queue, concurrency, Queues.runJob(jobName, handler));
