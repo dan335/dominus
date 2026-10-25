@@ -1,7 +1,7 @@
 // The welcome screen, the summary panel's groups and renaming, each a method
 // with a simulation that the browser calls without waiting
 // (dFunc.callAndForget, dFunc.callWithCallback; upgrade PR 17).
-const { test, expect, server, signIn, openGame } = require('../lib/fixtures');
+const { test, expect, server, signIn, openGame, openLeftPanel } = require('../lib/fixtures');
 
 test.beforeAll(() => { server('dTest.e2e.reset()'); });
 test.afterAll(() => { server('dTest.e2e.reset()'); });
@@ -23,6 +23,7 @@ test('the welcome screen stays closed, and the summary panel\'s groups fold and 
   await expect(page.locator('#rp_info_castle')).toBeVisible();
   await expect(page.locator('#welcome_screen')).toHaveCount(0);
 
+  await openLeftPanel(page, 'fa-bars', 'summary_panel');
   for (const [link, flag] of [['#armies_group_link', 'lp_show_armies'], ['#lords_group_link', 'lp_show_lords'], ['#allies_group_link', 'lp_show_allies']]) {
     expect(player()[flag]).toBe(true);
     await page.click(link);
