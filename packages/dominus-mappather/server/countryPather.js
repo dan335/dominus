@@ -16,14 +16,13 @@
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.findCountriesInPath.process(4, Meteor.bindEnvironment(function(job) {
-    Mappather.findCountriesInPath(job.data.path);
-    return Promise.resolve();
-  }));
+  Queues.findCountriesInPath.process(4, async function(job) {
+    await Mappather.findCountriesInPath(job.data.path);
+  });
 }
 
 
-Mappather.findCountriesInPath = function(path) {
+Mappather.findCountriesInPath = async function(path) {
   check(path._id, String);
   check(path.x, validNumber);
   check(path.y, validNumber);
@@ -33,19 +32,19 @@ Mappather.findCountriesInPath = function(path) {
   let fromX = null;
   let fromY = null;
   if (path.index == 0) {
-    const army = Armies.findOne(path.armyId, {fields: {x:1, y:1}});
+    const army = await Armies.findOneAsync(path.armyId, {fields: {x:1, y:1}});
     if (!army) {
-      Armypaths.remove({armyId:path.armyId});
+      await Armypaths.removeAsync({armyId:path.armyId});
       return false;
     }
     fromX = army.x;
     fromY = army.y;
   } else {
     //const lastPath = Armypaths.find({armyId:path.armyId, index:{$lt:path.index}}, {sort: {index:-1}, limit:1, fields: {x:1, y:1}}).fetch()[0];
-    const lastPath = Armypaths.findOne({armyId:path.armyId, index:path.index-1}, {fields: {x:1, y:1}});
+    const lastPath = await Armypaths.findOneAsync({armyId:path.armyId, index:path.index-1}, {fields: {x:1, y:1}});
     if (!lastPath) {
       // indexes are wrong somehow, re-index
-      Queues.add('fixPathIndexes', {armyId:path.armyId}, {delay:500, timeout:1000*60}, false);
+      await Queues.addAsyncOrLog('fixPathIndexes', {armyId:path.armyId}, {delay:500, timeout:1000*60}, false);
       //console.error('No lastpath found in findCountriesInPath', path);
       return false;
     }
@@ -61,7 +60,7 @@ Mappather.findCountriesInPath = function(path) {
   } else {
     //let nodes = countryNeighbors[path.gameId];
     const countryFields = {neighbors:1};
-    const nodes = Countries.find({gameId:path.gameId}, {fields:countryFields}).fetch();
+    const nodes = await Countries.find({gameId:path.gameId}, {fields:countryFields}).fetchAsync();
 
     if (!nodes) {
       console.error('no nodes found.');
@@ -71,7 +70,7 @@ Mappather.findCountriesInPath = function(path) {
     path.countryIds = pathfind(nodes, fromCountryId, toCountryId);
   }
 
-  Armypaths.update(path._id, {$set: {countryIds:path.countryIds}});
+  await Armypaths.updateAsync(path._id, {$set: {countryIds:path.countryIds}});
 }
 
 

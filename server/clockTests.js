@@ -199,10 +199,10 @@ if (Meteor.isServer) {
           Armypaths.insert({gameId: w.gameId, armyId: army._id, user_id: army.user_id, index: 0, x: army.x + 1, y: army.y,
             paused: false, speed: 5, hexes: [{x: army.x + 1, y: army.y}], countryIds: ['c'], distance: 1, time: 1,
             last_move_at: moment(dClock.now()).subtract(1, 'minute').toDate()});
-          dArmies.moveArmiesJob();
+          dTest.settle(dArmies.moveArmiesJob());
           equal(Armies.findOne(army._id).x, army.x, 'not moved before its time');
           dClock.advance(5 * 60 * 1000);
-          dTest.recordJobs(function() { dArmies.moveArmiesJob(); });
+          dTest.recordJobs(function() { dTest.settle(dArmies.moveArmiesJob()); });
           var moved = Armies.findOne(army._id);
           equal(moved.x, army.x + 1, 'moved once its time passed in game time');
           equal(moved.last_move_at.getTime(), dClock.nowMs(), 'last_move_at is the game time');

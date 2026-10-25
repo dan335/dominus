@@ -1,24 +1,29 @@
-var Future = Npm.require('fibers/future');
-
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.moveArmiesJob.process(Meteor.bindEnvironment(function(job) {
-    dArmies.moveArmiesJob();
-    return Promise.resolve();
-  }));
+  Queues.moveArmiesJob.process(async function(job) {
+    await dArmies.moveArmiesJob();
+  });
 }
 
 
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.fixPathIndexes.process(Meteor.bindEnvironment(function(job) {
-    dArmies.fixPathIndexes(job.data.armyId);
-    return Promise.resolve();
-  }));
+  Queues.fixPathIndexes.process(async function(job) {
+    await dArmies.fixPathIndexes(job.data.armyId);
+  });
 }
+
+// runs a bulk op, logging a failure as the callbacks this replaces did
+var executeBulk = async function(bulk) {
+  try {
+    await bulk.execute();
+  } catch (error) {
+    console.error(error);
+  }
+};
 
 // re-number army path indexes
-dArmies.fixPathIndexes = function(armyId) {
+dArmies.fixPathIndexes = async function(armyId) {
   check(armyId, String);
 
   let bulkPaths = Armypaths.rawCollection().initializeUnorderedBulkOp();
@@ -27,21 +32,14 @@ dArmies.fixPathIndexes = function(armyId) {
   var index = 0;
   var find = {armyId:armyId};
   var options = {sort:{index:1}};
-  Armypaths.find(find, options).forEach(function(path) {
+  for (const path of await Armypaths.find(find, options).fetchAsync()) {
     bulkPaths.find({_id:path._id}).updateOne({$set: {index:index, countryIds:null, hexes:null}});
     index++;
     hasBulk = true;
-  });
+  }
 
   if (hasBulk) {
-    let futurePaths = new Future();
-    bulkPaths.execute({}, function(error, result) {
-      if (error) {
-        console.error(error);
-      }
-      futurePaths.return(result);
-    });
-    futurePaths.wait();
+    await executeBulk(bulkPaths);
   }
 }
 
@@ -49,9 +47,9 @@ dArmies.fixPathIndexes = function(armyId) {
 
 // TODO: use find and modify
 // hexes is sometimes null by the time we do $pop
-dArmies.moveArmiesJob = function(done) {
+dArmies.moveArmiesJob = async function(done) {
 
-  Armypaths.find({index:0, paused:false, speed:{$ne:null}, hexes:{$ne:null, $exists:true}}).forEach(function(path) {
+  for (const path of await Armypaths.find({index:0, paused:false, speed:{$ne:null}, hexes:{$ne:null, $exists:true}}).fetchAsync()) {
 
     if (moment(new Date(path.last_move_at)).add(path.speed, 'minutes') < moment(dClock.now())) {
       if (path.hexes) {
@@ -70,17 +68,17 @@ dArmies.moveArmiesJob = function(done) {
           // the army to a non-adjacent hex. Re-read the path fresh and skip this
           // tick unless it still matches the snapshot, so we only pop from
           // current data. Worst case an army waits one tick -- never a teleport.
-          var freshPath = Armypaths.findOne(path._id, {fields: {hexes:1}});
+          var freshPath = await Armypaths.findOneAsync(path._id, {fields: {hexes:1}});
           if (!freshPath || !freshPath.hexes || freshPath.hexes.length !== path.hexes.length ||
               freshPath.hexes[0].x !== hex.x || freshPath.hexes[0].y !== hex.y) {
-            return;
+            continue;
           }
 
           let distance = path.hexes.length-1;
           var timeInMinutes = path.speed * distance;
           var time = timeInMinutes * 60 * 1000; // convert to ms
 
-          Armypaths.update(path._id, {$pop: {hexes:-1}, $set: {distance:distance, time:time}});
+          await Armypaths.updateAsync(path._id, {$pop: {hexes:-1}, $set: {distance:distance, time:time}});
           //bulkPaths.find({_id:path._id}).updateOne({$pop: {hexes:-1}, $set: {distance:distance, time:time}});
 
           // check if we're at the end
@@ -90,53 +88,45 @@ dArmies.moveArmiesJob = function(done) {
             if (hex.x == path.x && hex.y == path.y) {
               // path finished
               // remove and update index
-              Armypaths.remove(path._id);
+              await Armypaths.removeAsync(path._id);
               //bulkPaths.find({_id:path._id}).remove();
 
 
               var index = 0;
               var find = {armyId:path.armyId};
-              Armypaths.find(find, {sort:{index:1}}).forEach(function(p) {
+              for (const p of await Armypaths.find(find, {sort:{index:1}}).fetchAsync()) {
                 //Armypaths.update(p._id, {$set:{index:index}});
                 bulkPaths.find({_id:p._id}).updateOne({$set:{index:index}});
                 hasBulk = true;
                 index++;
-              });
+              }
             }
           }
 
           if (hasBulk) {
-            let futurePaths = new Future();
-            bulkPaths.execute({}, function(error, result) {
-              if (error) {
-                console.error(error);
-              }
-              futurePaths.return(result);
-            });
-            futurePaths.wait();
+            await executeBulk(bulkPaths);
           }
 
           // move army after fixing paths
-          Armies.update(path.armyId, {$set: {
+          await Armies.updateAsync(path.armyId, {$set: {
             x:hex.x,
             y:hex.y,
             last_move_at:dClock.now(),
             countryId: hex.countryId
           }, $inc: {moveDistance:-1}});
 
-          Armypaths.update({armyId:path.armyId}, {$set:{last_move_at:dClock.now()}}, {multi:true});
+          await Armypaths.updateAsync({armyId:path.armyId}, {$set:{last_move_at:dClock.now()}}, {multi:true});
           //bulkPaths.find({armyId:path.armyId}).update({$set:{last_move_at:new Date()}});
 
           // markers
-          Markers.update({unitType:'army', unitId:path.armyId}, {$set:{
+          await Markers.updateAsync({unitType:'army', unitId:path.armyId}, {$set:{
             x:hex.x,
             y:hex.y,
             countryId: hex.countryId
           }}, {multi:true});
           //bulkMarkers.find({unitId:path.armyId}).updateOne({$set:{x:hex.x, y:hex.y, countryId: hex.countryId}});
 
-          // async since upgrade PR 13a; this function converts in PR 13b
-          Promise.await(dArmies.enterNewHexCheck(path.gameId, path.armyId, true));
+          await dArmies.enterNewHexCheck(path.gameId, path.armyId, true);
 
         } else {
 
@@ -150,23 +140,16 @@ dArmies.moveArmiesJob = function(done) {
 
           var index = 0;
           var find = {armyId:path.armyId};
-          Armypaths.find(find, {sort:{index:1}}).forEach(function(p) {
+          for (const p of await Armypaths.find(find, {sort:{index:1}}).fetchAsync()) {
             //Armypaths.update(p._id, {$set:{index:index}});
             bulkPaths.find({_id:p._id}).updateOne({$set:{index:index}});
             index++;
-          });
+          }
 
-          let futurePaths = new Future();
-          bulkPaths.execute({}, function(error, result) {
-            if (error) {
-              console.error(error);
-            }
-            futurePaths.return(result);
-          });
-          futurePaths.wait();
+          await executeBulk(bulkPaths);
 
         }
       }
     }
-  });
+  }
 }

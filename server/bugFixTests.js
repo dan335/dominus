@@ -898,7 +898,7 @@ if (Meteor.isServer) {
         // pathfinding would normally refill these
         Armypaths.update(b[1], {$set: {hexes: [{x: 7, y: 7, countryId: 'bf'}], speed: 10}});
 
-        dArmies.moveArmiesJob();
+        dTest.settle(dArmies.moveArmiesJob());
 
         let army = Armies.findOne(armyB);
         equal(army.x, 0, 'army has not moved (x)');
