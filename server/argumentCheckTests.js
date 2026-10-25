@@ -174,6 +174,89 @@ if (Meteor.isServer) {
       }
     });
 
+    // A 'game' method waits for server/methodGate.js to look up the caller's
+    // player first. The audit still covers it as before: the gate's own checks
+    // of the ids it looks up count, and an argument nobody checks is refused.
+    // On 2.16 an async function runs in its caller's fiber, so an argument
+    // checked only after the method's first await still counts; on Meteor 3
+    // it won't (audit-argument-checks looks when the method returns its
+    // promise), so this test changes then on purpose.
+    run('argument checks: a game method behind the method gate is audited as before, and keeps its user and write fence', function() {
+      var user = t.createTestUser({});
+      var gameId = 'argcheck_gate_' + Random.id(6);
+      var playerId = Players.insert({gameId: gameId, userId: user._id, username: 'argcheck gate'});
+      var castleId = Castles.insert({gameId: gameId, user_id: user._id, name: 'argcheck gate castle'});
+      var otherGame = 'argcheck_gate_' + Random.id(6);
+      var ran = {};
+      var methods = {
+        argumentCheckTestsGateUnchecked: [{gameId: 0}, function(gameId, other) { ran.unchecked = (ran.unchecked || 0) + 1; return 'ran'; }],
+        argumentCheckTestsGateChecksRest: [{gameId: 0}, function(gameId, other) { check(other, String); return 'ran'; }],
+        argumentCheckTestsGateTarget: [{target: 0}, function(id) { return 'ran'; }],
+        argumentCheckTestsGateNotPlayer: [{gameId: 0}, function(gameId) { ran.notPlayer = (ran.notPlayer || 0) + 1; return 'ran'; }],
+        argumentCheckTestsGateAsync: [{gameId: 0}, async function(gameId, other) {
+          check(other, String);
+          await Promise.resolve();
+          return [this.userId, Meteor.userId(), !!DDPServer._CurrentWriteFence.get(), DDP._CurrentMethodInvocation.get() === this];
+        }],
+        argumentCheckTestsGateLateCheck: [{gameId: 0}, async function(gameId, other) {
+          await Promise.resolve();
+          check(other, String);
+          ran.late = (ran.late || 0) + 1;
+          return 'ran';
+        }]
+      };
+      _.each(methods, function(m, name) {
+        var spec = m[0];
+        MethodPolicy[name] = {access: 'game', game: function(args) {
+          return spec.target === undefined ? {gameId: args[spec.gameId]} : {targets: [[Castles, args[spec.target]]]};
+        }};
+        Meteor.methods(_.object([[name, m[1]]]));
+      });
+      dGate.wrapAll();
+      var connection = connect(user._id);
+      var call = function() {
+        var args = _.toArray(arguments);
+        try {
+          return {result: connection.apply(args[0], args.slice(1), {noRetry: true})};
+        } catch (e) {
+          return {error: e};
+        }
+      };
+      try {
+        var out = call('argumentCheckTestsGateUnchecked', gameId, 'x');
+        equal(out.error && out.error.error, 500, 'an argument nobody checked: refused as a server error');
+        equal(ran.unchecked, 1, 'after the method ran');
+
+        equal(call('argumentCheckTestsGateChecksRest', gameId, 'x').result, 'ran', 'the gate\'s check of the gameId counts');
+        equal(call('argumentCheckTestsGateTarget', castleId).result, 'ran', 'the gate\'s check of a target\'s id counts');
+
+        out = call('argumentCheckTestsGateNotPlayer', otherGame);
+        equal(out.error && out.error.error, 'not-authorized', 'not a player in the game: refused');
+        equal(ran.notPlayer, undefined, 'before the method ran');
+
+        out = call('argumentCheckTestsGateAsync', gameId, 'x');
+        equal(JSON.stringify(out.result), JSON.stringify([user._id, user._id, true, true]), 'an async method keeps its user, write fence and invocation after an await');
+
+        out = call('argumentCheckTestsGateLateCheck', gameId, 'x');
+        equal(out.result, 'ran', 'on 2.16, an argument checked only after an await still counts');
+        equal(ran.late, 1, 'and the method ran once');
+
+        out = call('argumentCheckTestsGateChecksRest', gameId, {$ne: null});
+        equal(out.error && out.error.error, 400, 'a bad argument is still refused by the method\'s own check');
+        out = call('argumentCheckTestsGateChecksRest', {$ne: null}, 'x');
+        equal(out.error && out.error.error, 400, 'and a bad gameId by the gate\'s');
+      } finally {
+        connection.disconnect();
+        _.each(methods, function(m, name) {
+          delete Meteor.server.method_handlers[name];
+          delete MethodPolicy[name];
+        });
+        Players.remove(playerId);
+        Castles.remove(castleId);
+        t.cleanupUser(user._id);
+      }
+    });
+
     run('argument checks: every method is listed with its argument count', function() {
       var names = clientMethods();
       assert(names.length > 90, 'methods are registered (' + names.length + ')');

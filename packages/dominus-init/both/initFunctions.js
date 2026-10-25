@@ -32,16 +32,16 @@ dInit.getRelationshipServer = async function(playerId, otherPlayerId) {
 }
 
 
-// throws unless userId has a player in gameId, returns the player's id
+// rejects unless userId has a player in gameId, resolves with the player's id
 // used by server/methodGate.js so spectators can't act in a game
-dInit.requirePlayerInGame = function(userId, gameId) {
+dInit.requirePlayerInGame = async function(userId, gameId) {
   check(gameId, String);
 
   if (!userId) {
     throw new Meteor.Error('not-authorized', 'You must be logged in.');
   }
 
-  let player = Players.findOne({gameId:gameId, userId:userId}, {fields: {_id:1}});
+  let player = await Players.findOneAsync({gameId:gameId, userId:userId}, {fields: {_id:1}});
   if (!player) {
     throw new Meteor.Error('not-authorized', 'You are not a player in this game.');
   }

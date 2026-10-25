@@ -5,28 +5,28 @@ Meteor.startup(function() {
 		console.log('--- dominus worker started ---');
 
 
-		Meteor.defer(function() {
+		Meteor.defer(async function() {
 			if (process.env.DOMINUS_TEST == 'false') {
 
-				Settings.upsert({}, {$set: {isPaused:false}});
+				await Settings.upsertAsync({}, {$set: {isPaused:false}});
 
 				// temp, fix up incomeFromVassals
-				Players.update({incomeFromVassals:0}, {$set: {incomeFromVassals:{}}}, {multi:true});
+				await Players.updateAsync({incomeFromVassals:0}, {$set: {incomeFromVassals:{}}}, {multi:true});
 				let vset = {};
 				_s.market.types_plus_gold.forEach(function(type) {
 					vset['incomeFromVassals.'+type] = 0;
 				});
-				Players.update({incomeFromVassals:0}, {$set:vset}, {multi:true});
+				await Players.updateAsync({incomeFromVassals:0}, {$set:vset}, {multi:true});
 
 				// another temp fix
-				Armies.update({moveDistance:null}, {$set: {moveDistance:0}}, {multi:true});
+				await Armies.updateAsync({moveDistance:null}, {$set: {moveDistance:0}}, {multi:true});
 
 
 
-				Armies.find({x:null, y:null}).forEach(function(army) {
-					var num = Armies.update(army._id, {$set:{x:army.castle_x, y:army.castle_y}});
+				for (let army of await Armies.find({x:null, y:null}).fetchAsync()) {
+					var num = await Armies.updateAsync(army._id, {$set:{x:army.castle_x, y:army.castle_y}});
 					console.log(num+' armies fixed with null x,y');
-				})
+				}
 
 
 				//make sure there are no negative armies
@@ -41,47 +41,46 @@ Meteor.startup(function() {
 				var villages = Villages.find({$or:find});
 				var armies = Armies.find({$or:find});
 
-				castles.forEach(function(res) {
-					_s.armies.types.forEach(function(type) {
+				for (let res of await castles.fetchAsync()) {
+					for (let type of _s.armies.types) {
 						if (res[type] < 0) {
 							console.log('castle '+res._id+' had '+res[type]+' '+type+'s');
 							var set = {};
 							set[type] = 0;
-							Castles.update(res._id, {$set:set});
+							await Castles.updateAsync(res._id, {$set:set});
 						}
-					});
-				});
+					}
+				}
 
-				villages.forEach(function(res) {
-					_s.armies.types.forEach(function(type) {
+				for (let res of await villages.fetchAsync()) {
+					for (let type of _s.armies.types) {
 						if (res[type] < 0) {
 							console.log('village '+res._id+' had '+res[type]+' '+type+'s');
 							var set = {};
 							set[type] = 0;
-							Villages.update(res._id, {$set:set});
+							await Villages.updateAsync(res._id, {$set:set});
 						}
-					});
-				});
+					}
+				}
 
-				armies.forEach(function(res) {
+				for (let res of await armies.fetchAsync()) {
 					var numSoldiers = 0;
-					_s.armies.types.forEach(function(type) {
+					for (let type of _s.armies.types) {
 						if (res[type] < 0) {
 							console.log('army '+res._id+' had '+res[type]+' '+type+'s');
 							var set = {};
 							set[type] = 0;
-							Armies.update(res._id, {$set:set});
+							await Armies.updateAsync(res._id, {$set:set});
 						} else {
 							numSoldiers += res[type];
 						}
-					});
+					}
 
 					// if no soldiers delete army
 					if (!numSoldiers) {
-						// async since upgrade PR 13a; this file converts in PR 17
-						Promise.await(dArmies.destroyArmy(res._id));
+						await dArmies.destroyArmy(res._id);
 					}
-				});
+				}
 			}
 		});
 

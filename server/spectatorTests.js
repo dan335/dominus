@@ -764,11 +764,12 @@ if (Meteor.isServer) {
         var foreign = Armypaths.insert({gameId: w.G, armyId: w.army, user_id: w.attacker._id, x: 3, y: -1, index: 1});
         var anonymous = Armypaths.insert({gameId: w.G, armyId: w.army, user_id: null, x: 3, y: -1, index: 2});
         var wrongGame = Armypaths.insert({gameId: w.G2, armyId: w.army, user_id: w.victim._id, x: 3, y: -1, index: 3});
-        removeForeignArmyPaths();
+        t.assert(dTest.settle(removeForeignArmyPaths()) >= 3, 'it counts the paths it removed');
         assert(!Armypaths.findOne(foreign), 'path from another user removed');
         assert(!Armypaths.findOne(anonymous), 'path from a logged out caller removed');
         assert(!Armypaths.findOne(wrongGame), 'path in the wrong game removed');
         assert(Armypaths.findOne(w.path), 'owner path kept');
+        t.equal(dTest.settle(removeForeignArmyPaths()), 0, 'and does nothing once clean');
       } finally {
         cleanupWorld(w);
       }

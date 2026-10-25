@@ -43,13 +43,13 @@ if (Meteor.isServer && process.env.DOMINUS_SOAK_MONITOR) {
     var CRON_LAG_MS = 10000;
     var cronFrom = new Date(Date.now() - CRON_LAG_MS);
     var cronLast = {};
-    var cronTicks = function() {
+    var cronTicks = async function() {
       var to = new Date(Date.now() - CRON_LAG_MS);
       var crons = {};
-      SyncedCron._collection.find({intendedAt: {$gte: cronFrom, $lt: to}}, {
+      (await SyncedCron._collection.find({intendedAt: {$gte: cronFrom, $lt: to}}, {
         fields: {name: 1, intendedAt: 1, finishedAt: 1, error: 1},
         sort: {intendedAt: 1}
-      }).forEach(function(tick) {
+      }).fetchAsync()).forEach(function(tick) {
         var c = crons[tick.name] || (crons[tick.name] = {ticks: 0, errors: 0, unfinished: 0, minGapMs: null, maxGapMs: 0});
         c.ticks++;
         if (tick.error) c.errors++;
@@ -68,7 +68,7 @@ if (Meteor.isServer && process.env.DOMINUS_SOAK_MONITOR) {
 
     var ms = function(ns) { return Math.round(ns / 1e4) / 100; };
 
-    var sample = function() {
+    var sample = async function() {
       var memory = process.memoryUsage();
       var sessions = Meteor.server.sessions;
       var out = {
@@ -86,44 +86,44 @@ if (Meteor.isServer && process.env.DOMINUS_SOAK_MONITOR) {
 
       if (isWorker) {
         out.queues = {};
-        Queues.queueNames.forEach(function(name) {
-          var counts = Promise.await(Queues[name].getJobCounts());
+        for (var name of Queues.queueNames) {
+          var counts = await Queues[name].getJobCounts();
           if (_.some(counts)) out.queues[name] = counts;
-        });
+        }
         out.failedAttempts = failedAttempts;
         out.failedReasons = failedReasons;
         failedAttempts = {};
         failedReasons = [];
-        out.cron = cronTicks();
+        out.cron = await cronTicks();
 
-        out.games = Games.find({hasStarted: true, hasClosed: {$ne: true}}, {fields: {_id: 1, name: 1, hasEnded: 1, dominusAchieved: 1}}).map(function(game) {
-          return {
+        out.games = [];
+        for (var game of await Games.find({hasStarted: true, hasClosed: {$ne: true}}, {fields: {_id: 1, name: 1, hasEnded: 1, dominusAchieved: 1}}).fetchAsync()) {
+          out.games.push({
             _id: game._id,
             name: game.name,
             hasEnded: !!game.hasEnded,
             dominusAchieved: !!game.dominusAchieved,
-            players: Players.find({gameId: game._id}).count(),
-            castles: Castles.find({gameId: game._id}).count(),
-            villages: Villages.find({gameId: game._id}).count(),
-            armies: Armies.find({gameId: game._id}).count(),
-            moves: Armypaths.find({gameId: game._id}).count(),
-            battles: Battles2.find({gameId: game._id, isOver: false}).count(),
-            battlesOver: Battles2.find({gameId: game._id, isOver: true}).count(),
-            kings: Players.find({gameId: game._id, is_king: true}).count(),
+            players: await Players.find({gameId: game._id}).countAsync(),
+            castles: await Castles.find({gameId: game._id}).countAsync(),
+            villages: await Villages.find({gameId: game._id}).countAsync(),
+            armies: await Armies.find({gameId: game._id}).countAsync(),
+            moves: await Armypaths.find({gameId: game._id}).countAsync(),
+            battles: await Battles2.find({gameId: game._id, isOver: false}).countAsync(),
+            battlesOver: await Battles2.find({gameId: game._id, isOver: true}).countAsync(),
+            kings: await Players.find({gameId: game._id, is_king: true}).countAsync(),
+            // the test runner's own check, still sync until the final sweep
             problems: dTest.gameInvariants(game._id)
-          };
-        });
+          });
+        }
       }
 
       console.log('SOAK_SAMPLE ' + JSON.stringify(out));
     };
 
     Meteor.setInterval(function() {
-      try {
-        sample();
-      } catch (e) {
+      sample().catch(function(e) {
         console.error('SOAK_MONITOR_ERROR', e && e.stack ? e.stack : e);
-      }
+      });
     }, seconds * 1000);
     console.log('SOAK_MONITOR started, a sample every ' + seconds + ' seconds');
   });

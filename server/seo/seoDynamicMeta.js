@@ -4,8 +4,8 @@
 // Turns the generic per-route metadata into a real title and description using
 // the actual game name / username, decides whether the URL is a genuine 404,
 // and renders the data itself (standings, game lists, rankings) into the
-// crawlable block.  Hooked into SEO.resolve() through the `dynamic` key on
-// those routes in lib/seo/seoRoutes.js.
+// crawlable block.  SEO.resolveAsync() (at the bottom) runs the one named by
+// the `dynamic` key on those routes in lib/seo/seoRoutes.js.
 //
 // The data has to be in the server HTML.  The client loads it over DDP, which
 // prefers WebSockets, and Googlebot does not support WebSockets - Search
@@ -32,11 +32,11 @@ var cache = {};
 var cacheOrder = [];
 
 
-function memo(key, fn) {
+async function memo(key, fn) {
   var entry = cache[key];
   if (entry && (Date.now() - entry.at) < CACHE_TTL) return entry.value;
 
-  var value = fn();
+  var value = await fn();
   cache[key] = { value: value, at: Date.now() };
   cacheOrder.push(key);
 
@@ -48,9 +48,9 @@ function memo(key, fn) {
 }
 
 
-function safely(name, meta, fn) {
+async function safely(name, meta, fn) {
   try {
-    return fn() || meta;
+    return (await fn()) || meta;
   } catch (err) {
     console.error('[seo] dynamic ' + name + ' failed for', meta && meta.path, err && err.stack ? err.stack : err);
     return meta;
@@ -149,14 +149,14 @@ function standingsHtml(results) {
 SEO.dynamic = {
 
   result: function(meta, gameId) {
-    return safely('result', meta, function() {
-      var game = memo('game:' + gameId, function() {
-        return Games.findOne(gameId, {
+    return safely('result', meta, async function() {
+      var game = await memo('game:' + gameId, async function() {
+        return (await Games.findOneAsync(gameId, {
           fields: _.extend({
             name: 1, hasEnded: 1, startedAt: 1, endDate: 1, winningPlayer: 1,
             numPlayers: 1, maxPlayers: 1, desc: 1, results: 1
           }, GAME_TYPE_FIELDS)
-        }) || null;
+        })) || null;
       });
 
       if (!game) return notFound(meta);
@@ -219,19 +219,19 @@ SEO.dynamic = {
 
 
   profile: function(meta, userId) {
-    return safely('profile', meta, function() {
-      var profile = memo('profile:' + userId, function() {
-        var user = Meteor.users.findOne(userId, { fields: { username: 1 } });
+    return safely('profile', meta, async function() {
+      var profile = await memo('profile:' + userId, async function() {
+        var user = await Meteor.users.findOneAsync(userId, { fields: { username: 1 } });
         if (!user) return null;
 
-        var players = Players.find({ userId: userId, gameIsOver: true }, {
+        var players = await Players.find({ userId: userId, gameIsOver: true }, {
           fields: { gameId: 1, wonGame: 1, rankByIncome: 1, rankByVassals: 1 }
-        }).fetch();
+        }).fetchAsync();
 
         var games = {};
-        Games.find({ _id: { $in: _.pluck(players, 'gameId') } }, {
+        (await Games.find({ _id: { $in: _.pluck(players, 'gameId') } }, {
           fields: { name: 1, endDate: 1, numPlayers: 1 }
-        }).forEach(function(game) { games[game._id] = game; });
+        }).fetchAsync()).forEach(function(game) { games[game._id] = game; });
 
         var rows = players.filter(function(player) {
           return games[player.gameId];
@@ -318,13 +318,13 @@ SEO.dynamic = {
   // client's list uses JavaScript toggles, so without this the result pages
   // are reachable only through the sitemap.
   results: function(meta) {
-    return safely('results', meta, function() {
-      var games = memo('list:results', function() {
+    return safely('results', meta, async function() {
+      var games = await memo('list:results', function() {
         return Games.find({ hasEnded: true }, {
           fields: _.extend({ name: 1, endDate: 1, startedAt: 1, numPlayers: 1, winningPlayer: 1 }, GAME_TYPE_FIELDS),
           sort: { endDate: -1 },
           limit: MAX_RESULTS_LISTED
-        }).fetch();
+        }).fetchAsync();
       });
 
       if (!games.length) return meta;
@@ -350,7 +350,7 @@ SEO.dynamic = {
 
 
   rankings: function(meta) {
-    return safely('rankings', meta, function() {
+    return safely('rankings', meta, async function() {
       function top(key) {
         var query = {};
         query[key + '.numGames'] = { $gt: 0 };
@@ -359,11 +359,11 @@ SEO.dynamic = {
         sort[key + '.overallRank'] = 1;
         var fields = { username: 1 };
         fields[key] = 1;
-        return Meteor.users.find(query, { fields: fields, sort: sort, limit: MAX_RANKED_LISTED }).fetch();
+        return Meteor.users.find(query, { fields: fields, sort: sort, limit: MAX_RANKED_LISTED }).fetchAsync();
       }
 
-      var lists = memo('list:rankings', function() {
-        return { pro: top('rankingPro'), regular: top('rankingRegular') };
+      var lists = await memo('list:rankings', async function() {
+        return { pro: await top('rankingPro'), regular: await top('rankingRegular') };
       });
 
       function table(users, key) {
@@ -388,12 +388,12 @@ SEO.dynamic = {
   // /games - open and running games.  No links: joining needs an account and
   // /game/* is disallowed in robots.txt.
   games: function(meta) {
-    return safely('games', meta, function() {
-      var games = memo('list:games', function() {
+    return safely('games', meta, async function() {
+      var games = await memo('list:games', function() {
         return Games.find({ hasEnded: false }, {
           fields: _.extend({ name: 1, numPlayers: 1, maxPlayers: 1, startAt: 1, hasStarted: 1 }, GAME_TYPE_FIELDS),
           sort: { startAt: -1 }
-        }).fetch();
+        }).fetchAsync();
       });
 
       if (!games.length) return meta;
@@ -428,4 +428,23 @@ SEO.dynamic = {
       });
     });
   }
+};
+
+
+// SEO.resolve(), plus the server side enrichment (real game names,
+// usernames, 404 decisions) for the routes with a `dynamic` key.  Never
+// rejects: each SEO.dynamic handler falls back to the plain meta.
+SEO.resolveAsync = async function(rawPath) {
+  var meta = SEO.resolve(rawPath);
+  if (meta.dynamic && typeof SEO.dynamic[meta.dynamic] === 'function') {
+    meta = (await SEO.dynamic[meta.dynamic](meta, meta.params[1])) || meta;
+  }
+  return meta;
+};
+
+
+// for server/seoPageTests.js: the next request reads the database again
+SEO.clearDynamicCache = function() {
+  cache = {};
+  cacheOrder = [];
 };
