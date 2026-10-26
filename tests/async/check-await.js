@@ -35,7 +35,8 @@
 //
 // Outside client files it also flags the calls that were sync on Meteor 2.16
 // but return a promise on Meteor 3: a cursor's observe() and observeChanges(),
-// and _publishCursor() (Mongo.Collection's, or a cursor's).
+// _publishCursor() (Mongo.Collection's, or a cursor's), and the accounts
+// functions in METEOR3_SERVER_ASYNC.
 //
 // In server files it also flags the sync collection API, which Meteor 3's
 // server doesn't have: findOne, insert, update, remove and upsert on a
@@ -654,14 +655,28 @@ function lateCheckFindings(ast) {
 }
 
 // findings for parsed files: {file: ast}, with {file: source} for ignores;
+// Meteor 3's accounts functions that return a promise on the server
+// (accounts-base 3.3, accounts-password 3.3); in the browser they take a callback
+const METEOR3_SERVER_ASYNC = {
+  'Accounts.createUser': 'accounts-password 3', 'Accounts.setPasswordAsync': 'accounts-password 3',
+  'Accounts.findUserByUsername': 'accounts-base 3', 'Accounts.findUserByEmail': 'accounts-base 3',
+  'Accounts.sendVerificationEmail': 'accounts-password 3', 'Accounts.sendResetPasswordEmail': 'accounts-password 3',
+  'Accounts.sendEnrollmentEmail': 'accounts-password 3', 'Accounts.addEmailAsync': 'accounts-password 3',
+  'Accounts.removeEmail': 'accounts-password 3', 'Accounts.setUsername': 'accounts-password 3',
+  'Accounts.updateOrCreateUserFromExternalService': 'accounts-base 3', 'Accounts._insertLoginToken': 'accounts-base 3'
+};
+
 function check(asts, sources, extraAsyncNames) {
   const asyncNames = Object.assign(asyncDefinitions(asts), extraAsyncNames || {});
+  const serverAsyncNames = Object.assign({}, asyncNames, METEOR3_SERVER_ASYNC);
   const asyncKeys = asyncPropertyKeys(asts);
   const findings = [];
   for (const [file, ast] of Object.entries(asts)) {
     const ignored = ignoredLines(sources[file] || '');
     const rawNames = rawCollectionNames(ast);
-    if (fileSide(path.join(ROOT, file)) !== 'client') {
+    const side = fileSide(path.join(ROOT, file));
+    const names = side === 'client' ? asyncNames : serverAsyncNames;
+    if (side !== 'client') {
       for (const late of lateCheckFindings(ast)) {
         const line = late.node.loc.start.line;
         if (!ignored.has(line)) findings.push({file: file, line: line, column: late.node.loc.start.column + 1, kind: 'late-check', message: late.message});
@@ -671,9 +686,9 @@ function check(asts, sources, extraAsyncNames) {
       if (node.type !== 'CallExpression') return;
       const line = node.loc.start.line;
       if (ignored.has(line)) return;
-      const callbackMessage = asyncCallbackFindings(node, asyncNames, rawNames, isTestFile(file) ? asyncKeys : null);
+      const callbackMessage = asyncCallbackFindings(node, names, rawNames, isTestFile(file) ? asyncKeys : null);
       if (callbackMessage) findings.push({file: file, line: line, column: node.loc.start.column + 1, kind: 'async-callback', message: callbackMessage});
-      const reason = promiseReason(node, asyncNames, rawNames, isTestFile(file) ? asyncKeys : null);
+      const reason = promiseReason(node, names, rawNames, isTestFile(file) ? asyncKeys : null);
       if (reason && !isWaitedFor(node)) {
         findings.push({file: file, line: line, column: node.loc.start.column + 1, kind: 'not-awaited',
           message: reason + ', and nothing waits for it'});

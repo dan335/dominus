@@ -28,8 +28,9 @@ The checker also flags an async callback given to `forEach`, `_.each`, `_.map`, 
 
 To skip a line, put `// check-await: ignore <reason>` on it or on the line above. The reason is required.
 
-Three checks are for Meteor 3, outside client files:
+Four checks are for Meteor 3, outside client files:
 
+- the accounts functions that return a promise on the server, when nothing waits for them: `Accounts.createUser`, `Accounts.findUserByUsername`, `Accounts._insertLoginToken` and the others listed in `METEOR3_SERVER_ASYNC`. In the browser they take a callback;
 - a cursor's `observe()` and `observeChanges()`, and `_publishCursor()` (`Mongo.Collection`'s or a cursor's), which return a promise on Meteor 3, when nothing waits for them;
 - in server files, the sync collection API, which Meteor 3's server doesn't have: `findOne`, `insert`, `update`, `remove` and `upsert` on a collection, and a `find()`'s `fetch`, `forEach`, `map` and `count` ('sync-api'). Shared and client files keep it: minimongo and the method simulations are sync. `server/lib/syncCursorGuard.js` catches at run time what this can't see, such as a shared helper the server calls;
 - a method or publication argument that an async handler `check()`s only after its first `await` or `throw` ('late-check'). audit-argument-checks looks when the handler returns, which is then, and the call fails with a 500. `server/lib/asyncArgumentChecks.js` waits for the handler when the audit fails, so a failed `check()` before the first `await` is still Match failed [400].

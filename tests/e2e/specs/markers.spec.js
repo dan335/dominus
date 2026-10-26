@@ -29,7 +29,10 @@ test('mark your castle, then name, group, move and remove markers and groups', a
 
   // groups: two, then a refused name
   const headings = panel.locator('.markerGroupHeading');
+  // the button is disabled until the server answers the last add, and that
+  // answer empties the input, so wait for it before typing the next name
   const addGroup = async (name) => {
+    await expect(panel.locator('#addGroupButton')).toBeEnabled();
     await panel.locator('#groupNameInput').fill(name);
     await panel.locator('#addGroupButton').click();
   };

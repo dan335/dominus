@@ -28,7 +28,10 @@ if (Meteor.isServer) {
       async function logged(fn) {
         var lines = [];
         var log = console.log;
-        var recent = ClientErrors.recent.length;
+        // emptied while fn runs: once it holds ClientErrors.keep reports (as on
+        // a second run of the suites), its length no longer grows
+        var before = ClientErrors.recent.splice(0);
+        var entries;
         console.log = function() {
           var line = _.toArray(arguments).join(' ');
           if (line.indexOf('Client error: ') === 0) lines.push(line);
@@ -38,8 +41,10 @@ if (Meteor.isServer) {
           await fn();
         } finally {
           console.log = log;
+          entries = ClientErrors.recent.splice(0);
+          ClientErrors.recent.push.apply(ClientErrors.recent, before.concat(entries).slice(-ClientErrors.keep));
         }
-        return {lines: lines, entries: ClientErrors.recent.slice(recent)};
+        return {lines: lines, entries: entries};
       }
 
       var report = function(fields) {

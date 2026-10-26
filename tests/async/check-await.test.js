@@ -266,3 +266,17 @@ test('an async method or publication that checks an argument after its first awa
   assert.deepStrictEqual(checkSources({'client/x.js': 'Meteor.methods({b: async function(x) { await load(); check(x, String); }});'})
     .filter(function(f) { return f.kind === 'late-check'; }).length, 0);
 });
+
+test('outside client files, the accounts functions that return a promise on Meteor 3 are flagged when nothing waits for them', function() {
+  const source = [
+    'async function a() { var id = Accounts.createUser({username: "x"}); }',
+    'async function b() { var id = await Accounts.createUser({username: "x"}); }',
+    'async function c(id, t) { Accounts._insertLoginToken(id, t); }',
+    'function d() { Accounts.createUser({username: "x"}, function() {}); }'
+  ].join('\n');
+  const lines = function(name) {
+    return checkSources({[name]: source}).filter(function(f) { return f.kind === 'not-awaited'; }).map(function(f) { return f.line; });
+  };
+  assert.deepStrictEqual(lines('server/a.js'), [1, 3, 4]);
+  assert.deepStrictEqual(lines('client/a.js'), [], 'in the browser they take a callback');
+});

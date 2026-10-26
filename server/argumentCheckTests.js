@@ -136,7 +136,7 @@ if (Meteor.isServer) {
       }
       if (userId) {
         var stamped = Accounts._generateStampedLoginToken();
-        Accounts._insertLoginToken(userId, stamped);
+        await Accounts._insertLoginToken(userId, stamped);
         await callOver(connection, 'login', {resume: stamped.token});
       }
       return connection;

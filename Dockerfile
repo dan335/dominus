@@ -27,7 +27,7 @@ ENV DOMINUS_TEST=false HTTP_FORWARDED_COUNT=1 PORT=80 TERM=xterm OPENSSL_CONF=/e
 ADD .build/dominus.tar.gz /opt/app/
 
 WORKDIR /opt/app/bundle/programs/server
-RUN npm install --unsafe-perm
+RUN npm install
 
 WORKDIR /opt/app/bundle/programs/server/npm
 RUN npm rebuild

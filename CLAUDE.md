@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Dominus is a multiplayer browser-based social strategy game built with **Meteor.js**. Players conquer castles, form feudal hierarchies (king/lord/vassal), and compete to dominate the map. Army movement and resource gathering are time-based (asynchronous gameplay).
+Dominus is a multiplayer browser-based social strategy game built with **Meteor.js** (Meteor 3.5.3 on Node 24). Players conquer castles, form feudal hierarchies (king/lord/vassal), and compete to dominate the map. Army movement and resource gathering are time-based (asynchronous gameplay).
 
 ## Development Commands
 
@@ -117,11 +117,15 @@ packages/dominus-<feature>/
 
 ### Background Job System
 
-Uses Bull 4 (Redis-backed queue) with 40+ job types for async game mechanics: army movement, income collection, battle resolution, map baking. Jobs are defined in `*Job.js` files within packages. `DOMINUS_WORKER=true` env var enables background processing. Every handler runs through `Queues.runJob` (`dominus-queue/queue.js`): Bull counts a job done when its work is done, so a queue runs at most its concurrency of jobs at once (1 unless the handler passes more to `.process`). A handler that throws is logged and its job still completes; jobs are never retried (`Queues.jobOptions` sets `attempts: 1`), and a job past its `timeout` fails in Bull but keeps its uniqueId until its work ends. Don't wait on Bull's own wait for active jobs (`queue.pause(true)` without `doNotWaitActive`, `queue.close()`): under fibers it aborts Node; use `Queues.pauseLocal()` and `Queues.whenIdle()`. SyncedCron (`quave:synced-cron`, pinned to 2.1.0 in `dominus-init/package.js`: later versions skip a tick while an earlier one has no `finishedAt`, and exit the process on SIGTERM and on an unhandled rejection) handles distributed scheduling; its ticks are recorded in the `cronHistory` collection.
+Uses Bull 4 (Redis-backed queue) with 40+ job types for async game mechanics: army movement, income collection, battle resolution, map baking. Jobs are defined in `*Job.js` files within packages. `DOMINUS_WORKER=true` env var enables background processing. Every handler runs through `Queues.runJob` (`dominus-queue/queue.js`): Bull counts a job done when its work is done, so a queue runs at most its concurrency of jobs at once (1 unless the handler passes more to `.process`). A handler that throws is logged and its job still completes; jobs are never retried (`Queues.jobOptions` sets `attempts: 1`), and a job past its `timeout` fails in Bull but keeps its uniqueId until its work ends. Don't wait on Bull's own wait for active jobs (`queue.pause(true)` without `doNotWaitActive`, `queue.close()`): under fibers it aborted Node; use `Queues.pauseLocal()` and `Queues.whenIdle()`. SyncedCron (`quave:synced-cron`, pinned to 2.1.0 in `dominus-init/package.js`: later versions skip a tick while an earlier one has no `finishedAt`, and exit the process on SIGTERM and on an unhandled rejection) handles distributed scheduling; its ticks are recorded in the `cronHistory` collection.
 
-### Async conversion (Meteor upgrade, stage 2)
+### Async server code (Meteor 3)
 
-The server code is moving from fibers to `async`/`await`, one domain per PR, while the app stays on Meteor 2.16. See `/mnt/project-files/reports/meteor-upgrade-plan.md` for the plan.
+The app runs on Meteor 3, which has no fibers: the server's collection, cursor and accounts calls are async. The code moved there from Meteor 2.16 one domain per PR; see `/mnt/project-files/reports/meteor-upgrade-plan.md`.
+
+- **The sync API on the server.** `findOne`, `insert`, `update` and `remove` throw on the server. A cursor's `fetch`, `forEach` and `map` don't throw: they quietly return a promise. `server/lib/syncCursorGuard.js` logs each of those calls from the app's own code once, and a test run that makes one fails. Use `findOneAsync`, `fetchAsync`, `forEachAsync` and the rest. `Accounts.createUser`, `Accounts.findUserByUsername`/`findUserByEmail`, `Accounts.sendVerificationEmail` and `Accounts._insertLoginToken` return promises on the server too.
+- **Unhandled rejections.** Node 24 ends the process on a rejection nobody handles, and Meteor adds no listener. `server/lib/unhandledRejections.js` logs them instead, and a test run fails on one.
+- **Argument checks.** `audit-argument-checks` looks when an async handler first awaits, so `check()` every argument before the first `await`. `server/lib/asyncArgumentChecks.js` makes a refused check a 400 instead of a 500 and an unhandled rejection. The missing-await check's `late-check` rule flags a `check()` after an `await`.
 
 - **The missing-await check.** `node tests/async/check-await.js` must report no findings. `tests/run-server-tests.sh` runs it, and `tests/async/README.md` explains it.
   - Await or return every promise, or `.catch()` it.
@@ -134,23 +138,22 @@ The server code is moving from fibers to `async`/`await`, one domain per PR, whi
   - A cache miss logs an error with its stack, once per game.
 - **Methods** (`both/*Methods.js` run on client and server):
   - A server-only method becomes an `async function`.
-  - A shared method stays a plain function. Its simulation is sync, behind `if (this.isSimulation) { ...; return; }`, and the server's part is `return (async () => { ... })();`. On 2.16 two async simulations that overlap throw "Called saveOriginals twice without retrieveOriginals" in the browser and the second one's change is lost (`tests/e2e/specs/markers.spec.js`).
+  - A shared method stays a plain function. Its simulation is sync, behind `if (this.isSimulation) { ...; return; }`, and the server's part is `return (async () => { ... })();`. (On 2.16 two async simulations that overlapped threw "Called saveOriginals twice without retrieveOriginals" in the browser; `tests/e2e/specs/markers.spec.js` checks overlapping ones.)
   - A method with no useful simulation loses its client stub.
-  - As each method converts, its client callers move from `Meteor.call` to `Meteor.callAsync`: `dFunc.callAndForget(name, ...args)` for a call nobody waits for (it logs a refusal the way `Meteor.call` does), and `dFunc.callWithCallback(name, args, callback)` in place of `Meteor.apply(name, args, {}, callback)`. A server-only method (no stub) can keep `Meteor.call`.
-  - Shared helpers the client calls sync get a server `…Async` twin, as with `dMarket.total_of_buyAsync`.
-- **Order.** Callers can go first. On 2.16, an async function can still make sync Meteor calls after an `await`. `node tests/async/async-graph.js` shows how far converting a domain ripples into others.
-  - A sync caller in a domain that hasn't converted yet calls a converted function as `Promise.await(fn())`, with a comment naming the PR that converts the caller. The only one left is `server/accounts.js`'s login hook: accounts-base 2.2 doesn't wait for an async `onLogin` callback, and the Meteor 3 upgrade (PR 19) removes it.
-- **Publications and observers.** On Meteor 3, server `observe`, `observeChanges` and `Mongo.Collection._publishCursor` return promises. Use `observeAsync`/`observeChangesAsync`, and make a publication that calls `_publishCursor` async and await it. `node tests/async/check-await.js --meteor3` lists the ones left.
+  - Client code calls a method with a stub through `Meteor.callAsync`: `dFunc.callAndForget(name, ...args)` for a call nobody waits for (it logs a refusal the way `Meteor.call` does), and `dFunc.callWithCallback(name, args, callback)` in place of `Meteor.apply(name, args, {}, callback)`. A server-only method (no stub) can keep `Meteor.call`.
+  - Shared helpers the client calls sync get a server `…Async` twin, as with `dMarket.total_of_buyAsync`. On the server the sync one gives wrong answers without an error (its cursor calls return promises), so tests run it in `dTest.onClient(fn)` (`server/lib/testRunnerMinimongo.js`), which points every server collection at a minimongo copy of the database while `fn` runs, as the browser has. Tests check a method's simulation the same way.
+- **Accounts.** Login errors aren't ambiguous (`ambiguousErrorMessages: false` in `server/accounts.js`), and accounts-base awaits each `onLogin` hook. Its `logoutAllClients` method is in `server/methodPolicy.js`.
+- **Publications and observers.** Server `observe`, `observeChanges` and `Mongo.Collection._publishCursor` return promises. Use `observeAsync`/`observeChangesAsync`, and make a publication that calls `_publishCursor` async and await it. The missing-await check flags the sync ones.
 - **Jobs.** A handler is `process(async function(job) { await ... })`, without `Meteor.bindEnvironment`. Jobs are added with `await Queues.addAsync(...)`, which rejects when Redis refuses the job; the sync `Queues.add` is gone (upgrade PR 18). Where the caller should carry on, use `await Queues.addAsyncOrLog(...)`, which logs the error and resolves with false. Tests record or stub `Queues.addAsync` (`dTest.recordJobs`; the simulation replaces it too). Cron job functions are async, and SyncedCron 2.1.0 awaits them.
-- **Tests.** The test files are async too (PR 18): they use the `*Async` collection calls and await what they call, and the missing-await check covers them. The package tinytests use `Tinytest.addAsync`. A browser test's `server(code)` waits for a promise the code returns.
+- **Tests.** The test files are async too: they use the `*Async` collection calls and await what they call, and the missing-await check covers them. The package tinytests use `Tinytest.addAsync`. A browser test's `server(code)` waits for a promise the code returns.
 
 ### Tech Stack
 
-- **Framework**: Meteor.js with Blaze templating
+- **Framework**: Meteor.js 3.5.3 (Node 24) with Blaze templating
 - **Database**: MongoDB (via Meteor's mongo package)
 - **Queue**: Redis + Bull
-- **CSS**: LESS + Bootstrap 3
-- **Client libs**: jQuery, D3.js (v3), Moment.js, Underscore.js
+- **CSS**: LESS + Bootstrap 3 (built once into `lib/client/bootstrap/bootstrap.generated.*` by `packages/bootstrap/build-static.js`; run it again after changing the bootstrap settings or variables)
+- **Client libs**: jQuery, D3.js (v3), Moment.js, Underscore.js (the underscore.string functions the game uses are in `lib/underscoreString.js`)
 - **Auth**: Meteor accounts with password, Google OAuth, Facebook OAuth
 - **Payments**: Stripe
 - **Email**: SendGrid / Mandrill
