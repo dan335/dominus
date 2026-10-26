@@ -9,7 +9,7 @@
 
 if (Meteor.isServer) {
 
-  _spectatorTests = function(run, t) {
+  _spectatorTests = async function(run, t) {
     var assert = t.assert;
     var equal = t.equal;
 
@@ -17,19 +17,19 @@ if (Meteor.isServer) {
     // --- Helpers ---
 
     // a call from a client, goes through server/methodGate.js
-    function callAsClient(userId, method, args) {
+    async function callAsClient(userId, method, args) {
       var inv = {userId: userId, isSimulation: false, connection: {id: 'spectatorTests', clientAddress: '127.0.0.1'},
         unblock: function() {}, setUserId: function() {}};
-      return DDP._CurrentInvocation.withValue(inv, function() {
-        return dTest.settle(Meteor.server.method_handlers[method].apply(inv, args));
+      return await DDP._CurrentInvocation.withValue(inv, async function() {
+        return await Meteor.server.method_handlers[method].apply(inv, args);
       });
     }
 
     // a call from server code, skips the gate so the method's own checks are tested
-    function callAsServer(userId, method, args) {
+    async function callAsServer(userId, method, args) {
       var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}, setUserId: function() {}};
-      return DDP._CurrentInvocation.withValue(inv, function() {
-        return dTest.settle(Meteor.server.method_handlers[method].apply(inv, args));
+      return await DDP._CurrentInvocation.withValue(inv, async function() {
+        return await Meteor.server.method_handlers[method].apply(inv, args);
       });
     }
 
@@ -37,7 +37,7 @@ if (Meteor.isServer) {
     var throws = dTest.throws;
 
     // run a publication handler against a recording stub subscription
-    function runPublication(name, userId, args) {
+    async function runPublication(name, userId, args) {
       var out = {ready: 0, docs: {}, error: null};
       var stops = [];
       var sub = {
@@ -57,7 +57,7 @@ if (Meteor.isServer) {
         stop: function() {}
       };
       try {
-        var result = dTest.settle(Meteor.server.publish_handlers[name].apply(sub, args || []));
+        var result = await Meteor.server.publish_handlers[name].apply(sub, args || []);
         var cursors = _.isArray(result) ? result : [result];
         cursors.forEach(function(cursor) {
           if (cursor && typeof cursor._publishCursor === 'function') {
@@ -99,13 +99,13 @@ if (Meteor.isServer) {
     };
 
     // everything about a game, one string per collection
-    function snapshot(gameId, userIds) {
+    async function snapshot(gameId, userIds) {
       var parts = {};
-      _.each(gameCollections, function(collection, name) {
-        parts[name] = EJSON.stringify(collection.find({gameId: gameId}, {sort: {_id: 1}}).fetch(), {canonical: true});
+      await dTest.eachAsync(gameCollections, async function(collection, name) {
+        parts[name] = EJSON.stringify(await collection.find({gameId: gameId}, {sort: {_id: 1}}).fetchAsync(), {canonical: true});
       });
-      parts.Games = EJSON.stringify(Games.findOne(gameId), {canonical: true});
-      parts.users = EJSON.stringify(Meteor.users.find({_id: {$in: userIds || []}}, {sort: {_id: 1}}).fetch(), {canonical: true});
+      parts.Games = EJSON.stringify(await Games.findOneAsync(gameId), {canonical: true});
+      parts.users = EJSON.stringify(await Meteor.users.find({_id: {$in: userIds || []}}, {sort: {_id: 1}}).fetchAsync(), {canonical: true});
       return parts;
     }
 
@@ -118,16 +118,16 @@ if (Meteor.isServer) {
     //   logged out (null userId), outsider (no player anywhere),
     //   attacker (a player in another game, G2, with their own castle and army)
 
-    function buildWorld() {
+    async function buildWorld() {
       var w = {};
       var started = {hasStarted: true, startAt: new Date(Date.now() - 1000 * 60 * 60)};
-      w.G = t.createTestGame(_.extend({name: 'Spectated Game'}, started))._id;
-      w.G2 = t.createTestGame(_.extend({name: 'Attacker Game'}, started))._id;
+      w.G = (await t.createTestGame(_.extend({name: 'Spectated Game'}, started)))._id;
+      w.G2 = (await t.createTestGame(_.extend({name: 'Attacker Game'}, started)))._id;
 
-      w.victim = t.createTestUser({username: 'victim_' + Random.id(4)});
-      w.victim2 = t.createTestUser({username: 'victim2_' + Random.id(4)});
-      w.attacker = t.createTestUser({username: 'attacker_' + Random.id(4)});
-      w.outsider = t.createTestUser({username: 'outsider_' + Random.id(4)});
+      w.victim = await t.createTestUser({username: 'victim_' + Random.id(4)});
+      w.victim2 = await t.createTestUser({username: 'victim2_' + Random.id(4)});
+      w.attacker = await t.createTestUser({username: 'attacker_' + Random.id(4)});
+      w.outsider = await t.createTestUser({username: 'outsider_' + Random.id(4)});
       w.userIds = [w.victim._id, w.victim2._id, w.attacker._id, w.outsider._id];
       w.victimIds = [w.victim._id, w.victim2._id];
 
@@ -136,8 +136,8 @@ if (Meteor.isServer) {
       var resources = {};
       _s.market.types_plus_gold.forEach(function(type) { resources[type] = 1000; });
 
-      function player(gameId, user, extra) {
-        return Players.insert(_.extend({
+      async function player(gameId, user, extra) {
+        return await Players.insertAsync(_.extend({
           gameId: gameId, userId: user._id, username: user.username, gameName: 'test',
           lord: null, king: null, is_king: true, is_dominus: false,
           allies_above: [], allies_below: [], team: [], vassals: [], num_allies_below: 0,
@@ -147,73 +147,73 @@ if (Meteor.isServer) {
         }, resources, extra || {}));
       }
 
-      w.P = player(w.G, w.victim);
-      w.P2 = player(w.G, w.victim2, {lord: w.P, king: w.P, is_king: false, x: 2, y: 0});
-      Players.update(w.P, {$set: {allies_below: [w.P2], vassals: [w.P2], team: [w.P2], num_allies_below: 1}});
-      Players.update(w.P2, {$set: {allies_above: [w.P], team: [w.P]}});
-      w.C = player(w.G2, w.attacker);
+      w.P = await player(w.G, w.victim);
+      w.P2 = await player(w.G, w.victim2, {lord: w.P, king: w.P, is_king: false, x: 2, y: 0});
+      await Players.updateAsync(w.P, {$set: {allies_below: [w.P2], vassals: [w.P2], team: [w.P2], num_allies_below: 1}});
+      await Players.updateAsync(w.P2, {$set: {allies_above: [w.P], team: [w.P]}});
+      w.C = await player(w.G2, w.attacker);
 
-      w.country = Countries.insert({gameId: w.G, minX: -10, maxX: 10, minY: -10, maxY: 10, minZ: -10, maxZ: 10, neighbors: [], paths: []});
+      w.country = await Countries.insertAsync({gameId: w.G, minX: -10, maxX: 10, minY: -10, maxY: 10, minZ: -10, maxZ: 10, neighbors: [], paths: []});
 
       function owned(user, playerId, extra) {
         return _.extend({gameId: w.G, user_id: user._id, playerId: playerId, username: user.username, countryId: w.country, male: true}, soldiers, extra);
       }
-      w.castle = Castles.insert(owned(w.victim, w.P, {x: 0, y: 0, name: 'victim castle', image: 'castle_01'}));
-      Players.update(w.P, {$set: {castle_id: w.castle}});
-      w.castle2 = Castles.insert(owned(w.victim2, w.P2, {x: 2, y: 0, name: 'vassal castle', image: 'castle_01'}));
-      Players.update(w.P2, {$set: {castle_id: w.castle2}});
-      w.village = Villages.insert(owned(w.victim, w.P, {x: 1, y: 0, name: 'victim village', level: 1, under_construction: false, income: {}}));
-      w.army = Armies.insert(owned(w.victim, w.P, {x: 1, y: -1, name: 'victim army', last_move_at: new Date(), speed: 5, castle_x: 0, castle_y: 0, castle_id: w.castle}));
-      w.path = Armypaths.insert({gameId: w.G, armyId: w.army, user_id: w.victim._id, x: 3, y: -1, index: 0, paused: false, createdAt: new Date(),
+      w.castle = await Castles.insertAsync(owned(w.victim, w.P, {x: 0, y: 0, name: 'victim castle', image: 'castle_01'}));
+      await Players.updateAsync(w.P, {$set: {castle_id: w.castle}});
+      w.castle2 = await Castles.insertAsync(owned(w.victim2, w.P2, {x: 2, y: 0, name: 'vassal castle', image: 'castle_01'}));
+      await Players.updateAsync(w.P2, {$set: {castle_id: w.castle2}});
+      w.village = await Villages.insertAsync(owned(w.victim, w.P, {x: 1, y: 0, name: 'victim village', level: 1, under_construction: false, income: {}}));
+      w.army = await Armies.insertAsync(owned(w.victim, w.P, {x: 1, y: -1, name: 'victim army', last_move_at: new Date(), speed: 5, castle_x: 0, castle_y: 0, castle_id: w.castle}));
+      w.path = await Armypaths.insertAsync({gameId: w.G, armyId: w.army, user_id: w.victim._id, x: 3, y: -1, index: 0, paused: false, createdAt: new Date(),
         countryIds: null, hexes: null, distance: null, time: null, speed: 5, last_move_at: new Date(), dirtyMoveTotals: false});
-      w.capital = Capitals.insert({gameId: w.G, playerId: w.P, user_id: w.victim._id, countryId: w.country, x: 5, y: 5, name: 'victim capital', income: {}});
-      [[0, 0], [1, 0], [1, -1], [2, 0], [3, -1], [5, 5]].forEach(function(xy) {
-        Hexes.insert({gameId: w.G, x: xy[0], y: xy[1], type: 'grain', large: false, hasBuilding: false});
+      w.capital = await Capitals.insertAsync({gameId: w.G, playerId: w.P, user_id: w.victim._id, countryId: w.country, x: 5, y: 5, name: 'victim capital', income: {}});
+      await dTest.eachAsync([[0, 0], [1, 0], [1, -1], [2, 0], [3, -1], [5, 5]], async function(xy) {
+        await Hexes.insertAsync({gameId: w.G, x: xy[0], y: xy[1], type: 'grain', large: false, hasBuilding: false});
       });
 
-      w.everyoneRoom = Rooms.insert({gameId: w.G, name: 'Everyone', type: 'everyone', owner: null, admins: [], members: [w.P, w.P2], memberData: []});
-      w.kingRoom = Rooms.insert({gameId: w.G, name: 'King', type: 'king', owner: w.P, admins: [], members: [w.P, w.P2], memberData: []});
-      w.normalRoom = Rooms.insert({gameId: w.G, name: 'Private', type: 'normal', owner: w.P, admins: [], members: [w.P, w.P2], memberData: []});
-      Roomchats.insert({gameId: w.G, room_id: w.normalRoom, playerId: w.P, user_id: w.victim._id, text: 'secret', created_at: new Date()});
-      Recentchats.insert({gameId: w.G, room_id: w.normalRoom, updated_at: new Date()});
+      w.everyoneRoom = await Rooms.insertAsync({gameId: w.G, name: 'Everyone', type: 'everyone', owner: null, admins: [], members: [w.P, w.P2], memberData: []});
+      w.kingRoom = await Rooms.insertAsync({gameId: w.G, name: 'King', type: 'king', owner: w.P, admins: [], members: [w.P, w.P2], memberData: []});
+      w.normalRoom = await Rooms.insertAsync({gameId: w.G, name: 'Private', type: 'normal', owner: w.P, admins: [], members: [w.P, w.P2], memberData: []});
+      await Roomchats.insertAsync({gameId: w.G, room_id: w.normalRoom, playerId: w.P, user_id: w.victim._id, text: 'secret', created_at: new Date()});
+      await Recentchats.insertAsync({gameId: w.G, room_id: w.normalRoom, updated_at: new Date()});
 
-      w.alert = Alerts.insert({gameId: w.G, type: 'alert_receivedGoldFrom', playerIds: [{playerId: w.P, read: false}], created_at: new Date(), vars: {}});
-      GlobalAlerts.insert({gameId: w.G, type: 'ga_test', created_at: new Date(), vars: {}});
-      w.markerGroup = MarkerGroups.insert({gameId: w.G, user_id: w.victim._id, playerId: w.P, name: 'group', order: 0, createdAt: new Date(), updatedAt: new Date()});
-      w.marker = Markers.insert({gameId: w.G, user_id: w.victim._id, playerId: w.P, groupId: w.markerGroup, order: 0, name: 'marker',
+      w.alert = await Alerts.insertAsync({gameId: w.G, type: 'alert_receivedGoldFrom', playerIds: [{playerId: w.P, read: false}], created_at: new Date(), vars: {}});
+      await GlobalAlerts.insertAsync({gameId: w.G, type: 'ga_test', created_at: new Date(), vars: {}});
+      w.markerGroup = await MarkerGroups.insertAsync({gameId: w.G, user_id: w.victim._id, playerId: w.P, name: 'group', order: 0, createdAt: new Date(), updatedAt: new Date()});
+      w.marker = await Markers.insertAsync({gameId: w.G, user_id: w.victim._id, playerId: w.P, groupId: w.markerGroup, order: 0, name: 'marker',
         description: '', unitType: 'castle', unitId: w.castle, x: 0, y: 0});
-      _s.market.types.forEach(function(type) {
-        Market.insert({gameId: w.G, type: type, price: 1, quantity: 100000, updated_at: new Date()});
+      await dTest.eachAsync(_s.market.types, async function(type) {
+        await Market.insertAsync({gameId: w.G, type: type, price: 1, quantity: 100000, updated_at: new Date()});
       });
 
       // the attacker's own game
-      w.cCastle = Castles.insert(_.extend({gameId: w.G2, user_id: w.attacker._id, playerId: w.C, username: w.attacker.username, x: 0, y: 0, name: 'attacker castle'}, soldiers));
-      Players.update(w.C, {$set: {castle_id: w.cCastle}});
-      w.cArmy = Armies.insert(_.extend({gameId: w.G2, user_id: w.attacker._id, playerId: w.C, username: w.attacker.username, x: 0, y: 0, name: 'attacker army', last_move_at: new Date(), speed: 5}, soldiers));
-      [[0, 0], [1, -1], [3, -1]].forEach(function(xy) {
-        Hexes.insert({gameId: w.G2, x: xy[0], y: xy[1], type: 'grain', large: false, hasBuilding: false});
+      w.cCastle = await Castles.insertAsync(_.extend({gameId: w.G2, user_id: w.attacker._id, playerId: w.C, username: w.attacker.username, x: 0, y: 0, name: 'attacker castle'}, soldiers));
+      await Players.updateAsync(w.C, {$set: {castle_id: w.cCastle}});
+      w.cArmy = await Armies.insertAsync(_.extend({gameId: w.G2, user_id: w.attacker._id, playerId: w.C, username: w.attacker.username, x: 0, y: 0, name: 'attacker army', last_move_at: new Date(), speed: 5}, soldiers));
+      await dTest.eachAsync([[0, 0], [1, -1], [3, -1]], async function(xy) {
+        await Hexes.insertAsync({gameId: w.G2, x: xy[0], y: xy[1], type: 'grain', large: false, hasBuilding: false});
       });
-      _s.market.types.forEach(function(type) {
-        Market.insert({gameId: w.G2, type: type, price: 1, quantity: 100000, updated_at: new Date()});
+      await dTest.eachAsync(_s.market.types, async function(type) {
+        await Market.insertAsync({gameId: w.G2, type: type, price: 1, quantity: 100000, updated_at: new Date()});
       });
 
 
-      waitForCounters(w);
+      await waitForCounters(w);
       return w;
     }
 
-    function cleanupWorld(w) {
-      [w.G, w.G2].forEach(function(gameId) {
-        _.each(gameCollections, function(collection) {
-          collection.remove({gameId: gameId});
+    async function cleanupWorld(w) {
+      await dTest.eachAsync([w.G, w.G2], async function(gameId) {
+        await dTest.eachAsync(gameCollections, async function(collection) {
+          await collection.removeAsync({gameId: gameId});
         });
-        Games.remove(gameId);
+        await Games.removeAsync(gameId);
       });
-      w.userIds.forEach(function(userId) {
-        Markers.remove({user_id: userId});
-        MarkerGroups.remove({user_id: userId});
-        Gamesignups.remove({userId: userId});
-        Meteor.users.remove(userId);
+      await dTest.eachAsync(w.userIds, async function(userId) {
+        await Markers.removeAsync({user_id: userId});
+        await MarkerGroups.removeAsync({user_id: userId});
+        await Gamesignups.removeAsync({userId: userId});
+        await Meteor.users.removeAsync(userId);
       });
     }
 
@@ -378,14 +378,14 @@ if (Meteor.isServer) {
     // with a 1s debounce (dominus-game/server/num*.js), so building the world
     // changes the Games docs a second later. Wait until they stop changing, or
     // that write gets blamed on whichever method is being called at the time.
-    function waitForCounters(w) {
-      var read = function() { return EJSON.stringify(Games.find({_id: {$in: [w.G, w.G2]}}, {sort: {_id: 1}}).fetch()); };
-      var last = read();
+    async function waitForCounters(w) {
+      var read = async function() { return EJSON.stringify(await Games.find({_id: {$in: [w.G, w.G2]}}, {sort: {_id: 1}}).fetchAsync()); };
+      var last = await read();
       var stableSince = Date.now();
       var deadline = Date.now() + 10000;
       while (Date.now() - stableSince < 1500 && Date.now() < deadline) {
-        dTest.sleep(250);
-        var now = read();
+        await dTest.sleep(250);
+        var now = await read();
         if (now !== last) {
           last = now;
           stableSince = Date.now();
@@ -394,10 +394,10 @@ if (Meteor.isServer) {
     }
 
     // ids that would show up in a job about game G
-    function gameIds(w) {
+    async function gameIds(w) {
       var ids = [w.G];
-      _.each(gameCollections, function(collection) {
-        collection.find({gameId: w.G}, {fields: {_id: 1}}).forEach(function(doc) { ids.push(doc._id); });
+      await dTest.eachAsync(gameCollections, async function(collection) {
+        await collection.find({gameId: w.G}, {fields: {_id: 1}}).forEachAsync(function(doc) { ids.push(doc._id); });
       });
       return ids;
     }
@@ -409,7 +409,7 @@ if (Meteor.isServer) {
 
     // --- Coverage ---
 
-    run('spectator: every client callable method is in server/methodPolicy.js and wrapped by the gate', function() {
+    await run('spectator: every client callable method is in server/methodPolicy.js and wrapped by the gate', function() {
       var names = clientMethodNames();
       assert(names.length > 100, 'found the app methods (' + names.length + ')');
       equal(_.reject(names, function(n) { return MethodPolicy[n]; }).join(','), '', 'methods missing from server/methodPolicy.js');
@@ -425,22 +425,22 @@ if (Meteor.isServer) {
       equal(malformed.join(','), '', 'policy entries without a valid access level');
     });
 
-    run('spectator: every client callable method is in the attack table', function() {
+    await run('spectator: every client callable method is in the attack table', function() {
       var w = {G: 'g', G2: 'g2', victim: {_id: 'v', username: 'v'}, attacker: {_id: 'a', username: 'a'}};
       var table = attackTable(w);
       equal(_.reject(clientMethodNames(), function(n) { return table[n]; }).join(','), '', 'methods missing from the attack table in server/spectatorTests.js');
     });
 
-    run('spectator: a method missing from the policy refuses client calls', function() {
+    await run('spectator: a method missing from the policy refuses client calls', async function() {
       var name = 'spectatorTestsUnlisted_' + Random.id(4);
       Meteor.server.method_handlers[name] = function() { return 'ran'; };
       try {
         dGate.wrapAll();
-        var user = t.createTestUser();
-        var e = throws(function() { callAsClient(user._id, name, []); });
+        var user = await t.createTestUser();
+        var e = await throws(async function() { await callAsClient(user._id, name, []); });
         assert(e && e.error === 'not-authorized', 'client call refused');
-        equal(callAsServer(null, name, []), 'ran', 'server code can still call it');
-        t.cleanupUser(user._id);
+        equal(await callAsServer(null, name, []), 'ran', 'server code can still call it');
+        await t.cleanupUser(user._id);
       } finally {
         delete Meteor.server.method_handlers[name];
       }
@@ -449,12 +449,12 @@ if (Meteor.isServer) {
 
     // --- The guarantee ---
 
-    run('spectator: no method lets a logged out, outside or other-game caller change the game', function() {
-      var w = buildWorld();
+    await run('spectator: no method lets a logged out, outside or other-game caller change the game', async function() {
+      var w = await buildWorld();
       var recorder = recordJobs();
       try {
         var table = attackTable(w);
-        var ids = gameIds(w);
+        var ids = await gameIds(w);
         var attackers = [
           {label: 'logged out', userId: null},
           {label: 'not a player', userId: w.outsider._id},
@@ -466,19 +466,19 @@ if (Meteor.isServer) {
 
         var problems = [];
         var calls = 0;
-        var before = snapshot(w.G, w.victimIds);
-        var before2 = snapshot(w.G2, []);
+        var before = await snapshot(w.G, w.victimIds);
+        var before2 = await snapshot(w.G2, []);
 
-        names.forEach(function(name) {
-          (table[name] || []).forEach(function(args) {
-            attackers.forEach(function(attacker) {
+        await dTest.eachAsync(names, async function(name) {
+          await dTest.eachAsync(table[name] || [], async function(args) {
+            await dTest.eachAsync(attackers, async function(attacker) {
               recorder.jobs.length = 0;
-              throws(function() { callAsClient(attacker.userId, name, EJSON.clone(args)); });
+              await throws(async function() { await callAsClient(attacker.userId, name, EJSON.clone(args)); });
               calls++;
 
               let label = name + '(' + EJSON.stringify(args) + ') as ' + attacker.label;
 
-              let after = snapshot(w.G, w.victimIds);
+              let after = await snapshot(w.G, w.victimIds);
               let changed = changedParts(before, after);
               if (changed.length) {
                 problems.push(label + ' changed ' + changed.join(', '));
@@ -486,7 +486,7 @@ if (Meteor.isServer) {
               before = after;
 
               // the attacker may change their own game, nobody else may
-              let after2 = snapshot(w.G2, []);
+              let after2 = await snapshot(w.G2, []);
               if (!attacker.ownGame) {
                 let changed2 = changedParts(before2, after2);
                 if (changed2.length) {
@@ -512,56 +512,56 @@ if (Meteor.isServer) {
         equal(problems.join(' | '), '', 'nothing in the game changed');
       } finally {
         recorder.restore();
-        cleanupWorld(w);
+        await cleanupWorld(w);
       }
     });
 
-    run('spectator: collection mutators refuse client writes to game collections', function() {
-      var w = buildWorld();
+    await run('spectator: collection mutators refuse client writes to game collections', async function() {
+      var w = await buildWorld();
       try {
-        var before = snapshot(w.G, w.victimIds);
+        var before = await snapshot(w.G, w.victimIds);
         var targets = {players: w.P, castles: w.castle, villages: w.village, armies: w.army, armypaths2: w.path,
-          capitals: w.capital, rooms: w.normalRoom, alerts: w.alert, markers: w.marker, market: Market.findOne({gameId: w.G})._id};
-        _.each(targets, function(id, collection) {
-          [null, w.outsider._id, w.victim._id].forEach(function(userId) {
-            throws(function() { callAsClient(userId, '/' + collection + '/update', [{_id: id}, {$set: {hacked: true}}, {}]); });
-            throws(function() { callAsClient(userId, '/' + collection + '/remove', [{_id: id}]); });
-            throws(function() { callAsClient(userId, '/' + collection + '/insert', [{gameId: w.G, hacked: true}]); });
+          capitals: w.capital, rooms: w.normalRoom, alerts: w.alert, markers: w.marker, market: (await Market.findOneAsync({gameId: w.G}))._id};
+        await dTest.eachAsync(targets, async function(id, collection) {
+          await dTest.eachAsync([null, w.outsider._id, w.victim._id], async function(userId) {
+            await throws(async function() { await callAsClient(userId, '/' + collection + '/update', [{_id: id}, {$set: {hacked: true}}, {}]); });
+            await throws(async function() { await callAsClient(userId, '/' + collection + '/remove', [{_id: id}]); });
+            await throws(async function() { await callAsClient(userId, '/' + collection + '/insert', [{gameId: w.G, hacked: true}]); });
           });
         });
-        equal(changedParts(before, snapshot(w.G, w.victimIds)).join(', '), '', 'nothing changed');
+        equal(changedParts(before, await snapshot(w.G, w.victimIds)).join(', '), '', 'nothing changed');
       } finally {
-        cleanupWorld(w);
+        await cleanupWorld(w);
       }
     });
 
-    run('spectator: publications never change the game, and private ones stay empty when logged out', function() {
-      var w = buildWorld();
+    await run('spectator: publications never change the game, and private ones stay empty when logged out', async function() {
+      var w = await buildWorld();
       try {
-        var before = snapshot(w.G, w.victimIds);
+        var before = await snapshot(w.G, w.victimIds);
 
-        var pub = function(name, userId, args) {
-          return runPublication(name, userId, args);
+        var pub = async function(name, userId, args) {
+          return await runPublication(name, userId, args);
         };
 
         // public game data reaches logged out spectators
-        [['game', [w.G]], ['countryIndex', [w.G]], ['countryOnScreen', [w.country]], ['castleForHexInfo', [w.castle]],
+        await dTest.eachAsync([['game', [w.G]], ['countryIndex', [w.G]], ['countryOnScreen', [w.country]], ['castleForHexInfo', [w.castle]],
           ['armyForHexInfo', [w.army]], ['villageForHexInfo', [w.village]], ['capitalForHexInfo', [w.capital]],
           ['gamePiecesAtHex', [w.G, 0, 0]], ['rightPanelPlayers', [w.P]], ['rightPanelTree', [w.P2]],
-          ['market', [w.G]], ['globalAlerts', [w.G, 10]]].forEach(function(c) {
-          let out = pub(c[0], null, c[1]);
+          ['market', [w.G]], ['globalAlerts', [w.G, 10]]], async function(c) {
+          let out = await pub(c[0], null, c[1]);
           assert(publishedCount(out) > 0, c[0] + ' publishes to a logged out spectator');
         });
 
-        let players = pub('rightPanelPlayers', null, [w.P]).docs.right_panel_players;
+        let players = (await pub('rightPanelPlayers', null, [w.P])).docs.right_panel_players;
         assert(players && players[w.P] && !_.has(players[w.P], 'possibleDupe'), 'rightPanelPlayers leaves out possibleDupe');
 
         // object selectors are refused (server/argumentCheckTests.js)
-        [['countryIndex', [{$ne: null}]], ['castleForHexInfo', [{$ne: null}]], ['rightPanelPlayers', [{$ne: null}]],
-          ['game', [{$ne: null}]], ['market', [{$ne: null}]]].forEach(function(c) {
+        await dTest.eachAsync([['countryIndex', [{$ne: null}]], ['castleForHexInfo', [{$ne: null}]], ['rightPanelPlayers', [{$ne: null}]],
+          ['game', [{$ne: null}]], ['market', [{$ne: null}]]], async function(c) {
           var refused = null;
           try {
-            pub(c[0], null, c[1]);
+            await pub(c[0], null, c[1]);
           } catch (e) {
             refused = e;
           }
@@ -569,216 +569,216 @@ if (Meteor.isServer) {
         });
 
         // a spectator's private data is empty, and nothing private about the victim
-        [null, w.outsider._id].forEach(function(userId) {
-          [['player', [w.G]], ['myArmies', [w.G]], ['myArmyPaths', [w.G]], ['left_panel_castle', [w.G]],
-            ['left_panel_villages', [w.G]], ['my_dailystats', [w.G]], ['myMarkers', [w.P]], ['myMarkerGroups', [w.P]]].forEach(function(c) {
-            equal(publishedCount(pub(c[0], userId, c[1])), 0, c[0] + ' publishes nothing to ' + userId);
+        await dTest.eachAsync([null, w.outsider._id], async function(userId) {
+          await dTest.eachAsync([['player', [w.G]], ['myArmies', [w.G]], ['myArmyPaths', [w.G]], ['left_panel_castle', [w.G]],
+            ['left_panel_villages', [w.G]], ['my_dailystats', [w.G]], ['myMarkers', [w.P]], ['myMarkerGroups', [w.P]]], async function(c) {
+            equal(publishedCount(await pub(c[0], userId, c[1])), 0, c[0] + ' publishes nothing to ' + userId);
           });
         });
-        [['everyoneChatroom', [w.G]], ['roomchats', [w.normalRoom]], ['myAlerts', [w.P, 10, []]]].forEach(function(c) {
-          equal(publishedCount(pub(c[0], null, c[1])), 0, c[0] + ' publishes nothing when logged out');
+        await dTest.eachAsync([['everyoneChatroom', [w.G]], ['roomchats', [w.normalRoom]], ['myAlerts', [w.P, 10, []]]], async function(c) {
+          equal(publishedCount(await pub(c[0], null, c[1])), 0, c[0] + ' publishes nothing when logged out');
         });
 
-        equal(changedParts(before, snapshot(w.G, w.victimIds)).join(', '), '', 'running publications changed nothing');
+        equal(changedParts(before, await snapshot(w.G, w.victimIds)).join(', '), '', 'running publications changed nothing');
       } finally {
-        cleanupWorld(w);
+        await cleanupWorld(w);
       }
     });
 
 
     // --- The players can still play ---
 
-    run('spectator: the gate still lets a player act in their own game', function() {
-      var w = buildWorld();
+    await run('spectator: the gate still lets a player act in their own game', async function() {
+      var w = await buildWorld();
       var recorder = recordJobs();
       try {
         var uid = w.victim._id;
 
-        var pathId = callAsClient(uid, 'addArmyPath', [w.G, 2, 0, w.army]);
-        assert(Armypaths.findOne({_id: pathId, user_id: uid, armyId: w.army}), 'owner can add a path');
-        callAsClient(uid, 'removeArmyPath', [pathId]);
-        assert(!Armypaths.findOne(pathId), 'owner can remove a path');
+        var pathId = await callAsClient(uid, 'addArmyPath', [w.G, 2, 0, w.army]);
+        assert(await Armypaths.findOneAsync({_id: pathId, user_id: uid, armyId: w.army}), 'owner can add a path');
+        await callAsClient(uid, 'removeArmyPath', [pathId]);
+        assert(!await Armypaths.findOneAsync(pathId), 'owner can remove a path');
 
-        callAsClient(uid, 'setHexScale', [w.P, 0.5]);
-        equal(Players.findOne(w.P).hex_scale, 0.5, 'owner can set zoom');
-        callAsClient(uid, 'setHexScale', [w.P, 50]);
-        equal(Players.findOne(w.P).hex_scale, _s.init.hexScaleMax, 'zoom is clamped');
+        await callAsClient(uid, 'setHexScale', [w.P, 0.5]);
+        equal((await Players.findOneAsync(w.P)).hex_scale, 0.5, 'owner can set zoom');
+        await callAsClient(uid, 'setHexScale', [w.P, 50]);
+        equal((await Players.findOneAsync(w.P)).hex_scale, _s.init.hexScaleMax, 'zoom is clamped');
 
-        var chats = Roomchats.find({room_id: w.normalRoom}).count();
-        callAsClient(uid, 'addChatToRoom', [w.G, w.normalRoom, 'hello']);
-        equal(Roomchats.find({room_id: w.normalRoom}).count(), chats + 1, 'member can chat');
+        var chats = await Roomchats.find({room_id: w.normalRoom}).countAsync();
+        await callAsClient(uid, 'addChatToRoom', [w.G, w.normalRoom, 'hello']);
+        equal(await Roomchats.find({room_id: w.normalRoom}).countAsync(), chats + 1, 'member can chat');
 
-        callAsClient(uid, 'edit_name', ['castle', w.castle, 'New Name', w.P]);
-        equal(Castles.findOne(w.castle).name, 'New Name', 'owner can rename a castle');
+        await callAsClient(uid, 'edit_name', ['castle', w.castle, 'New Name', w.P]);
+        equal((await Castles.findOneAsync(w.castle)).name, 'New Name', 'owner can rename a castle');
 
         // the castle panel sends the gameId as the 4th argument
-        Meteor.users.update(uid, {$set: {purchases: {castles: ['castle_01', 'castle_02_keep']}}});
-        callAsClient(uid, 'set_unit_image', [w.castle, 'castles', 'castle_02_keep', w.G]);
-        equal(Castles.findOne(w.castle).image, 'castle_02_keep', 'owner can change their castle image');
-        var imageError = throws(function() { callAsClient(uid, 'set_unit_image', [w.castle, 'castles', 'castle_01', w.P]); });
+        await Meteor.users.updateAsync(uid, {$set: {purchases: {castles: ['castle_01', 'castle_02_keep']}}});
+        await callAsClient(uid, 'set_unit_image', [w.castle, 'castles', 'castle_02_keep', w.G]);
+        equal((await Castles.findOneAsync(w.castle)).image, 'castle_02_keep', 'owner can change their castle image');
+        var imageError = await throws(async function() { await callAsClient(uid, 'set_unit_image', [w.castle, 'castles', 'castle_01', w.P]); });
         assert(imageError && imageError.error === 'not-authorized', 'a playerId in the gameId slot is refused');
-        equal(Castles.findOne(w.castle).image, 'castle_02_keep', 'image unchanged after the refused call');
+        equal((await Castles.findOneAsync(w.castle)).image, 'castle_02_keep', 'image unchanged after the refused call');
 
-        callAsClient(uid, 'markAlertAsRead', [w.G, w.alert]);
-        assert(Alerts.findOne(w.alert).playerIds[0].read, 'player can mark their alert read');
+        await callAsClient(uid, 'markAlertAsRead', [w.G, w.alert]);
+        assert((await Alerts.findOneAsync(w.alert)).playerIds[0].read, 'player can mark their alert read');
 
-        callAsClient(uid, 'hide_castle', [w.G]);
-        equal(Players.findOne(w.P).lp_show_castle, false, 'player can change panel settings');
+        await callAsClient(uid, 'hide_castle', [w.G]);
+        equal((await Players.findOneAsync(w.P)).lp_show_castle, false, 'player can change panel settings');
 
-        callAsClient(uid, 'chatroomMakeAdmin', [w.G, w.normalRoom, w.P2]);
-        assert(_.contains(Rooms.findOne(w.normalRoom).admins, w.P2), 'room owner can make an admin');
+        await callAsClient(uid, 'chatroomMakeAdmin', [w.G, w.normalRoom, w.P2]);
+        assert(_.contains((await Rooms.findOneAsync(w.normalRoom)).admins, w.P2), 'room owner can make an admin');
 
-        callAsClient(uid, 'armies.stopMoving', [{armyId: w.army}]);
-        equal(Armypaths.find({armyId: w.army}).count(), 0, 'owner can stop their army');
+        await callAsClient(uid, 'armies.stopMoving', [{armyId: w.army}]);
+        equal(await Armypaths.find({armyId: w.army}).countAsync(), 0, 'owner can stop their army');
 
         // a gameId that doesn't match the object is refused even for the owner
-        var e = throws(function() { callAsClient(uid, 'disbandArmy', [w.G2, w.army]); });
+        var e = await throws(async function() { await callAsClient(uid, 'disbandArmy', [w.G2, w.army]); });
         assert(e && e.error === 'not-authorized', 'object from another game is refused');
-        assert(Armies.findOne(w.army), 'army still there');
+        assert(await Armies.findOneAsync(w.army), 'army still there');
       } finally {
         recorder.restore();
-        cleanupWorld(w);
+        await cleanupWorld(w);
       }
     });
 
 
     // --- The method fixes on their own, without the gate ---
 
-    run('spectator: addArmyPath only adds paths to your own army in that game', function() {
-      var w = buildWorld();
+    await run('spectator: addArmyPath only adds paths to your own army in that game', async function() {
+      var w = await buildWorld();
       try {
-        Armypaths.remove({armyId: w.army});
-        [[w.attacker._id, w.G2], [w.attacker._id, w.G], [w.outsider._id, w.G], [null, w.G], [w.victim._id, w.G2]].forEach(function(c) {
-          var e = throws(function() { callAsServer(c[0], 'addArmyPath', [c[1], 3, -1, w.army]); });
+        await Armypaths.removeAsync({armyId: w.army});
+        await dTest.eachAsync([[w.attacker._id, w.G2], [w.attacker._id, w.G], [w.outsider._id, w.G], [null, w.G], [w.victim._id, w.G2]], async function(c) {
+          var e = await throws(async function() { await callAsServer(c[0], 'addArmyPath', [c[1], 3, -1, w.army]); });
           assert(e, 'refused for ' + c[0] + ' in ' + c[1]);
         });
-        equal(Armypaths.find({armyId: w.army}).count(), 0, 'no path was added');
+        equal(await Armypaths.find({armyId: w.army}).countAsync(), 0, 'no path was added');
 
-        var pathId = callAsServer(w.victim._id, 'addArmyPath', [w.G, 3, -1, w.army]);
-        var path = Armypaths.findOne(pathId);
+        var pathId = await callAsServer(w.victim._id, 'addArmyPath', [w.G, 3, -1, w.army]);
+        var path = await Armypaths.findOneAsync(pathId);
         assert(path && path.user_id === w.victim._id && path.speed === 5, 'owner path added with the army speed');
       } finally {
-        cleanupWorld(w);
+        await cleanupWorld(w);
       }
     });
 
-    run('spectator: setHexScale only changes your own player', function() {
-      var w = buildWorld();
+    await run('spectator: setHexScale only changes your own player', async function() {
+      var w = await buildWorld();
       try {
-        callAsServer(w.outsider._id, 'setHexScale', [w.P, 0.5]);
-        throws(function() { callAsServer(null, 'setHexScale', [w.P, 0.5]); });
-        equal(Players.findOne(w.P).hex_scale, 1, 'victim zoom unchanged');
+        await callAsServer(w.outsider._id, 'setHexScale', [w.P, 0.5]);
+        await throws(async function() { await callAsServer(null, 'setHexScale', [w.P, 0.5]); });
+        equal((await Players.findOneAsync(w.P)).hex_scale, 1, 'victim zoom unchanged');
       } finally {
-        cleanupWorld(w);
+        await cleanupWorld(w);
       }
     });
 
-    run('spectator: addChatToRoom needs the room to be in your game and you in the room', function() {
-      var w = buildWorld();
+    await run('spectator: addChatToRoom needs the room to be in your game and you in the room', async function() {
+      var w = await buildWorld();
       try {
-        var count = function() { return Roomchats.find({room_id: {$in: [w.everyoneRoom, w.kingRoom, w.normalRoom]}}).count(); };
-        var start = count();
+        var count = async function() { return await Roomchats.find({room_id: {$in: [w.everyoneRoom, w.kingRoom, w.normalRoom]}}).countAsync(); };
+        var start = await count();
 
         // the attacker is a player in G2 but the rooms are in G
-        [w.everyoneRoom, w.kingRoom, w.normalRoom].forEach(function(room) {
-          var e = throws(function() { callAsServer(w.attacker._id, 'addChatToRoom', [w.G2, room, 'hi']); });
+        await dTest.eachAsync([w.everyoneRoom, w.kingRoom, w.normalRoom], async function(room) {
+          var e = await throws(async function() { await callAsServer(w.attacker._id, 'addChatToRoom', [w.G2, room, 'hi']); });
           assert(e && e.error === 'not-authorized', 'other game player refused in ' + room);
-          equal(callAsServer(w.outsider._id, 'addChatToRoom', [w.G, room, 'hi']), false, 'non player refused');
+          equal(await callAsServer(w.outsider._id, 'addChatToRoom', [w.G, room, 'hi']), false, 'non player refused');
         });
 
         // a player who isn't a member of a private room
-        var other = Rooms.insert({gameId: w.G, name: 'Other', type: 'normal', owner: w.P, admins: [], members: [w.P], memberData: []});
-        var e = throws(function() { callAsServer(w.victim2._id, 'addChatToRoom', [w.G, other, 'hi']); });
+        var other = await Rooms.insertAsync({gameId: w.G, name: 'Other', type: 'normal', owner: w.P, admins: [], members: [w.P], memberData: []});
+        var e = await throws(async function() { await callAsServer(w.victim2._id, 'addChatToRoom', [w.G, other, 'hi']); });
         assert(e && e.error === 'not-authorized', 'non member refused');
-        var missing = throws(function() { callAsServer(w.victim._id, 'addChatToRoom', [w.G, 'noSuchRoom', 'hi']); });
+        var missing = await throws(async function() { await callAsServer(w.victim._id, 'addChatToRoom', [w.G, 'noSuchRoom', 'hi']); });
         assert(missing && missing.error === 'not-authorized', 'missing room refused');
-        equal(count(), start, 'nothing posted');
+        equal(await count(), start, 'nothing posted');
 
         // every player can post in the everyone room, even before the job adds them to members
-        Rooms.update(w.everyoneRoom, {$set: {members: []}});
-        callAsServer(w.victim2._id, 'addChatToRoom', [w.G, w.everyoneRoom, 'hi everyone']);
-        equal(Roomchats.find({room_id: w.everyoneRoom}).count(), 1, 'player posted in the everyone room');
-        callAsServer(w.victim._id, 'addChatToRoom', [w.G, w.normalRoom, 'hi']);
-        equal(Roomchats.find({room_id: w.normalRoom}).count(), 2, 'member posted');
+        await Rooms.updateAsync(w.everyoneRoom, {$set: {members: []}});
+        await callAsServer(w.victim2._id, 'addChatToRoom', [w.G, w.everyoneRoom, 'hi everyone']);
+        equal(await Roomchats.find({room_id: w.everyoneRoom}).countAsync(), 1, 'player posted in the everyone room');
+        await callAsServer(w.victim._id, 'addChatToRoom', [w.G, w.normalRoom, 'hi']);
+        equal(await Roomchats.find({room_id: w.normalRoom}).countAsync(), 2, 'member posted');
       } finally {
-        cleanupWorld(w);
+        await cleanupWorld(w);
       }
     });
 
-    run('spectator: cancelSignupForGame only cancels your own signup', function() {
-      var game = t.createTestGame({startAt: new Date(Date.now() + 1000 * 60 * 60 * 24)});
-      var victim = t.createTestUser();
-      var attacker = t.createTestUser();
+    await run('spectator: cancelSignupForGame only cancels your own signup', async function() {
+      var game = await t.createTestGame({startAt: new Date(Date.now() + 1000 * 60 * 60 * 24)});
+      var victim = await t.createTestUser();
+      var attacker = await t.createTestUser();
       try {
-        Gamesignups.insert({gameId: game._id, userId: victim._id, username: victim.username, createdAt: new Date(), usedToken: false});
-        Gamesignups.insert({gameId: game._id, userId: attacker._id, username: attacker.username, createdAt: new Date(), usedToken: false});
+        await Gamesignups.insertAsync({gameId: game._id, userId: victim._id, username: victim.username, createdAt: new Date(), usedToken: false});
+        await Gamesignups.insertAsync({gameId: game._id, userId: attacker._id, username: attacker.username, createdAt: new Date(), usedToken: false});
         var refused = null;
         try {
-          callAsServer(attacker._id, 'cancelSignupForGame', [{$ne: null}, game._id]);
+          await callAsServer(attacker._id, 'cancelSignupForGame', [{$ne: null}, game._id]);
         } catch (e) {
           refused = e;
         }
         assert(refused, 'an object for the user id is refused');
-        equal(Gamesignups.find({gameId: game._id}).count(), 2, 'and cancels nothing');
+        equal(await Gamesignups.find({gameId: game._id}).countAsync(), 2, 'and cancels nothing');
 
         // the userId argument is ignored
-        callAsServer(attacker._id, 'cancelSignupForGame', [victim._id, game._id]);
-        equal(Gamesignups.find({gameId: game._id, userId: victim._id}).count(), 1, 'victim signup kept');
-        equal(Gamesignups.find({gameId: game._id, userId: attacker._id}).count(), 0, 'own signup cancelled');
+        await callAsServer(attacker._id, 'cancelSignupForGame', [victim._id, game._id]);
+        equal(await Gamesignups.find({gameId: game._id, userId: victim._id}).countAsync(), 1, 'victim signup kept');
+        equal(await Gamesignups.find({gameId: game._id, userId: attacker._id}).countAsync(), 0, 'own signup cancelled');
       } finally {
-        Gamesignups.remove({gameId: game._id});
-        t.cleanup(game._id);
-        t.cleanupUser(victim._id);
-        t.cleanupUser(attacker._id);
+        await Gamesignups.removeAsync({gameId: game._id});
+        await t.cleanup(game._id);
+        await t.cleanupUser(victim._id);
+        await t.cleanupUser(attacker._id);
       }
     });
 
-    run('spectator: createArmyFromBuilding only uses buildings in the game you name', function() {
-      var w = buildWorld();
+    await run('spectator: createArmyFromBuilding only uses buildings in the game you name', async function() {
+      var w = await buildWorld();
       var recorder = recordJobs();
       try {
-        var footmen = function(id) { return Castles.findOne(id).footmen; };
+        var footmen = async function(id) { return (await Castles.findOneAsync(id)).footmen; };
         var soldiers = {};
         _s.armies.types.forEach(function(type) { soldiers[type] = 0; });
         soldiers.footmen = 1;
 
         // the attacker's own castle is in G2, they have no player in G
-        var e = throws(function() { callAsServer(w.attacker._id, 'createArmyFromBuilding', [w.G, 'castle', w.cCastle, soldiers]); });
+        var e = await throws(async function() { await callAsServer(w.attacker._id, 'createArmyFromBuilding', [w.G, 'castle', w.cCastle, soldiers]); });
         assert(e, 'refused');
-        equal(footmen(w.cCastle), 10, 'soldiers not taken out of the castle');
+        equal(await footmen(w.cCastle), 10, 'soldiers not taken out of the castle');
 
         // the victim's castle is in G, asking for G2 finds nothing
-        e = throws(function() { callAsServer(w.victim._id, 'createArmyFromBuilding', [w.G2, 'castle', w.castle, soldiers]); });
+        e = await throws(async function() { await callAsServer(w.victim._id, 'createArmyFromBuilding', [w.G2, 'castle', w.castle, soldiers]); });
         assert(e, 'refused');
-        equal(footmen(w.castle), 10, 'soldiers not taken out of the castle');
-        equal(Armies.find({gameId: w.G2, user_id: w.victim._id}).count(), 0, 'no army created');
+        equal(await footmen(w.castle), 10, 'soldiers not taken out of the castle');
+        equal(await Armies.find({gameId: w.G2, user_id: w.victim._id}).countAsync(), 0, 'no army created');
       } finally {
         recorder.restore();
-        cleanupWorld(w);
+        await cleanupWorld(w);
       }
     });
 
-    run('spectator: removeForeignArmyPaths removes paths added to someone else\'s army', function() {
-      var w = buildWorld();
+    await run('spectator: removeForeignArmyPaths removes paths added to someone else\'s army', async function() {
+      var w = await buildWorld();
       try {
-        var foreign = Armypaths.insert({gameId: w.G, armyId: w.army, user_id: w.attacker._id, x: 3, y: -1, index: 1});
-        var anonymous = Armypaths.insert({gameId: w.G, armyId: w.army, user_id: null, x: 3, y: -1, index: 2});
-        var wrongGame = Armypaths.insert({gameId: w.G2, armyId: w.army, user_id: w.victim._id, x: 3, y: -1, index: 3});
-        t.assert(dTest.settle(removeForeignArmyPaths()) >= 3, 'it counts the paths it removed');
-        assert(!Armypaths.findOne(foreign), 'path from another user removed');
-        assert(!Armypaths.findOne(anonymous), 'path from a logged out caller removed');
-        assert(!Armypaths.findOne(wrongGame), 'path in the wrong game removed');
-        assert(Armypaths.findOne(w.path), 'owner path kept');
-        t.equal(dTest.settle(removeForeignArmyPaths()), 0, 'and does nothing once clean');
+        var foreign = await Armypaths.insertAsync({gameId: w.G, armyId: w.army, user_id: w.attacker._id, x: 3, y: -1, index: 1});
+        var anonymous = await Armypaths.insertAsync({gameId: w.G, armyId: w.army, user_id: null, x: 3, y: -1, index: 2});
+        var wrongGame = await Armypaths.insertAsync({gameId: w.G2, armyId: w.army, user_id: w.victim._id, x: 3, y: -1, index: 3});
+        t.assert(await removeForeignArmyPaths() >= 3, 'it counts the paths it removed');
+        assert(!await Armypaths.findOneAsync(foreign), 'path from another user removed');
+        assert(!await Armypaths.findOneAsync(anonymous), 'path from a logged out caller removed');
+        assert(!await Armypaths.findOneAsync(wrongGame), 'path in the wrong game removed');
+        assert(await Armypaths.findOneAsync(w.path), 'owner path kept');
+        t.equal(await removeForeignArmyPaths(), 0, 'and does nothing once clean');
       } finally {
-        cleanupWorld(w);
+        await cleanupWorld(w);
       }
     });
 
 
     // --- Rate limits ---
 
-    run('spectator: logged out spectators are rate limited per connection, not all together', function() {
+    await run('spectator: logged out spectators are rate limited per connection, not all together', function() {
       var input = function(connectionId) {
         return {userId: null, clientAddress: '10.20.30.40', type: 'subscription', name: 'game', connectionId: connectionId};
       };

@@ -10,7 +10,7 @@
 if (Meteor.isServer) {
 
   Meteor.startup(function() {
-    dTest.addSuite('browser error reports (server/clientErrorTests.js)', function(run, t) {
+    dTest.addSuite('browser error reports (server/clientErrorTests.js)', async function(run, t) {
       var assert = t.assert;
       var equal = t.equal;
       var expectError = dTest.expectError;
@@ -18,14 +18,14 @@ if (Meteor.isServer) {
 
       var clients = [];
       var userIds = [];
-      var connect = function(userId) {
-        var client = dTest.ddp.connect(userId);
+      var connect = async function(userId) {
+        var client = await dTest.ddp.connect(userId);
         clients.push(client);
         return client;
       };
 
       // the lines console.log printed while fn ran, and what ClientErrors kept
-      function logged(fn) {
+      async function logged(fn) {
         var lines = [];
         var log = console.log;
         var recent = ClientErrors.recent.length;
@@ -35,7 +35,7 @@ if (Meteor.isServer) {
           else log.apply(console, arguments);
         };
         try {
-          fn();
+          await fn();
         } finally {
           console.log = log;
         }
@@ -48,10 +48,10 @@ if (Meteor.isServer) {
 
       try {
 
-        test('a logged out report is logged as one line of JSON, with no user', function() {
-          var client = connect();
-          var out = logged(function() {
-            client.call('reportClientError', report({message: 'Two\nlines', stack: 'at a\nat b', path: '/games',
+        await test('a logged out report is logged as one line of JSON, with no user', async function() {
+          var client = await connect();
+          var out = await logged(async function() {
+            await client.call('reportClientError', report({message: 'Two\nlines', stack: 'at a\nat b', path: '/games',
               version: 'abc', userAgent: 'Test browser'}));
           });
           equal(out.lines.length, 1, 'one line logged');
@@ -62,13 +62,13 @@ if (Meteor.isServer) {
           equal(JSON.stringify(out.entries), JSON.stringify([entry]), 'and kept in ClientErrors.recent');
         });
 
-        test('a signed in report names the user, and a long one is cut short', function() {
-          var user = dTest.helpers.createTestUser({username: 'clienterr_' + Random.id(6)});
+        await test('a signed in report names the user, and a long one is cut short', async function() {
+          var user = await dTest.helpers.createTestUser({username: 'clienterr_' + Random.id(6)});
           userIds.push(user._id);
-          var client = connect(user._id);
+          var client = await connect(user._id);
           var long = new Array(5001).join('x');
-          var out = logged(function() {
-            client.call('reportClientError', report({kind: long, message: long, stack: long, path: long, version: long, userAgent: long}));
+          var out = await logged(async function() {
+            await client.call('reportClientError', report({kind: long, message: long, stack: long, path: long, version: long, userAgent: long}));
           });
           var entry = out.entries[0];
           equal(entry.userId, user._id, 'the user');
@@ -76,46 +76,46 @@ if (Meteor.isServer) {
             entry.userAgent.length].join(','), '40,2000,2000,200,100,300', 'each field cut to its length');
         });
 
-        test('one connection may send 5 reports a minute, and another connection is counted on its own', function() {
-          var busy = connect();
-          var other = connect();
-          var out = logged(function() {
-            _.times(5, function(i) { busy.call('reportClientError', report({message: 'Busy ' + i})); });
-            expectError(function() { return busy.call('reportClientError', report({message: 'Busy 5'})); },
+        await test('one connection may send 5 reports a minute, and another connection is counted on its own', async function() {
+          var busy = await connect();
+          var other = await connect();
+          var out = await logged(async function() {
+            for (let i = 0; i < 5; i++) await busy.call('reportClientError', report({message: 'Busy ' + i}));
+            await expectError(async function() { return await busy.call('reportClientError', report({message: 'Busy 5'})); },
               'too-many-requests', null, 'the sixth report');
-            other.call('reportClientError', report({message: 'Other'}));
+            await other.call('reportClientError', report({message: 'Other'}));
           });
           equal(_.pluck(out.entries, 'message').join(','), 'Busy 0,Busy 1,Busy 2,Busy 3,Busy 4,Other', 'what was logged');
         });
 
-        test('a report that is not the shape the page sends is refused, and nothing is logged', function() {
-          var client = connect();
-          var out = logged(function() {
-            [
+        await test('a report that is not the shape the page sends is refused, and nothing is logged', async function() {
+          var client = await connect();
+          var out = await logged(async function() {
+            await dTest.eachAsync([
               [],
               [{message: 'no kind'}],
               [report({extra: 'field'})],
               [report({stack: {$ne: null}})],
               [report({message: 5})],
               ['just a string']
-            ].forEach(function(args) {
+            ], async function(args) {
               dTest.ddp.resetRateLimits();
-              expectError(function() { return client.call.apply(client, ['reportClientError'].concat(args)); },
+              await expectError(function() { return client.call.apply(client, ['reportClientError'].concat(args)); },
                 400, null, 'reportClientError(' + JSON.stringify(args) + ')');
             });
           });
           equal(out.lines.length, 0, 'nothing logged');
         });
 
-        test('ClientErrors.recent keeps only the last 20 reports', function() {
-          var client = connect();
-          logged(function() {
-            _.times(4, function(round) {
+        await test('ClientErrors.recent keeps only the last 20 reports', async function() {
+          var client = await connect();
+          await logged(async function() {
+            for (let round = 0; round < 4; round++) {
               dTest.ddp.resetRateLimits();
-              _.times(5, function(i) { client.call('reportClientError', report({message: 'Kept ' + (round * 5 + i)})); });
-            });
+              for (let i = 0; i < 5; i++) await client.call('reportClientError', report({message: 'Kept ' + (round * 5 + i)}));
+            }
             dTest.ddp.resetRateLimits();
-            client.call('reportClientError', report({message: 'Kept 20'}));
+            await client.call('reportClientError', report({message: 'Kept 20'}));
           });
           equal(ClientErrors.recent.length, 20, 'twenty kept');
           equal(_.last(ClientErrors.recent).message, 'Kept 20', 'newest last');
@@ -124,7 +124,7 @@ if (Meteor.isServer) {
 
       } finally {
         clients.forEach(function(client) { client.close(); });
-        userIds.forEach(function(id) { Meteor.users.remove(id); });
+        await dTest.eachAsync(userIds, async function(id) { await Meteor.users.removeAsync(id); });
         dTest.ddp.resetRateLimits();
       }
     });

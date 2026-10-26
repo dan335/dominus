@@ -11,7 +11,7 @@ if (Meteor.isServer) {
   // which logs an exception instead of throwing it: runJob throws it instead,
   // unless opts.allowError, when it is returned as {error}. opts.job(job), when
   // given, sees the job first; job.progressed lists what it passed to progress().
-  dTest.runJob = function(name, data, opts) {
+  dTest.runJob = async function(name, data, opts) {
     opts = opts || {};
     var queue = Queues[name];
     if (!queue || !queue.handler) {
@@ -36,7 +36,7 @@ if (Meteor.isServer) {
     try {
       // an async handler rejects instead (Queues.runJob logs that as
       // "Exception in job <name>")
-      result = dTest.settle(queue.handler(job));
+      result = await queue.handler(job);
     } catch (error) {
       logged.push(error instanceof Error ? error : new Error(String(error)));
     } finally {
@@ -55,7 +55,7 @@ if (Meteor.isServer) {
   // Replaces Queues.addAsync while fn runs (and the promise it returns
   // settles), so the jobs it adds are recorded and not run; each resolves with
   // true. Returns the jobs: [{name, data, options, uniqueId}].
-  dTest.recordJobs = function(fn) {
+  dTest.recordJobs = async function(fn) {
     var jobs = [];
     var original = Queues.addAsync;
     Queues.addAsync = async function(jobName, data, options, uniqueId) {
@@ -63,7 +63,7 @@ if (Meteor.isServer) {
       return true;
     };
     try {
-      dTest.settle(fn(jobs));
+      await fn(jobs);
     } finally {
       Queues.addAsync = original;
     }

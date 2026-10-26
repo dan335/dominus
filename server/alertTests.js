@@ -10,25 +10,25 @@
 if (Meteor.isServer) {
 
   Meteor.startup(function() {
-    dTest.addSuite('alerts (server/alertTests.js)', function(run, t) {
+    dTest.addSuite('alerts (server/alertTests.js)', async function(run, t) {
       var assert = t.assert;
       var equal = t.equal;
 
       var G = 'alertTestGame';
       var army = {footmen: 2, archers: 1};
 
-      var cleanUp = function() {
-        Alerts.remove({gameId: G});
-        GlobalAlerts.remove({gameId: G});
+      var cleanUp = async function() {
+        await Alerts.removeAsync({gameId: G});
+        await GlobalAlerts.removeAsync({gameId: G});
       };
 
-      var test = function(name, fn) {
-        run(name, function() {
-          cleanUp();
+      var test = async function(name, fn) {
+        await run(name, async function() {
+          await cleanUp();
           try {
-            return fn();
+            return await fn();
           } finally {
-            cleanUp();
+            await cleanUp();
           }
         });
       };
@@ -72,44 +72,44 @@ if (Meteor.isServer) {
         ['gAlert_inactiveAccountDeleted', ['someone'], 'ga_inactiveAccountDeleted', {username: 'someone'}]
       ];
 
-      var call = function(name, args) {
-        return dTest.settle(dAlerts[name].apply(dAlerts, [G].concat(args)));
+      var call = async function(name, args) {
+        return await dAlerts[name].apply(dAlerts, [G].concat(args));
       };
 
-      test('alerts: every player alert is written, with its players unread and its vars, once the call returns', function() {
+      await test('alerts: every player alert is written, with its players unread and its vars, once the call returns', async function() {
         equal(_.keys(dAlerts).filter(function(k) { return /^alert_/.test(k); }).sort().join(),
           _.pluck(ALERTS, 0).sort().join(), 'the table has every player alert');
-        ALERTS.forEach(function(row) {
+        await dTest.eachAsync(ALERTS, async function(row) {
           var before = dClock.now();
-          equal(call(row[0], row[1]), undefined, row[0] + ' returns nothing');
-          var docs = Alerts.find({gameId: G, type: row[2]}).fetch();
+          equal(await call(row[0], row[1]), undefined, row[0] + ' returns nothing');
+          var docs = await Alerts.find({gameId: G, type: row[2]}).fetchAsync();
           equal(docs.length, 1, row[0] + ': one alert');
           var doc = docs[0] || {};
           equal(JSON.stringify(doc.playerIds), JSON.stringify(row[3].map(function(p) { return {playerId: p, read: false}; })), row[0] + ': its players, unread');
           equal(JSON.stringify(doc.vars), JSON.stringify(row[4]), row[0] + ': its vars');
           assert(doc.created_at instanceof Date && doc.created_at.getTime() >= before.getTime(), row[0] + ': created now');
-          Alerts.remove({gameId: G});
+          await Alerts.removeAsync({gameId: G});
         });
-        equal(GlobalAlerts.find({gameId: G}).count(), 0, 'no global alert');
+        equal(await GlobalAlerts.find({gameId: G}).countAsync(), 0, 'no global alert');
       });
 
-      test('alerts: every global alert is written, with its vars, once the call returns', function() {
+      await test('alerts: every global alert is written, with its vars, once the call returns', async function() {
         // gAlert_playerReported: see the known bug below
         equal(_.keys(dAlerts).filter(function(k) { return /^gAlert_/.test(k); }).sort().join(),
           _.pluck(GLOBAL_ALERTS, 0).concat(['gAlert_playerReported']).sort().join(), 'the table has every other global alert');
-        GLOBAL_ALERTS.forEach(function(row) {
-          equal(call(row[0], row[1]), undefined, row[0] + ' returns nothing');
-          var docs = GlobalAlerts.find({gameId: G, type: row[2]}).fetch();
+        await dTest.eachAsync(GLOBAL_ALERTS, async function(row) {
+          equal(await call(row[0], row[1]), undefined, row[0] + ' returns nothing');
+          var docs = await GlobalAlerts.find({gameId: G, type: row[2]}).fetchAsync();
           equal(docs.length, 1, row[0] + ': one alert');
           var doc = docs[0] || {};
           equal(JSON.stringify(_.keys(doc).sort()), JSON.stringify(['_id', 'created_at', 'gameId', 'type', 'vars']), row[0] + ': its fields');
           equal(JSON.stringify(doc.vars), JSON.stringify(row[3]), row[0] + ': its vars');
-          GlobalAlerts.remove({gameId: G});
+          await GlobalAlerts.removeAsync({gameId: G});
         });
-        equal(Alerts.find({gameId: G}).count(), 0, 'no player alert');
+        equal(await Alerts.find({gameId: G}).countAsync(), 0, 'no player alert');
       });
 
-      test('alerts: a bad argument throws or rejects, and writes nothing', function() {
+      await test('alerts: a bad argument throws or rejects, and writes nothing', async function() {
         var bad = [
           ['alert_battleStart', [5, 'u1', 'castle', 'b1']],
           ['alert_receivedGoldFrom', ['p1', 'p2', 'lots', 5]],
@@ -118,19 +118,19 @@ if (Meteor.isServer) {
           ['gAlert_mapExpanded', [1.5, 2, 0, 0]],
           ['gAlert_newDominus', ['p1', 7]]
         ];
-        bad.forEach(function(row) {
-          var e = dTest.throws(function() { return dAlerts[row[0]].apply(dAlerts, [G].concat(row[1])); });
+        await dTest.eachAsync(bad, async function(row) {
+          var e = await dTest.throws(function() { return dAlerts[row[0]].apply(dAlerts, [G].concat(row[1])); });
           assert(e && /Match error/.test(e.message), row[0] + ' refused: ' + (e && e.message));
         });
-        var e = dTest.throws(function() { return dAlerts.alert_newLord(null, 'p1', 'p2'); });
+        var e = await dTest.throws(function() { return dAlerts.alert_newLord(null, 'p1', 'p2'); });
         assert(e && /Match error/.test(e.message), 'no gameId: ' + (e && e.message));
-        equal(Alerts.find({gameId: G}).count() + GlobalAlerts.find({gameId: G}).count(), 0, 'nothing written');
+        equal(await Alerts.find({gameId: G}).countAsync() + await GlobalAlerts.find({gameId: G}).countAsync(), 0, 'nothing written');
       });
 
-      test('alerts: gAlert_playerReported always fails, as reporterUsername is never defined (known bug)', function() {
-        var e = dTest.throws(function() { return dAlerts.gAlert_playerReported(G, 'p1', 'someone', 'spam', 'p2', 'other'); });
+      await test('alerts: gAlert_playerReported always fails, as reporterUsername is never defined (known bug)', async function() {
+        var e = await dTest.throws(function() { return dAlerts.gAlert_playerReported(G, 'p1', 'someone', 'spam', 'p2', 'other'); });
         assert(e && /reporterUsername is not defined/.test(e.message), 'ReferenceError: ' + (e && e.message));
-        equal(GlobalAlerts.find({gameId: G}).count(), 0, 'nothing written');
+        equal(await GlobalAlerts.find({gameId: G}).countAsync(), 0, 'nothing written');
       });
     });
   });

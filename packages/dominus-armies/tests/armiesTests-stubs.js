@@ -1,6 +1,6 @@
-armiesTestsStubPlayer = function(gameId) {
-  Meteor.users.remove({});
-  Meteor.users.insert({
+armiesTestsStubPlayer = async function(gameId) {
+  await Meteor.users.removeAsync({});
+  await Meteor.users.insertAsync({
     _id:'wee',
     admin:false,
     verifiedEmail:true,
@@ -8,7 +8,7 @@ armiesTestsStubPlayer = function(gameId) {
     pro:false
   });
 
-  Players.remove({});
+  await Players.removeAsync({});
   var player = {
     gameId:gameId,
     userId:'wee',
@@ -24,6 +24,6 @@ armiesTestsStubPlayer = function(gameId) {
     castle_id:1,
     is_dominus:false
   };
-  player._id = Players.insert(player);
+  player._id = await Players.insertAsync(player);
   return player;
 }

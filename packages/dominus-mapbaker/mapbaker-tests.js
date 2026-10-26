@@ -1,7 +1,7 @@
-Tinytest.add('mapbaker.findTopAndBottomHexesInImage', function(test) {
+Tinytest.addAsync('mapbaker.findTopAndBottomHexesInImage', async function(test) {
   let gameId = 'testgamemapbaker';
 
-  Promise.await(Mapmaker.eraseMap(gameId));
+  await Mapmaker.eraseMap(gameId);
 
   var country = {
     hexes: []
@@ -14,11 +14,11 @@ Tinytest.add('mapbaker.findTopAndBottomHexesInImage', function(test) {
     }
   }
 
-  country._id = Countries.insert(country);
+  country._id = await Countries.insertAsync(country);
 
-  country.hexes = _.map(country.hexes, function(h) {
+  country.hexes = await dTest.mapAsync(country.hexes, async function(h) {
     h.countryId = country._id;
-    h._id = Hexes.insert(h);
+    h._id = await Hexes.insertAsync(h);
     return h;
   })
 
@@ -37,10 +37,10 @@ Tinytest.add('mapbaker.findTopAndBottomHexesInImage', function(test) {
 
 
 
-Tinytest.add('mapbaker.findTopLeftHexInImage', function(test) {
+Tinytest.addAsync('mapbaker.findTopLeftHexInImage', async function(test) {
   let gameId = 'testgamemapbaker2';
 
-  Promise.await(Mapmaker.eraseMap(gameId));
+  await Mapmaker.eraseMap(gameId);
 
   var country = {
     hexes: []
@@ -53,11 +53,11 @@ Tinytest.add('mapbaker.findTopLeftHexInImage', function(test) {
     }
   }
 
-  country._id = Countries.insert(country);
+  country._id = await Countries.insertAsync(country);
 
-  country.hexes = _.map(country.hexes, function(h) {
+  country.hexes = await dTest.mapAsync(country.hexes, async function(h) {
     h.countryId = country._id;
-    h._id = Hexes.insert(h);
+    h._id = await Hexes.insertAsync(h);
     return h;
   })
 

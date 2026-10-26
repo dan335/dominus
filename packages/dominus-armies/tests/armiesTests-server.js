@@ -1,13 +1,13 @@
 // run at the beginning of tests
-stubTestGame = function() {
-  Games.remove({});
+stubTestGame = async function() {
+  await Games.removeAsync({});
   let game = {
     _id: 'testgamearmies',
     isSpeed: false,
     hasEnded: false,
     maxPlayers: 200
   }
-  game._id = Games.insert(game);
+  game._id = await Games.insertAsync(game);
   return game._id;
 }
 
@@ -18,19 +18,19 @@ Tinytest.add('armies.createName', function(test) {
 })
 
 
-Tinytest.add('armies.create', function(test) {
-  let gameId = stubTestGame();
-  Promise.await(Mapmaker.eraseMap(gameId));
-  let player = armiesTestsStubPlayer(gameId);
+Tinytest.addAsync('armies.create', async function(test) {
+  let gameId = await stubTestGame();
+  await Mapmaker.eraseMap(gameId);
+  let player = await armiesTestsStubPlayer(gameId);
 
   _s.mapmaker.minHexesInCountry = 12;
   _s.mapmaker.maxHexesInCountry = 12;
-  Promise.await(Mapmaker.addCountry(gameId, true));
+  await Mapmaker.addCountry(gameId, true);
 
   var soldiers = {'footmen':1};
 
-  var army = Promise.await(dArmies.create(player._id, soldiers, 0, 0));
-  var army = Armies.findOne();
+  var army = await dArmies.create(player._id, soldiers, 0, 0);
+  var army = await Armies.findOneAsync();
   test.notEqual(army, false);
 
   // speed should be set after created
@@ -40,44 +40,44 @@ Tinytest.add('armies.create', function(test) {
 })
 
 
-Tinytest.add('armies.speed', function(test) {
-  let gameId = stubTestGame();
-  Promise.await(Mapmaker.eraseMap(gameId));
-  let player = armiesTestsStubPlayer(gameId);
+Tinytest.addAsync('armies.speed', async function(test) {
+  let gameId = await stubTestGame();
+  await Mapmaker.eraseMap(gameId);
+  let player = await armiesTestsStubPlayer(gameId);
 
   _s.mapmaker.minHexesInCountry = 12;
   _s.mapmaker.maxHexesInCountry = 12;
-  Promise.await(Mapmaker.addCountry(gameId, true));
+  await Mapmaker.addCountry(gameId, true);
 
   var soldiers = {'footmen':1};
-  var army = Promise.await(dArmies.create(player._id, soldiers, 0, 0));
-  test.equal(Armies.findOne(army._id).speed, (60 / _s.armies.stats.footmen.speed) * _s.armies.armyTravelMultiplier);
+  var army = await dArmies.create(player._id, soldiers, 0, 0);
+  test.equal((await Armies.findOneAsync(army._id)).speed, (60 / _s.armies.stats.footmen.speed) * _s.armies.armyTravelMultiplier);
 
   var soldiers = {'cavalry':1};
-  var army = Promise.await(dArmies.create(player._id, soldiers, 0, 0));
-  test.equal(Armies.findOne(army._id).speed, (60 / _s.armies.stats.cavalry.speed) * _s.armies.armyTravelMultiplier);
+  var army = await dArmies.create(player._id, soldiers, 0, 0);
+  test.equal((await Armies.findOneAsync(army._id)).speed, (60 / _s.armies.stats.cavalry.speed) * _s.armies.armyTravelMultiplier);
 
   var soldiers = {'cavalry':1, 'footmen':1};
-  var army = Promise.await(dArmies.create(player._id, soldiers, 0, 0));
-  test.equal(Armies.findOne(army._id).speed, (60 / _s.armies.stats.footmen.speed) * _s.armies.armyTravelMultiplier);
+  var army = await dArmies.create(player._id, soldiers, 0, 0);
+  test.equal((await Armies.findOneAsync(army._id)).speed, (60 / _s.armies.stats.footmen.speed) * _s.armies.armyTravelMultiplier);
 
   var soldiers = {'cavalry':1, 'footmen':1, 'catapults':1};
-  var army = Promise.await(dArmies.create(player._id, soldiers, 0, 0));
-  test.equal(Armies.findOne(army._id).speed, (60 / _s.armies.stats.catapults.speed) * _s.armies.armyTravelMultiplier);
+  var army = await dArmies.create(player._id, soldiers, 0, 0);
+  test.equal((await Armies.findOneAsync(army._id)).speed, (60 / _s.armies.stats.catapults.speed) * _s.armies.armyTravelMultiplier);
 })
 
 
 // make sure speed is updated after combining
-Tinytest.add('armies.splitCombineLastMoveAt', function(test) {
-  let gameId = stubTestGame();
-  Promise.await(Mapmaker.eraseMap(gameId));
-  let player = armiesTestsStubPlayer(gameId);
+Tinytest.addAsync('armies.splitCombineLastMoveAt', async function(test) {
+  let gameId = await stubTestGame();
+  await Mapmaker.eraseMap(gameId);
+  let player = await armiesTestsStubPlayer(gameId);
 
-  Armies.remove({});
+  await Armies.removeAsync({});
 
   _s.mapmaker.minHexesInCountry = 50;
   _s.mapmaker.maxHexesInCountry = 50;
-  Promise.await(Mapmaker.addCountry(gameId, true));
+  await Mapmaker.addCountry(gameId, true);
 
   Meteor.userId = function() {
     return player._id;
@@ -85,28 +85,28 @@ Tinytest.add('armies.splitCombineLastMoveAt', function(test) {
 
   // create army
   var soldiers = {footmen:1, cavalry:1};
-  var army = Promise.await(dArmies.create(player._id, soldiers, 0, 0));
-  test.equal(Armies.findOne(army._id).speed, (60 / _s.armies.stats.footmen.speed) * _s.armies.armyTravelMultiplier, 'test speed');
+  var army = await dArmies.create(player._id, soldiers, 0, 0);
+  test.equal((await Armies.findOneAsync(army._id)).speed, (60 / _s.armies.stats.footmen.speed) * _s.armies.armyTravelMultiplier, 'test speed');
   var last_move_at = army.last_move_at;
 
   // split
-  var newArmyId = Promise.await(dArmies.split(gameId, army._id, {cavalry:1}));
-  test.equal(Armies.findOne(army._id).speed, (60 / _s.armies.stats.footmen.speed) * _s.armies.armyTravelMultiplier, 'test army speed');
-  test.equal(Armies.findOne(newArmyId).speed, (60 / _s.armies.stats.cavalry.speed) * _s.armies.armyTravelMultiplier, 'test new army speed');
-  test.equal(Armies.findOne(newArmyId).cavalry, 1, 'cav should be 1');
-  test.equal(Armies.findOne(army._id).last_move_at, last_move_at, 'army lastMoveAt');
-  test.equal(Armies.findOne(newArmyId).last_move_at, last_move_at, 'newarmy lastMoveAt');
+  var newArmyId = await dArmies.split(gameId, army._id, {cavalry:1});
+  test.equal((await Armies.findOneAsync(army._id)).speed, (60 / _s.armies.stats.footmen.speed) * _s.armies.armyTravelMultiplier, 'test army speed');
+  test.equal((await Armies.findOneAsync(newArmyId)).speed, (60 / _s.armies.stats.cavalry.speed) * _s.armies.armyTravelMultiplier, 'test new army speed');
+  test.equal((await Armies.findOneAsync(newArmyId)).cavalry, 1, 'cav should be 1');
+  test.equal((await Armies.findOneAsync(army._id)).last_move_at, last_move_at, 'army lastMoveAt');
+  test.equal((await Armies.findOneAsync(newArmyId)).last_move_at, last_move_at, 'newarmy lastMoveAt');
 
   // give path
-  var hex = Hexes.findOne({isBorder:true, x:{$ne:army.x}, y:{$ne:army.y}});
+  var hex = await Hexes.findOneAsync({isBorder:true, x:{$ne:army.x}, y:{$ne:army.y}});
   test.isNotUndefined(hex);
-  var pathId0 = Meteor.call('addArmyPath', gameId, hex.x, hex.y, newArmyId);
+  var pathId0 = await Meteor.callAsync('addArmyPath', gameId, hex.x, hex.y, newArmyId);
 
   // combine
-  Promise.await(Meteor.server.method_handlers['armies.combineArmies'].call({userId: 'wee'}, {gameId:gameId, armyId: army._id}));
+  await Meteor.server.method_handlers['armies.combineArmies'].call({userId: 'wee'}, {gameId:gameId, armyId: army._id});
   //Meteor.server.method_handlers['armies.combineArmies'].call({userId: 'wee'}, {gameId:gameId, armyId: newArmyId});
-  test.equal(Armies.find().count(), 1, 'one army after combining');
-  var a = Armies.findOne();
+  test.equal(await Armies.find().countAsync(), 1, 'one army after combining');
+  var a = await Armies.findOneAsync();
   test.equal(a.footmen, 1, 'one foot');
   test.equal(a.cavalry, 1, 'one cav');
   test.equal(a.speed, (60 / _s.armies.stats.footmen.speed) * _s.armies.armyTravelMultiplier, 'speed is correct');

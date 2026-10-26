@@ -13,9 +13,9 @@
 //
 //
 //
-Tinytest.add('income.addIncome', function(test) {
-  Players.remove({});
-  var playerId = Players.insert({});
+Tinytest.addAsync('income.addIncome', async function(test) {
+  await Players.removeAsync({});
+  var playerId = await Players.insertAsync({});
 
   var job = new dIncome.incomeJob();
   job.addIncome(playerId, {gold:30, lumber:20});

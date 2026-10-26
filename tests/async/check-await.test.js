@@ -133,3 +133,93 @@ test('--meteor3 flags observe, observeChanges and _publishCursor outside client 
   const finding = checkSources({'server/a.js': source}, {meteor3: true})[0];
   assert.strictEqual(finding.kind, 'meteor3');
 });
+
+test('a bare name is the function declared around the call, before one of that name in another file', function() {
+  const other = {'b.js': 'async function check() { return 1; }\n'};
+  assert.deepStrictEqual(flagged('function f() { function check() {} check(); }', other), []);
+  assert.deepStrictEqual(flagged('function f() { var check = function() {}; check(); }', other), []);
+  assert.deepStrictEqual(flagged('function f() { check(); }', other), [1]);
+  assert.deepStrictEqual(flagged('function f() { var load = async function() {}; load(); }'), [1]);
+});
+
+test('a local alias of an async function is that function', function() {
+  const other = {'b.js': 'dTest = {}; dTest.throws = async function(fn) { await fn(); };\n'};
+  assert.deepStrictEqual(flagged('function f() { var throws = dTest.throws; throws(g); }', other), [1]);
+  assert.deepStrictEqual(flagged('async function f() { var throws = dTest.throws; await throws(g); }', other), []);
+});
+
+test('fn.apply() and fn.call() return what fn returns', function() {
+  assert.deepStrictEqual(flagged(DEF + [
+    'function a() { load.apply(null, []); }',
+    'function b() { load.call(null); }',
+    'async function c() { await load.apply(null, []); }',
+    'function d() { Games.findOneAsync.call(Games, "x"); }',
+    'function e(fn) { fn.apply(null, []); }'
+  ].join('\n')), [2, 3, 5]);
+});
+
+test('withValue() with an async function returns its promise', function() {
+  assert.deepStrictEqual(flagged([
+    'function a() { DDP._CurrentInvocation.withValue(x, async function() {}); }',
+    'async function b() { await DDP._CurrentInvocation.withValue(x, async function() {}); }',
+    'function c() { DDP._CurrentInvocation.withValue(x, function() {}); }'
+  ].join('\n')), [1]);
+});
+
+test('a promise kept in a variable and read as if it held the value is flagged, even when awaited later', function() {
+  assert.deepStrictEqual(flagged(DEF + 'async function a() { var e = load(); use(e.error); return e; }'), [2]);
+  assert.deepStrictEqual(flagged(DEF + 'async function a() { var p = load(); p.then(use); await p; }'), []);
+});
+
+test('Tinytest.addAsync registers a test; it is not a promise', function() {
+  assert.deepStrictEqual(flagged('Tinytest.addAsync("x", async function(test) {});'), []);
+  assert.deepStrictEqual(flagged('function f() { Queues.addAsync("x"); }'), [1]);
+});
+
+test('a promise kept in a variable and stored or handed on is flagged, but checking it is a promise is not', function() {
+  assert.deepStrictEqual(flagged(DEF + 'async function a() { var u = load(); users.x = u; return u; }'), [2]);
+  assert.deepStrictEqual(flagged(DEF + 'async function a() { var p = load(); assert(p instanceof Promise); assert(dTest.isPromise(p)); await p; }'), []);
+});
+
+test('in a test file, obj.key() is a promise when key only ever names async functions', function() {
+  const lines = function(sources, file) {
+    return checkSources(sources).filter(function(f) { return f.file === file; }).map(function(f) { return f.line; });
+  };
+  const world = 'function world() { return {doc: async function() {}, name: function() {}}; }\n' +
+    'other = {name: async function() {}};\n';
+  const body = 'async function t(w) {\n  w.doc();\n  await w.doc();\n  w.name();\n  "a,b".split(",");\n}\n';
+  assert.deepStrictEqual(lines({'w.js': world, 'server/xTests.js': body}, 'server/xTests.js'), [2]);
+  // outside the tests, an unknown object's method isn't guessed at
+  assert.deepStrictEqual(lines({'w.js': world, 'server/x.js': body}, 'server/x.js'), []);
+});
+
+test('a sync callback to map() that returns a promise is an async callback', function() {
+  assert.deepStrictEqual(flagged(DEF + 'async function a() { var xs = [1].map(function() { return load(); }); }'), [2]);
+  assert.deepStrictEqual(flagged(DEF + 'async function a() { await Promise.all([1].map(function() { return load(); })); }'), []);
+});
+
+test('an async callback to _.times, or to filter, find and the like, is flagged', function() {
+  assert.deepStrictEqual(flagged(DEF + [
+    'async function a() { _.times(3, function() { return load(); }); }',
+    'async function b() { [1].filter(async function() { return await load(); }); }',
+    'async function c() { _.find([1], async function() { return true; }); }',
+    'async function d() { await dTest.findAsync([1], async function() { return true; }); }',
+    'async function e() { await Promise.all(_.times(3, function() { return load(); })); }'
+  ].join('\n')), [2, 3, 4]);
+});
+
+test('returning a promise from a try block with a finally does not wait for it before the finally', function() {
+  assert.deepStrictEqual(flagged(DEF + [
+    'async function a() { try { return load(); } finally { done(); } }',
+    'async function b() { try { return await load(); } finally { done(); } }',
+    'function c() { try { x(); } finally { done(); } return load(); }'
+  ].join('\n')), [2]);
+});
+
+test('an async function passed by name to map() is an async callback', function() {
+  assert.deepStrictEqual(flagged(DEF + [
+    'function a(ids) { var names = _.map(ids, load); }',
+    'async function b(ids) { return await dTest.mapAsync(ids, load); }',
+    'function c(load) { return _.map(load, String); }'
+  ].join('\n')), [2]);
+});

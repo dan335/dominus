@@ -14,7 +14,7 @@ if (Meteor.isServer) {
     if (actual !== expected) throw new Error('FAIL: ' + message + ' (expected ' + expected + ', got ' + actual + ')');
   }
 
-  function _createTestGame(overrides) {
+  async function _createTestGame(overrides) {
     let game = {
       name: 'Test Game',
       desc: 'A test game',
@@ -43,11 +43,11 @@ if (Meteor.isServer) {
       minimap: null
     };
     if (overrides) _.extend(game, overrides);
-    game._id = Games.insert(game);
+    game._id = await Games.insertAsync(game);
     return game;
   }
 
-  function _createTestUser(overrides) {
+  async function _createTestUser(overrides) {
     let user = {
       username: 'testuser_' + Random.id(6),
       male: true,
@@ -56,37 +56,37 @@ if (Meteor.isServer) {
       proTokens: 0
     };
     if (overrides) _.extend(user, overrides);
-    user._id = Meteor.users.insert(user);
+    user._id = await Meteor.users.insertAsync(user);
     return user;
   }
 
   // one 100 hex country, with the map settings put back afterwards: they are
   // read by every later suite (the game simulation's map depends on them)
-  function _addTestCountry(gameId) {
+  async function _addTestCountry(gameId) {
     let sizes = _.pick(_s.mapmaker, 'minHexesInCountry', 'maxHexesInCountry');
     try {
       _s.mapmaker.minHexesInCountry = 100;
       _s.mapmaker.maxHexesInCountry = 100;
-      dTest.settle(Mapmaker.addCountry(gameId, true));
+      await Mapmaker.addCountry(gameId, true);
     } finally {
       _.extend(_s.mapmaker, sizes);
     }
   }
 
-  function _testCleanup(gameId) {
-    Games.remove(gameId);
-    Players.remove({gameId: gameId});
-    Castles.remove({gameId: gameId});
-    Market.remove({gameId: gameId});
-    Markethistory.remove({gameId: gameId});
-    Gamesignups.remove({gameId: gameId});
-    Hexes.remove({gameId: gameId});
-    Countries.remove({gameId: gameId});
-    Capitals.remove({gameId: gameId});
+  async function _testCleanup(gameId) {
+    await Games.removeAsync(gameId);
+    await Players.removeAsync({gameId: gameId});
+    await Castles.removeAsync({gameId: gameId});
+    await Market.removeAsync({gameId: gameId});
+    await Markethistory.removeAsync({gameId: gameId});
+    await Gamesignups.removeAsync({gameId: gameId});
+    await Hexes.removeAsync({gameId: gameId});
+    await Countries.removeAsync({gameId: gameId});
+    await Capitals.removeAsync({gameId: gameId});
   }
 
-  function _testCleanupUser(userId) {
-    Meteor.users.remove(userId);
+  async function _testCleanupUser(userId) {
+    await Meteor.users.removeAsync(userId);
   }
 
 
@@ -100,21 +100,21 @@ if (Meteor.isServer) {
   };
 
 
-  dTest.addSuite('game creation', function(run) {
+  dTest.addSuite('game creation', async function(run) {
 
       // --- Guard ---
 
-      run('runAllTests and runGameCreationTests refuse client calls and change nothing', function() {
+      await run('runAllTests and runGameCreationTests refuse client calls and change nothing', async function() {
         let collections = [Games, Players, Armies, Castles, Alerts, GlobalAlerts, Dailystats];
-        let counts = function() { return collections.map(function(c) { return c.find().count(); }).join(','); };
-        let before = counts();
-        ['runAllTests', 'runGameCreationTests'].forEach(function(method) {
-          [null, 'someUserId'].forEach(function(userId) {
+        let counts = async function() { return (await dTest.mapAsync(collections, async function(c) { return await c.find().countAsync(); })).join(','); };
+        let before = await counts();
+        await dTest.eachAsync(['runAllTests', 'runGameCreationTests'], async function(method) {
+          await dTest.eachAsync([null, 'someUserId'], async function(userId) {
             let inv = {userId: userId, isSimulation: false, connection: {id: 'fakeClient'}, unblock: function() {}};
             let error = null;
             try {
-              DDP._CurrentInvocation.withValue(inv, function() {
-                return dTest.settle(Meteor.server.method_handlers[method].apply(inv, []));
+              await DDP._CurrentInvocation.withValue(inv, async function() {
+                return await Meteor.server.method_handlers[method].apply(inv, []);
               });
             } catch (e) {
               error = e;
@@ -124,14 +124,14 @@ if (Meteor.isServer) {
             _testAssert(error && error.error === expected, method + ' client call throws ' + expected + ' (userId ' + userId + ')');
           });
         });
-        _testEqual(counts(), before, 'no collection counts changed');
+        _testEqual(await counts(), before, 'no collection counts changed');
       });
 
 
 
-      run('game insert has correct default flags', function() {
-        let game = _createTestGame();
-        let doc = Games.findOne(game._id);
+      await run('game insert has correct default flags', async function() {
+        let game = await _createTestGame();
+        let doc = await Games.findOneAsync(game._id);
         _testAssert(doc.hasStarted === false, 'hasStarted');
         _testAssert(doc.isStarting === false, 'isStarting');
         _testAssert(doc.hasEnded === false, 'hasEnded');
@@ -141,49 +141,49 @@ if (Meteor.isServer) {
         _testEqual(doc.taxesCollected, 0, 'taxesCollected');
         _testAssert(doc.closeDate === null, 'closeDate');
         _testAssert(doc.endDate === null, 'endDate');
-        _testCleanup(game._id);
+        await _testCleanup(game._id);
       });
 
-      run('startGame transitions to started state', function() {
-        let game = _createTestGame();
-        let user = _createTestUser();
-        Gamesignups.insert({gameId: game._id, userId: user._id, username: user.username, createdAt: new Date(), usedToken: false});
-        dTest.settle(Mapmaker.eraseMap(game._id));
-        _addTestCountry(game._id);
+      await run('startGame transitions to started state', async function() {
+        let game = await _createTestGame();
+        let user = await _createTestUser();
+        await Gamesignups.insertAsync({gameId: game._id, userId: user._id, username: user.username, createdAt: new Date(), usedToken: false});
+        await Mapmaker.eraseMap(game._id);
+        await _addTestCountry(game._id);
 
-        dTest.settle(dManager.startGame(game, true));
+        await dManager.startGame(game, true);
 
-        let g = Games.findOne(game._id);
+        let g = await Games.findOneAsync(game._id);
         _testAssert(g.hasStarted === true, 'hasStarted');
         _testAssert(g.startedAt !== undefined, 'startedAt set');
-        _testEqual(Gamesignups.find({gameId: game._id}).count(), 0, 'signups removed');
-        _testEqual(Players.find({gameId: game._id}).count(), 1, 'player created');
-        _testEqual(Market.find({gameId: game._id}).count(), _s.market.types.length, 'market created');
-        _testCleanup(game._id);
-        _testCleanupUser(user._id);
+        _testEqual(await Gamesignups.find({gameId: game._id}).countAsync(), 0, 'signups removed');
+        _testEqual(await Players.find({gameId: game._id}).countAsync(), 1, 'player created');
+        _testEqual(await Market.find({gameId: game._id}).countAsync(), _s.market.types.length, 'market created');
+        await _testCleanup(game._id);
+        await _testCleanupUser(user._id);
       });
 
-      run('startGame with zero signups works', function() {
-        let game = _createTestGame();
-        dTest.settle(dManager.startGame(game, true));
-        let g = Games.findOne(game._id);
+      await run('startGame with zero signups works', async function() {
+        let game = await _createTestGame();
+        await dManager.startGame(game, true);
+        let g = await Games.findOneAsync(game._id);
         _testAssert(g.hasStarted === true, 'hasStarted');
-        _testEqual(Market.find({gameId: game._id}).count(), _s.market.types.length, 'market created');
-        _testCleanup(game._id);
+        _testEqual(await Market.find({gameId: game._id}).countAsync(), _s.market.types.length, 'market created');
+        await _testCleanup(game._id);
       });
 
 
       // --- Player Creation ---
 
-      run('createPlayer correct starting resources', function() {
-        let game = _createTestGame({hasStarted: true});
-        let user = _createTestUser();
-        dTest.settle(Mapmaker.eraseMap(game._id));
-        _addTestCountry(game._id);
+      await run('createPlayer correct starting resources', async function() {
+        let game = await _createTestGame({hasStarted: true});
+        let user = await _createTestUser();
+        await Mapmaker.eraseMap(game._id);
+        await _addTestCountry(game._id);
 
-        let playerId = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
+        let playerId = await dCastles.createPlayer(game._id, user._id, user.username, false);
         _testAssert(!!playerId, 'playerId returned');
-        let p = Players.findOne(playerId);
+        let p = await Players.findOneAsync(playerId);
         _testEqual(p.gold, _s.init.startingResources.gold, 'gold');
         _testEqual(p.grain, _s.init.startingResources.grain, 'grain');
         _testEqual(p.lumber, _s.init.startingResources.lumber, 'lumber');
@@ -191,19 +191,19 @@ if (Meteor.isServer) {
         _testEqual(p.wool, _s.init.startingResources.wool, 'wool');
         _testEqual(p.clay, _s.init.startingResources.clay, 'clay');
         _testEqual(p.glass, _s.init.startingResources.glass, 'glass');
-        _testCleanup(game._id);
-        _testCleanupUser(user._id);
+        await _testCleanup(game._id);
+        await _testCleanupUser(user._id);
       });
 
-      run('createPlayer crazyFast boosted resources', function() {
-        let game = _createTestGame({hasStarted: true, isCrazyFast: true});
-        let user = _createTestUser();
-        dTest.settle(Mapmaker.eraseMap(game._id));
-        _addTestCountry(game._id);
+      await run('createPlayer crazyFast boosted resources', async function() {
+        let game = await _createTestGame({hasStarted: true, isCrazyFast: true});
+        let user = await _createTestUser();
+        await Mapmaker.eraseMap(game._id);
+        await _addTestCountry(game._id);
 
-        let playerId = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
+        let playerId = await dCastles.createPlayer(game._id, user._id, user.username, false);
         _testAssert(!!playerId, 'playerId returned');
-        let p = Players.findOne(playerId);
+        let p = await Players.findOneAsync(playerId);
         _testEqual(p.gold, 10000, 'gold');
         _testEqual(p.grain, 1500, 'grain');
         _testEqual(p.lumber, 2000, 'lumber');
@@ -211,118 +211,118 @@ if (Meteor.isServer) {
         _testEqual(p.wool, 1500, 'wool');
         _testEqual(p.clay, 2000, 'clay');
         _testEqual(p.glass, 1500, 'glass');
-        _testCleanup(game._id);
-        _testCleanupUser(user._id);
+        await _testCleanup(game._id);
+        await _testCleanupUser(user._id);
       });
 
-      run('createPlayer rejects duplicate', function() {
-        let game = _createTestGame({hasStarted: true});
-        let user = _createTestUser();
-        dTest.settle(Mapmaker.eraseMap(game._id));
-        _addTestCountry(game._id);
+      await run('createPlayer rejects duplicate', async function() {
+        let game = await _createTestGame({hasStarted: true});
+        let user = await _createTestUser();
+        await Mapmaker.eraseMap(game._id);
+        await _addTestCountry(game._id);
 
-        let id1 = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
+        let id1 = await dCastles.createPlayer(game._id, user._id, user.username, false);
         _testAssert(!!id1, 'first succeeds');
-        let id2 = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
+        let id2 = await dCastles.createPlayer(game._id, user._id, user.username, false);
         _testAssert(!id2, 'second returns false');
-        _testEqual(Players.find({gameId: game._id}).count(), 1, 'one player');
-        _testCleanup(game._id);
-        _testCleanupUser(user._id);
+        _testEqual(await Players.find({gameId: game._id}).countAsync(), 1, 'one player');
+        await _testCleanup(game._id);
+        await _testCleanupUser(user._id);
       });
 
-      run('createPlayer rejects when dominusAchieved', function() {
-        let game = _createTestGame({hasStarted: true, dominusAchieved: true});
-        let user = _createTestUser();
-        let playerId = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
+      await run('createPlayer rejects when dominusAchieved', async function() {
+        let game = await _createTestGame({hasStarted: true, dominusAchieved: true});
+        let user = await _createTestUser();
+        let playerId = await dCastles.createPlayer(game._id, user._id, user.username, false);
         _testAssert(!playerId, 'returns false');
-        _testCleanup(game._id);
-        _testCleanupUser(user._id);
+        await _testCleanup(game._id);
+        await _testCleanupUser(user._id);
       });
 
-      run('createPlayer creates castle at valid hex', function() {
-        let game = _createTestGame({hasStarted: true});
-        let user = _createTestUser();
-        dTest.settle(Mapmaker.eraseMap(game._id));
-        _addTestCountry(game._id);
+      await run('createPlayer creates castle at valid hex', async function() {
+        let game = await _createTestGame({hasStarted: true});
+        let user = await _createTestUser();
+        await Mapmaker.eraseMap(game._id);
+        await _addTestCountry(game._id);
 
-        let playerId = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
-        let p = Players.findOne(playerId);
+        let playerId = await dCastles.createPlayer(game._id, user._id, user.username, false);
+        let p = await Players.findOneAsync(playerId);
         _testAssert(p.x !== null, 'x set');
         _testAssert(p.y !== null, 'y set');
         _testAssert(p.castle_id !== null, 'castle_id set');
-        let castle = Castles.findOne(p.castle_id);
+        let castle = await Castles.findOneAsync(p.castle_id);
         _testAssert(castle !== undefined, 'castle exists');
         _testEqual(castle.x, p.x, 'castle x');
         _testEqual(castle.y, p.y, 'castle y');
-        _testCleanup(game._id);
-        _testCleanupUser(user._id);
+        await _testCleanup(game._id);
+        await _testCleanupUser(user._id);
       });
 
-      run('createPlayer rejects unverified email', function() {
-        let game = _createTestGame({hasStarted: true});
-        let user = _createTestUser({verifiedEmail: false});
-        let playerId = dTest.settle(dCastles.createPlayer(game._id, user._id, user.username, false));
+      await run('createPlayer rejects unverified email', async function() {
+        let game = await _createTestGame({hasStarted: true});
+        let user = await _createTestUser({verifiedEmail: false});
+        let playerId = await dCastles.createPlayer(game._id, user._id, user.username, false);
         _testAssert(!playerId, 'returns false');
-        _testCleanup(game._id);
-        _testCleanupUser(user._id);
+        await _testCleanup(game._id);
+        await _testCleanupUser(user._id);
       });
 
 
       // --- Market Creation ---
 
-      run('createMarket creates one doc per resource type', function() {
-        let game = _createTestGame();
-        dTest.settle(dMarket.createMarket(game._id));
-        _testEqual(Market.find({gameId: game._id}).count(), _s.market.types.length, 'count');
-        _s.market.types.forEach(function(type) {
-          _testAssert(Market.findOne({gameId: game._id, type: type}) !== undefined, type + ' exists');
+      await run('createMarket creates one doc per resource type', async function() {
+        let game = await _createTestGame();
+        await dMarket.createMarket(game._id);
+        _testEqual(await Market.find({gameId: game._id}).countAsync(), _s.market.types.length, 'count');
+        await dTest.eachAsync(_s.market.types, async function(type) {
+          _testAssert(await Market.findOneAsync({gameId: game._id, type: type}) !== undefined, type + ' exists');
         });
-        _testCleanup(game._id);
+        await _testCleanup(game._id);
       });
 
-      run('createMarket correct starting prices', function() {
-        let game = _createTestGame();
-        dTest.settle(dMarket.createMarket(game._id));
-        Market.find({gameId: game._id}).forEach(function(doc) {
+      await run('createMarket correct starting prices', async function() {
+        let game = await _createTestGame();
+        await dMarket.createMarket(game._id);
+        await Market.find({gameId: game._id}).forEachAsync(function(doc) {
           _testEqual(doc.price, _s.market.startPrice[doc.type], doc.type + ' price');
         });
-        _testCleanup(game._id);
+        await _testCleanup(game._id);
       });
 
-      run('createMarket is idempotent', function() {
-        let game = _createTestGame();
-        dTest.settle(dMarket.createMarket(game._id));
-        dTest.settle(dMarket.createMarket(game._id));
-        _testEqual(Market.find({gameId: game._id}).count(), _s.market.types.length, 'no dupes');
-        _testCleanup(game._id);
+      await run('createMarket is idempotent', async function() {
+        let game = await _createTestGame();
+        await dMarket.createMarket(game._id);
+        await dMarket.createMarket(game._id);
+        _testEqual(await Market.find({gameId: game._id}).countAsync(), _s.market.types.length, 'no dupes');
+        await _testCleanup(game._id);
       });
 
 
       // --- Signup Validation ---
 
-      run('signup after startAt is detectable', function() {
-        let game = _createTestGame({startAt: moment().subtract(1, 'day').toDate()});
+      await run('signup after startAt is detectable', async function() {
+        let game = await _createTestGame({startAt: moment().subtract(1, 'day').toDate()});
         _testAssert(moment().isAfter(moment(game.startAt)), 'past startAt detected');
-        _testCleanup(game._id);
+        await _testCleanup(game._id);
       });
 
-      run('signup full game is detectable', function() {
-        let game = _createTestGame({maxPlayers: 2});
+      await run('signup full game is detectable', async function() {
+        let game = await _createTestGame({maxPlayers: 2});
         for (let i = 0; i < 3; i++) {
-          Gamesignups.insert({gameId: game._id, userId: 'fake' + i, username: 'p' + i, createdAt: new Date(), usedToken: false});
+          await Gamesignups.insertAsync({gameId: game._id, userId: 'fake' + i, username: 'p' + i, createdAt: new Date(), usedToken: false});
         }
-        _testAssert(Gamesignups.find({gameId: game._id}).count() > game.maxPlayers, 'over max');
-        _testCleanup(game._id);
+        _testAssert(await Gamesignups.find({gameId: game._id}).countAsync() > game.maxPlayers, 'over max');
+        await _testCleanup(game._id);
       });
 
 
       // --- Auto Game Creation ---
 
-      run('createNextGame creates game with correct fields', function() {
-        Games.remove({});
-        let gameId = dTest.settle(dManager.createNextGame());
+      await run('createNextGame creates game with correct fields', async function() {
+        await Games.removeAsync({});
+        let gameId = await dManager.createNextGame();
         _testAssert(!!gameId, 'gameId returned');
-        let g = Games.findOne(gameId);
+        let g = await Games.findOneAsync(gameId);
         _testEqual(g.name, 'Game 1', 'name');
         _testEqual(g.desc, '', 'desc empty');
         _testEqual(g.maxPlayers, 50, 'maxPlayers');
@@ -341,141 +341,141 @@ if (Meteor.isServer) {
         _testEqual(g.taxesCollected, 0, 'taxesCollected');
         _testAssert(g.startAt instanceof Date, 'startAt is Date');
         _testAssert(g.createdAt instanceof Date, 'createdAt is Date');
-        Games.remove(gameId);
+        await Games.removeAsync(gameId);
       });
 
-      run('createNextGame names first game "Game 1"', function() {
-        Games.remove({});
-        let gameId = dTest.settle(dManager.createNextGame());
-        _testEqual(Games.findOne(gameId).name, 'Game 1', 'first game name');
-        Games.remove(gameId);
+      await run('createNextGame names first game "Game 1"', async function() {
+        await Games.removeAsync({});
+        let gameId = await dManager.createNextGame();
+        _testEqual((await Games.findOneAsync(gameId)).name, 'Game 1', 'first game name');
+        await Games.removeAsync(gameId);
       });
 
-      run('createNextGame names sequentially', function() {
-        Games.remove({});
+      await run('createNextGame names sequentially', async function() {
+        await Games.removeAsync({});
         // insert a "Game 3" as if it existed before
-        let oldId = Games.insert({name: 'Game 3', createdAt: new Date(), hasStarted: true, hasClosed: true});
-        let gameId = dTest.settle(dManager.createNextGame());
-        _testEqual(Games.findOne(gameId).name, 'Game 4', 'sequential name');
-        Games.remove(gameId);
-        Games.remove(oldId);
+        let oldId = await Games.insertAsync({name: 'Game 3', createdAt: new Date(), hasStarted: true, hasClosed: true});
+        let gameId = await dManager.createNextGame();
+        _testEqual((await Games.findOneAsync(gameId)).name, 'Game 4', 'sequential name');
+        await Games.removeAsync(gameId);
+        await Games.removeAsync(oldId);
       });
 
-      run('createNextGame handles non-standard previous name', function() {
-        Games.remove({});
-        let oldId = Games.insert({name: 'My Custom Game', createdAt: new Date(), hasStarted: true, hasClosed: true});
-        let gameId = dTest.settle(dManager.createNextGame());
-        _testEqual(Games.findOne(gameId).name, 'Game 1', 'fallback to Game 1');
-        Games.remove(gameId);
-        Games.remove(oldId);
+      await run('createNextGame handles non-standard previous name', async function() {
+        await Games.removeAsync({});
+        let oldId = await Games.insertAsync({name: 'My Custom Game', createdAt: new Date(), hasStarted: true, hasClosed: true});
+        let gameId = await dManager.createNextGame();
+        _testEqual((await Games.findOneAsync(gameId)).name, 'Game 1', 'fallback to Game 1');
+        await Games.removeAsync(gameId);
+        await Games.removeAsync(oldId);
       });
 
-      run('createNextGame does not create duplicate', function() {
-        Games.remove({});
-        let id1 = dTest.settle(dManager.createNextGame());
-        let id2 = dTest.settle(dManager.createNextGame());
+      await run('createNextGame does not create duplicate', async function() {
+        await Games.removeAsync({});
+        let id1 = await dManager.createNextGame();
+        let id2 = await dManager.createNextGame();
         _testAssert(!!id1, 'first creates');
         _testAssert(!id2, 'second returns null');
-        _testEqual(Games.find({hasStarted: false, hasClosed: false}).count(), 1, 'only one pending');
-        Games.remove(id1);
+        _testEqual(await Games.find({hasStarted: false, hasClosed: false}).countAsync(), 1, 'only one pending');
+        await Games.removeAsync(id1);
       });
 
-      run('createNextGame startAt is ~72 hours in future', function() {
-        Games.remove({});
-        let gameId = dTest.settle(dManager.createNextGame());
-        let g = Games.findOne(gameId);
+      await run('createNextGame startAt is ~72 hours in future', async function() {
+        await Games.removeAsync({});
+        let gameId = await dManager.createNextGame();
+        let g = await Games.findOneAsync(gameId);
         let diff = g.startAt.getTime() - new Date().getTime();
         let hours = diff / (1000 * 60 * 60);
         _testAssert(hours > 71 && hours < 73, 'startAt ~72h from now (got ' + hours.toFixed(1) + 'h)');
-        Games.remove(gameId);
+        await Games.removeAsync(gameId);
       });
 
-      run('createNextGame picks highest game number', function() {
-        Games.remove({});
-        let id1 = Games.insert({name: 'Game 5', createdAt: new Date('2020-01-01'), hasStarted: true, hasClosed: true});
-        let id2 = Games.insert({name: 'Game 2', createdAt: new Date('2021-01-01'), hasStarted: true, hasClosed: true});
-        let id3 = Games.insert({name: 'Game 10', createdAt: new Date('2019-01-01'), hasStarted: true, hasClosed: true});
-        let gameId = dTest.settle(dManager.createNextGame());
-        _testEqual(Games.findOne(gameId).name, 'Game 11', 'picks highest N + 1');
-        Games.remove(gameId);
-        Games.remove(id1);
-        Games.remove(id2);
-        Games.remove(id3);
+      await run('createNextGame picks highest game number', async function() {
+        await Games.removeAsync({});
+        let id1 = await Games.insertAsync({name: 'Game 5', createdAt: new Date('2020-01-01'), hasStarted: true, hasClosed: true});
+        let id2 = await Games.insertAsync({name: 'Game 2', createdAt: new Date('2021-01-01'), hasStarted: true, hasClosed: true});
+        let id3 = await Games.insertAsync({name: 'Game 10', createdAt: new Date('2019-01-01'), hasStarted: true, hasClosed: true});
+        let gameId = await dManager.createNextGame();
+        _testEqual((await Games.findOneAsync(gameId)).name, 'Game 11', 'picks highest N + 1');
+        await Games.removeAsync(gameId);
+        await Games.removeAsync(id1);
+        await Games.removeAsync(id2);
+        await Games.removeAsync(id3);
       });
 
-      run('dominus achievement creates next game', function() {
-        Games.remove({});
-        Players.remove({});
-        let game = _createTestGame({hasStarted: true});
-        let user1 = _createTestUser({username: 'king_' + Random.id(4)});
-        let user2 = _createTestUser({username: 'vassal_' + Random.id(4)});
+      await run('dominus achievement creates next game', async function() {
+        await Games.removeAsync({});
+        await Players.removeAsync({});
+        let game = await _createTestGame({hasStarted: true});
+        let user1 = await _createTestUser({username: 'king_' + Random.id(4)});
+        let user2 = await _createTestUser({username: 'vassal_' + Random.id(4)});
 
         // create king with vassal (dominus condition)
-        let p1 = Players.insert({gameId: game._id, userId: user1._id, username: user1.username, is_king: true, king: null, castle_id: 'c1', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
-        let p2 = Players.insert({gameId: game._id, userId: user2._id, username: user2.username, is_king: false, king: p1, castle_id: 'c2', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
+        let p1 = await Players.insertAsync({gameId: game._id, userId: user1._id, username: user1.username, is_king: true, king: null, castle_id: 'c1', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
+        let p2 = await Players.insertAsync({gameId: game._id, userId: user2._id, username: user2.username, is_king: false, king: p1, castle_id: 'c2', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
 
-        dTest.settle(dManager.checkForDominus(game._id));
+        await dManager.checkForDominus(game._id);
 
         // verify new game was created
-        let newGame = Games.findOne({hasStarted: false, hasClosed: false, _id: {$ne: game._id}});
+        let newGame = await Games.findOneAsync({hasStarted: false, hasClosed: false, _id: {$ne: game._id}});
         _testAssert(!!newGame, 'new game created');
         _testEqual(newGame.name, 'Game 1', 'new game named Game 1');
 
-        _testCleanup(game._id);
-        if (newGame) Games.remove(newGame._id);
-        _testCleanupUser(user1._id);
-        _testCleanupUser(user2._id);
+        await _testCleanup(game._id);
+        if (newGame) await Games.removeAsync(newGame._id);
+        await _testCleanupUser(user1._id);
+        await _testCleanupUser(user2._id);
       });
 
-      run('re-achieving dominus does not create second game', function() {
-        Games.remove({});
-        Players.remove({});
-        let game = _createTestGame({hasStarted: true});
-        let user1 = _createTestUser({username: 'king_' + Random.id(4)});
-        let user2 = _createTestUser({username: 'vassal_' + Random.id(4)});
+      await run('re-achieving dominus does not create second game', async function() {
+        await Games.removeAsync({});
+        await Players.removeAsync({});
+        let game = await _createTestGame({hasStarted: true});
+        let user1 = await _createTestUser({username: 'king_' + Random.id(4)});
+        let user2 = await _createTestUser({username: 'vassal_' + Random.id(4)});
 
         // dominus condition
-        let p1 = Players.insert({gameId: game._id, userId: user1._id, username: user1.username, is_king: true, king: null, castle_id: 'c1', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
-        let p2 = Players.insert({gameId: game._id, userId: user2._id, username: user2.username, is_king: false, king: p1, castle_id: 'c2', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
+        let p1 = await Players.insertAsync({gameId: game._id, userId: user1._id, username: user1.username, is_king: true, king: null, castle_id: 'c1', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
+        let p2 = await Players.insertAsync({gameId: game._id, userId: user2._id, username: user2.username, is_king: false, king: p1, castle_id: 'c2', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
 
         // first dominus
-        dTest.settle(dManager.checkForDominus(game._id));
-        let count1 = Games.find({hasStarted: false, hasClosed: false, _id: {$ne: game._id}}).count();
+        await dManager.checkForDominus(game._id);
+        let count1 = await Games.find({hasStarted: false, hasClosed: false, _id: {$ne: game._id}}).countAsync();
         _testEqual(count1, 1, 'one pending game after first dominus');
 
         // simulate losing dominus then re-achieving
-        Players.update(p2, {$set: {is_king: true, king: null}});
-        dTest.settle(dManager.checkForDominus(game._id)); // no dominus now
-        Players.update(p2, {$set: {is_king: false, king: p1}});
-        dTest.settle(dManager.checkForDominus(game._id)); // dominus again
+        await Players.updateAsync(p2, {$set: {is_king: true, king: null}});
+        await dManager.checkForDominus(game._id); // no dominus now
+        await Players.updateAsync(p2, {$set: {is_king: false, king: p1}});
+        await dManager.checkForDominus(game._id); // dominus again
 
-        let count2 = Games.find({hasStarted: false, hasClosed: false, _id: {$ne: game._id}}).count();
+        let count2 = await Games.find({hasStarted: false, hasClosed: false, _id: {$ne: game._id}}).countAsync();
         _testEqual(count2, 1, 'still only one pending game');
 
-        _testCleanup(game._id);
-        Games.remove({hasStarted: false, hasClosed: false});
-        _testCleanupUser(user1._id);
-        _testCleanupUser(user2._id);
+        await _testCleanup(game._id);
+        await Games.removeAsync({hasStarted: false, hasClosed: false});
+        await _testCleanupUser(user1._id);
+        await _testCleanupUser(user2._id);
       });
 
-      run('auto-created game compatible with checkForGameStart', function() {
-        Games.remove({});
-        let gameId = dTest.settle(dManager.createNextGame());
-        let g = Games.findOne(gameId);
+      await run('auto-created game compatible with checkForGameStart', async function() {
+        await Games.removeAsync({});
+        let gameId = await dManager.createNextGame();
+        let g = await Games.findOneAsync(gameId);
         // checkForGameStart query: {hasStarted:false, isStarting:false, startAt:{$lte:new Date()}}
         _testEqual(g.hasStarted, false, 'hasStarted false');
         _testEqual(g.isStarting, false, 'isStarting false');
         _testAssert(g.startAt instanceof Date, 'startAt is Date');
         // simulate time passing: if startAt were in the past, it would match
         let query = {_id: gameId, hasStarted: false, isStarting: false, startAt: {$lte: moment().add(73, 'hours').toDate()}};
-        _testAssert(!!Games.findOne(query), 'matches checkForGameStart query when time passes');
-        Games.remove(gameId);
+        _testAssert(!!await Games.findOneAsync(query), 'matches checkForGameStart query when time passes');
+        await Games.removeAsync(gameId);
       });
 
 
       // --- Nightly Rebuild ---
 
-      run('no-king rebuild window does not clear dominus or fire false alert', function() {
+      await run('no-king rebuild window does not clear dominus or fire false alert', async function() {
         // Regression test for the false "no longer dominus" alert race (fix
         // branch fix/dominus-no-king-race). relation_finder transiently sets
         // is_king:false for every player mid-rebuild; if checkForDominus reads
@@ -486,122 +486,122 @@ if (Meteor.isServer) {
         // This test forces the zero-king window and asserts the dominus is
         // preserved and no alert fires. On the pre-fix code this FAILS (dominus
         // cleared + alert fired), which is exactly what it must catch.
-        Games.remove({});
-        Players.remove({});
-        Alerts.remove({});
-        GlobalAlerts.remove({});
-        let game = _createTestGame({hasStarted: true});
-        let user1 = _createTestUser({username: 'king_' + Random.id(4)});
-        let user2 = _createTestUser({username: 'vassal_' + Random.id(4)});
+        await Games.removeAsync({});
+        await Players.removeAsync({});
+        await Alerts.removeAsync({});
+        await GlobalAlerts.removeAsync({});
+        let game = await _createTestGame({hasStarted: true});
+        let user1 = await _createTestUser({username: 'king_' + Random.id(4)});
+        let user2 = await _createTestUser({username: 'vassal_' + Random.id(4)});
 
-        let p1 = Players.insert({gameId: game._id, userId: user1._id, username: user1.username, is_king: true, king: null, lord: null, castle_id: 'c1', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
-        let p2 = Players.insert({gameId: game._id, userId: user2._id, username: user2.username, is_king: false, king: p1, lord: p1, castle_id: 'c2', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
+        let p1 = await Players.insertAsync({gameId: game._id, userId: user1._id, username: user1.username, is_king: true, king: null, lord: null, castle_id: 'c1', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
+        let p2 = await Players.insertAsync({gameId: game._id, userId: user2._id, username: user2.username, is_king: false, king: p1, lord: p1, castle_id: 'c2', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
 
         // establish dominus
-        dTest.settle(dManager.checkForDominus(game._id));
-        _testAssert(Players.findOne(p1, {fields:{is_dominus:1}}).is_dominus === true, 'p1 is dominus');
-        Alerts.remove({gameId: game._id});
-        GlobalAlerts.remove({gameId: game._id});
+        await dManager.checkForDominus(game._id);
+        _testAssert((await Players.findOneAsync(p1, {fields:{is_dominus:1}})).is_dominus === true, 'p1 is dominus');
+        await Alerts.removeAsync({gameId: game._id});
+        await GlobalAlerts.removeAsync({gameId: game._id});
 
         // simulate the mid-rebuild window: is_king:false committed for everyone
         // (relation_finder set it and hasn't restored is_king:true yet)
-        Players.update({gameId: game._id}, {$set: {is_king: false}}, {multi: true});
-        dTest.settle(dManager.checkForDominus(game._id));
+        await Players.updateAsync({gameId: game._id}, {$set: {is_king: false}}, {multi: true});
+        await dManager.checkForDominus(game._id);
 
         // fix: a transient no-king read is ignored -> dominus preserved, no alert
-        _testAssert(Players.findOne(p1, {fields:{is_dominus:1}}).is_dominus === true, 'dominus preserved during no-king window');
-        _testEqual(Alerts.find({gameId: game._id, type: 'alert_noLongerDominus'}).count(), 0, 'no false noLongerDominus alert');
+        _testAssert((await Players.findOneAsync(p1, {fields:{is_dominus:1}})).is_dominus === true, 'dominus preserved during no-king window');
+        _testEqual(await Alerts.find({gameId: game._id, type: 'alert_noLongerDominus'}).countAsync(), 0, 'no false noLongerDominus alert');
 
-        Alerts.remove({gameId: game._id});
-        GlobalAlerts.remove({gameId: game._id});
-        _testCleanup(game._id);
-        Games.remove({hasStarted: false, hasClosed: false});
-        _testCleanupUser(user1._id);
-        _testCleanupUser(user2._id);
+        await Alerts.removeAsync({gameId: game._id});
+        await GlobalAlerts.removeAsync({gameId: game._id});
+        await _testCleanup(game._id);
+        await Games.removeAsync({hasStarted: false, hasClosed: false});
+        await _testCleanupUser(user1._id);
+        await _testCleanupUser(user2._id);
       });
 
-      run('nightly rebuild + checkForDominus does not send false alert', function() {
+      await run('nightly rebuild + checkForDominus does not send false alert', async function() {
         // Full nightly flow: rebuildRelationships then checkForDominus.
         // With the fix (synchronous bulk.execute), is_king is correctly
         // committed before checkForDominus queries it.
-        Games.remove({});
-        Players.remove({});
-        Alerts.remove({});
-        GlobalAlerts.remove({});
-        let game = _createTestGame({hasStarted: true});
-        let user1 = _createTestUser({username: 'king_' + Random.id(4)});
-        let user2 = _createTestUser({username: 'vassal_' + Random.id(4)});
-        let user3 = _createTestUser({username: 'vassal2_' + Random.id(4)});
+        await Games.removeAsync({});
+        await Players.removeAsync({});
+        await Alerts.removeAsync({});
+        await GlobalAlerts.removeAsync({});
+        let game = await _createTestGame({hasStarted: true});
+        let user1 = await _createTestUser({username: 'king_' + Random.id(4)});
+        let user2 = await _createTestUser({username: 'vassal_' + Random.id(4)});
+        let user3 = await _createTestUser({username: 'vassal2_' + Random.id(4)});
 
-        let p1 = Players.insert({gameId: game._id, userId: user1._id, username: user1.username, is_king: true, king: null, lord: null, castle_id: 'c1', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
-        let p2 = Players.insert({gameId: game._id, userId: user2._id, username: user2.username, is_king: false, king: p1, lord: p1, castle_id: 'c2', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
-        let p3 = Players.insert({gameId: game._id, userId: user3._id, username: user3.username, is_king: false, king: p1, lord: p1, castle_id: 'c3', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
+        let p1 = await Players.insertAsync({gameId: game._id, userId: user1._id, username: user1.username, is_king: true, king: null, lord: null, castle_id: 'c1', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
+        let p2 = await Players.insertAsync({gameId: game._id, userId: user2._id, username: user2.username, is_king: false, king: p1, lord: p1, castle_id: 'c2', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
+        let p3 = await Players.insertAsync({gameId: game._id, userId: user3._id, username: user3.username, is_king: false, king: p1, lord: p1, castle_id: 'c3', is_dominus: false, vassals: [], allies_above: [], allies_below: [], team: []});
 
         // establish dominus
-        dTest.settle(dManager.checkForDominus(game._id));
-        _testAssert(Players.findOne(p1, {fields:{is_dominus:1}}).is_dominus === true, 'p1 is dominus');
-        Alerts.remove({gameId: game._id});
-        GlobalAlerts.remove({gameId: game._id});
+        await dManager.checkForDominus(game._id);
+        _testAssert((await Players.findOneAsync(p1, {fields:{is_dominus:1}})).is_dominus === true, 'p1 is dominus');
+        await Alerts.removeAsync({gameId: game._id});
+        await GlobalAlerts.removeAsync({gameId: game._id});
 
         // simulate midnight: rebuild relationships then check dominus
-        dTest.settle(dInit.rebuildRelationships(game._id));
-        dTest.settle(dManager.checkForDominus(game._id));
+        await dInit.rebuildRelationships(game._id);
+        await dManager.checkForDominus(game._id);
 
         // dominus should be unchanged, no false alerts
-        _testAssert(Players.findOne(p1, {fields:{is_dominus:1}}).is_dominus === true, 'p1 still dominus after rebuild');
-        _testEqual(Alerts.find({gameId: game._id, type: 'alert_noLongerDominus'}).count(), 0, 'no false noLongerDominus alert');
-        _testEqual(GlobalAlerts.find({gameId: game._id, type: 'ga_newDominus'}).count(), 0, 'no false newDominus global alert');
+        _testAssert((await Players.findOneAsync(p1, {fields:{is_dominus:1}})).is_dominus === true, 'p1 still dominus after rebuild');
+        _testEqual(await Alerts.find({gameId: game._id, type: 'alert_noLongerDominus'}).countAsync(), 0, 'no false noLongerDominus alert');
+        _testEqual(await GlobalAlerts.find({gameId: game._id, type: 'ga_newDominus'}).countAsync(), 0, 'no false newDominus global alert');
 
-        Alerts.remove({gameId: game._id});
-        GlobalAlerts.remove({gameId: game._id});
-        _testCleanup(game._id);
-        Games.remove({hasStarted: false, hasClosed: false});
-        _testCleanupUser(user1._id);
-        _testCleanupUser(user2._id);
-        _testCleanupUser(user3._id);
+        await Alerts.removeAsync({gameId: game._id});
+        await GlobalAlerts.removeAsync({gameId: game._id});
+        await _testCleanup(game._id);
+        await Games.removeAsync({hasStarted: false, hasClosed: false});
+        await _testCleanupUser(user1._id);
+        await _testCleanupUser(user2._id);
+        await _testCleanupUser(user3._id);
       });
 
 
       // --- Account deletion: orphan subtree ---
 
-      run('deleting a lord with a missing super-lord promotes its vassals to kings', function() {
+      await run('deleting a lord with a missing super-lord promotes its vassals to kings', async function() {
         // Regression test for fix/dominus-orphan-subtree. When a deleted
         // player's `lord` points at a doc that no longer exists,
         // deleteGameAccount used to skip vassal reparenting (the if(lord) block
         // had no else), orphaning the subtree: vassals left is_king:false with a
         // dangling lord, invisible to the tree/rebuild but still counted by
         // checkForDominus -> unwinnable game. The fix promotes them to kings.
-        Games.remove({}); Players.remove({});
-        let game = _createTestGame({hasStarted: true});
-        let uP = _createTestUser();
-        let uV = _createTestUser();
+        await Games.removeAsync({}); await Players.removeAsync({});
+        let game = await _createTestGame({hasStarted: true});
+        let uP = await _createTestUser();
+        let uV = await _createTestUser();
 
         // P points at a missing lord and has one vassal V.
-        let pId = Players.insert({gameId: game._id, userId: uP._id, username: uP.username,
+        let pId = await Players.insertAsync({gameId: game._id, userId: uP._id, username: uP.username,
           is_king: false, lord: 'ghost-missing-lord', king: 'ghost-missing-lord',
           vassals: [], allies_above: ['ghost-missing-lord'], allies_below: [], team: [], castle_id: 'cP'});
-        let vId = Players.insert({gameId: game._id, userId: uV._id, username: uV.username,
+        let vId = await Players.insertAsync({gameId: game._id, userId: uV._id, username: uV.username,
           is_king: false, lord: pId, king: 'ghost-missing-lord',
           vassals: [], allies_above: [pId, 'ghost-missing-lord'], allies_below: [], team: [], castle_id: 'cV'});
-        Players.update(pId, {$set: {vassals: [vId], allies_below: [vId]}});
+        await Players.updateAsync(pId, {$set: {vassals: [vId], allies_below: [vId]}});
 
-        dTest.settle(dGame.deleteGameAccount(pId));
+        await dGame.deleteGameAccount(pId);
 
-        let v = Players.findOne(vId, {fields: {is_king: 1, lord: 1}});
+        let v = await Players.findOneAsync(vId, {fields: {is_king: 1, lord: 1}});
         _testAssert(!!v, 'vassal still exists');
         _testAssert(v.is_king === true, 'orphaned vassal promoted to king');
         _testAssert(v.lord === null, 'orphaned vassal has no dangling lord');
-        _testAssert(!Players.findOne(pId), 'deleted player removed');
+        _testAssert(!await Players.findOneAsync(pId), 'deleted player removed');
 
-        Alerts.remove({gameId: game._id});
-        GlobalAlerts.remove({gameId: game._id});
-        Armies.remove({gameId: game._id});
-        Villages.remove({gameId: game._id});
-        Markers.remove({gameId: game._id});
-        _testCleanup(game._id);
-        Games.remove({hasStarted: false, hasClosed: false});
-        _testCleanupUser(uP._id);
-        _testCleanupUser(uV._id);
+        await Alerts.removeAsync({gameId: game._id});
+        await GlobalAlerts.removeAsync({gameId: game._id});
+        await Armies.removeAsync({gameId: game._id});
+        await Villages.removeAsync({gameId: game._id});
+        await Markers.removeAsync({gameId: game._id});
+        await _testCleanup(game._id);
+        await Games.removeAsync({hasStarted: false, hasClosed: false});
+        await _testCleanupUser(uP._id);
+        await _testCleanupUser(uV._id);
       });
 
 
@@ -609,45 +609,45 @@ if (Meteor.isServer) {
 
       // --- Auth: disbandArmy ownership ---
 
-      run('disbandArmy rejects a non-owner and keeps the army', function() {
+      await run('disbandArmy rejects a non-owner and keeps the army', async function() {
         // Regression test for fix/auth-disband-army. disbandArmy -> destroyArmy
         // looked the army up by _id only, so any player could delete any army.
         // The fix requires the caller to own it.
-        Games.remove({}); Players.remove({}); Armies.remove({});
-        let game = _createTestGame({hasStarted: true});
-        let owner = _createTestUser();
-        let attacker = _createTestUser();
+        await Games.removeAsync({}); await Players.removeAsync({}); await Armies.removeAsync({});
+        let game = await _createTestGame({hasStarted: true});
+        let owner = await _createTestUser();
+        let attacker = await _createTestUser();
 
-        let armyId = Armies.insert({gameId: game._id, user_id: owner._id, playerId: 'pOwner',
+        let armyId = await Armies.insertAsync({gameId: game._id, user_id: owner._id, playerId: 'pOwner',
           x: 0, y: 0, footmen: 5, name: 'testarmy'});
 
         // invoke the method handler with a chosen this.userId
         function callAs(userId, method, args) {
           var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}};
-          return DDP._CurrentInvocation.withValue(inv, function() {
-            return dTest.settle(Meteor.server.method_handlers[method].apply(inv, args));
+          return DDP._CurrentInvocation.withValue(inv, async function() {
+            return await Meteor.server.method_handlers[method].apply(inv, args);
           });
         }
 
         var threw = false;
-        try { callAs(attacker._id, 'disbandArmy', [game._id, armyId]); } catch (e) { threw = true; }
+        try { await callAs(attacker._id, 'disbandArmy', [game._id, armyId]); } catch (e) { threw = true; }
         _testAssert(threw, 'non-owner disbandArmy throws');
-        _testEqual(Armies.find({_id: armyId}).count(), 1, 'army survives the non-owner attempt');
+        _testEqual(await Armies.find({_id: armyId}).countAsync(), 1, 'army survives the non-owner attempt');
 
         // no regression: the owner can disband their own army
-        callAs(owner._id, 'disbandArmy', [game._id, armyId]);
-        _testEqual(Armies.find({_id: armyId}).count(), 0, 'owner can disband own army');
+        await callAs(owner._id, 'disbandArmy', [game._id, armyId]);
+        _testEqual(await Armies.find({_id: armyId}).countAsync(), 0, 'owner can disband own army');
 
-        Armies.remove({gameId: game._id});
-        _testCleanup(game._id);
-        _testCleanupUser(owner._id);
-        _testCleanupUser(attacker._id);
+        await Armies.removeAsync({gameId: game._id});
+        await _testCleanup(game._id);
+        await _testCleanupUser(owner._id);
+        await _testCleanupUser(attacker._id);
       });
 
 
       // --- Battle calculator: dominus ally/enemy ---
 
-      run('dominus army is enemy-not-ally of its own vassal', function() {
+      await run('dominus army is enemy-not-ally of its own vassal', function() {
         // Regression test for fix/dominus-attack-ally-enemy. isEnemy has a
         // dominus override (a dominus can attack anyone's armies); isAlly must
         // have a matching override so a dominus and its own vassal are never
@@ -678,80 +678,80 @@ if (Meteor.isServer) {
 
       // --- Auth: splitArmy ownership ---
 
-      run('splitArmy rejects a non-owner and leaves the army intact', function() {
+      await run('splitArmy rejects a non-owner and leaves the army intact', async function() {
         // Regression test for fix/auth-split-army. splitArmy -> dArmies.split
         // looked the army up by _id only (and reset its speed/moveTime), so any
         // player could stop and fragment an enemy army. The fix requires
         // ownership.
-        Games.remove({}); Players.remove({}); Armies.remove({});
-        let game = _createTestGame({hasStarted: true});
-        let owner = _createTestUser();
-        let attacker = _createTestUser();
+        await Games.removeAsync({}); await Players.removeAsync({}); await Armies.removeAsync({});
+        let game = await _createTestGame({hasStarted: true});
+        let owner = await _createTestUser();
+        let attacker = await _createTestUser();
 
-        let armyId = Armies.insert({gameId: game._id, user_id: owner._id, playerId: 'pOwner',
+        let armyId = await Armies.insertAsync({gameId: game._id, user_id: owner._id, playerId: 'pOwner',
           x: 0, y: 0, footmen: 10, archers: 0, pikemen: 0, cavalry: 0, catapults: 0,
           speed: 5, moveTime: 123, name: 'testarmy'});
 
         function callAs(userId, method, args) {
           var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}};
-          return DDP._CurrentInvocation.withValue(inv, function() {
-            return dTest.settle(Meteor.server.method_handlers[method].apply(inv, args));
+          return DDP._CurrentInvocation.withValue(inv, async function() {
+            return await Meteor.server.method_handlers[method].apply(inv, args);
           });
         }
 
         var threw = false;
-        try { callAs(attacker._id, 'splitArmy', [game._id, armyId, {footmen: 5}]); } catch (e) { threw = true; }
+        try { await callAs(attacker._id, 'splitArmy', [game._id, armyId, {footmen: 5}]); } catch (e) { threw = true; }
         _testAssert(threw, 'non-owner splitArmy throws');
-        _testEqual(Armies.find({gameId: game._id}).count(), 1, 'no new army was split off');
-        let a = Armies.findOne(armyId);
+        _testEqual(await Armies.find({gameId: game._id}).countAsync(), 1, 'no new army was split off');
+        let a = await Armies.findOneAsync(armyId);
         _testEqual(a.footmen, 10, 'original army soldiers untouched');
         _testEqual(a.speed, 5, 'original army movement not reset by a non-owner');
 
-        Armies.remove({gameId: game._id});
-        _testCleanup(game._id);
-        _testCleanupUser(owner._id);
-        _testCleanupUser(attacker._id);
+        await Armies.removeAsync({gameId: game._id});
+        await _testCleanup(game._id);
+        await _testCleanupUser(owner._id);
+        await _testCleanupUser(attacker._id);
       });
 
 
       // --- Auth: change_username scoping ---
 
-      run('change_username cannot rename another player or their castle', function() {
+      await run('change_username cannot rename another player or their castle', async function() {
         // Regression test for fix/auth-change-username. The Players write was
         // userId-scoped, but the denormalized Castle/Village/Army/Room renames
         // used playerId only, so passing a victim's playerId renamed their
         // units. The fix loads the player scoped to the caller and bails.
-        Games.remove({}); Players.remove({}); Castles.remove({});
-        let game = _createTestGame({hasStarted: true});
-        let victim = _createTestUser();
-        let attacker = _createTestUser();
+        await Games.removeAsync({}); await Players.removeAsync({}); await Castles.removeAsync({});
+        let game = await _createTestGame({hasStarted: true});
+        let victim = await _createTestUser();
+        let attacker = await _createTestUser();
 
-        let victimPid = Players.insert({gameId: game._id, userId: victim._id, username: 'VictimName', is_king: false});
-        let castleId = Castles.insert({gameId: game._id, playerId: victimPid, user_id: victim._id, username: 'VictimName', x: 0, y: 0});
+        let victimPid = await Players.insertAsync({gameId: game._id, userId: victim._id, username: 'VictimName', is_king: false});
+        let castleId = await Castles.insertAsync({gameId: game._id, playerId: victimPid, user_id: victim._id, username: 'VictimName', x: 0, y: 0});
 
         function callAs(userId, method, args) {
           var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}};
-          return DDP._CurrentInvocation.withValue(inv, function() {
-            return dTest.settle(Meteor.server.method_handlers[method].apply(inv, args));
+          return DDP._CurrentInvocation.withValue(inv, async function() {
+            return await Meteor.server.method_handlers[method].apply(inv, args);
           });
         }
 
         var threw = false;
-        try { callAs(attacker._id, 'change_username', [victimPid, 'Hacked']); } catch (e) { threw = true; }
+        try { await callAs(attacker._id, 'change_username', [victimPid, 'Hacked']); } catch (e) { threw = true; }
         _testAssert(threw, 'renaming another player throws');
-        _testEqual(Castles.findOne(castleId).username, 'VictimName', 'victim castle username unchanged');
-        _testEqual(Players.findOne(victimPid).username, 'VictimName', 'victim player username unchanged');
+        _testEqual((await Castles.findOneAsync(castleId)).username, 'VictimName', 'victim castle username unchanged');
+        _testEqual((await Players.findOneAsync(victimPid)).username, 'VictimName', 'victim player username unchanged');
 
-        Castles.remove({gameId: game._id});
-        _testCleanup(game._id);
-        _testCleanupUser(victim._id);
-        _testCleanupUser(attacker._id);
+        await Castles.removeAsync({gameId: game._id});
+        await _testCleanup(game._id);
+        await _testCleanupUser(victim._id);
+        await _testCleanupUser(attacker._id);
       });
 
 
       // --- Battle calculator: casualty count ---
 
-      run('findLoses spends all affordable power (no early exit)', function() {
+      await run('findLoses spends all affordable power (no early exit)', function() {
         // Regression test for fix/battle-casualty-undercount. findLoses removes
         // soldiers worth powerToLose. The old code used a `fails` counter that
         // accumulated across passes, so an army holding a persistently
@@ -786,7 +786,7 @@ if (Meteor.isServer) {
 
       // --- Economy: send_gold_to atomic debit ---
 
-      run('send_gold_to rejects overspend and debits a valid send correctly', function() {
+      await run('send_gold_to rejects overspend and debits a valid send correctly', async function() {
         // Correctness / no-regression test for fix/economy-send-gold-toctou,
         // which reordered the transfer to debit the sender first via a
         // conditional update ({_id, gold:{$gte:amount}}). The true concurrency
@@ -794,68 +794,68 @@ if (Meteor.isServer) {
         // reproducible in a single-threaded test, so this asserts the reorder
         // still rejects an overspend without corrupting gold and that a valid
         // send debits the sender by the exact amount.
-        Games.remove({}); Players.remove({});
-        let game = _createTestGame({hasStarted: true});
-        let uSender = _createTestUser();
-        let uRecip = _createTestUser();
+        await Games.removeAsync({}); await Players.removeAsync({});
+        let game = await _createTestGame({hasStarted: true});
+        let uSender = await _createTestUser();
+        let uRecip = await _createTestUser();
 
-        let recipPid = Players.insert({gameId: game._id, userId: uRecip._id, username: 'recip', gold: 0});
-        let senderPid = Players.insert({gameId: game._id, userId: uSender._id, username: 'sender', gold: 10, allies_below: [recipPid]});
+        let recipPid = await Players.insertAsync({gameId: game._id, userId: uRecip._id, username: 'recip', gold: 0});
+        let senderPid = await Players.insertAsync({gameId: game._id, userId: uSender._id, username: 'sender', gold: 10, allies_below: [recipPid]});
 
         function callAs(userId, method, args) {
           var inv = {userId: userId, isSimulation: false, connection: null, unblock: function() {}};
-          return DDP._CurrentInvocation.withValue(inv, function() {
-            return dTest.settle(Meteor.server.method_handlers[method].apply(inv, args));
+          return DDP._CurrentInvocation.withValue(inv, async function() {
+            return await Meteor.server.method_handlers[method].apply(inv, args);
           });
         }
 
         var threw = false;
-        try { callAs(uSender._id, 'send_gold_to', [game._id, recipPid, 100]); } catch (e) { threw = true; }
+        try { await callAs(uSender._id, 'send_gold_to', [game._id, recipPid, 100]); } catch (e) { threw = true; }
         _testAssert(threw, 'overspend throws');
-        _testEqual(Players.findOne(senderPid).gold, 10, 'sender gold unchanged after failed overspend (never negative)');
+        _testEqual((await Players.findOneAsync(senderPid)).gold, 10, 'sender gold unchanged after failed overspend (never negative)');
 
         // valid send: sender is debited by exactly the amount
-        callAs(uSender._id, 'send_gold_to', [game._id, recipPid, 4]);
-        _testEqual(Players.findOne(senderPid).gold, 6, 'sender debited by amount on a valid send');
+        await callAs(uSender._id, 'send_gold_to', [game._id, recipPid, 4]);
+        _testEqual((await Players.findOneAsync(senderPid)).gold, 6, 'sender debited by amount on a valid send');
 
-        _testCleanup(game._id);
-        _testCleanupUser(uSender._id);
-        _testCleanupUser(uRecip._id);
+        await _testCleanup(game._id);
+        await _testCleanupUser(uSender._id);
+        await _testCleanupUser(uRecip._id);
       });
 
 
       // --- Rankings: tie collapse including zero ---
 
-      run('vassal/income ranks collapse ties including zero values', function() {
+      await run('vassal/income ranks collapse ties including zero values', async function() {
         // Regression test for fix/rankings-tie-zero. The dense ranking used
         // `if (prevNumVassals)` / `if (prevIncome)`, so a previous value of 0
         // (the common case) was treated as "no previous" and inflated ranks.
         // [5,5,0,0,0] used to rank 1,2,2,3,4 instead of 1,1,2,2,2.
-        Games.remove({}); Players.remove({}); Dailystats.remove({});
-        let game = _createTestGame({hasStarted: true, startedAt: new Date()});
-        let mk = function(n) {
-          return Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), username: 'p_' + Random.id(3),
+        await Games.removeAsync({}); await Players.removeAsync({}); await Dailystats.removeAsync({});
+        let game = await _createTestGame({hasStarted: true, startedAt: new Date()});
+        let mk = async function(n) {
+          return await Players.insertAsync({gameId: game._id, userId: 'u_' + Random.id(5), username: 'p_' + Random.id(3),
             num_allies_below: n, income: n, is_king: false, king: null, lord: null, vassals: [],
             allies_above: [], allies_below: [], team: [], castle_id: 'c_' + Random.id(3)});
         };
-        let a = mk(5), b = mk(5), c = mk(0), d = mk(0), e = mk(0);
+        let a = await mk(5), b = await mk(5), c = await mk(0), d = await mk(0), e = await mk(0);
 
-        dTest.settle(dGraphs.updateVassalRank(game._id));
-        let vrank = function(pid) { let ds = Dailystats.findOne({playerId: pid}); return ds ? ds.vassalRank : null; };
-        _testEqual(vrank(a), 1, 'top vassal count is rank 1');
-        _testEqual(vrank(b), 1, 'tie with top is also rank 1');
-        _testEqual(vrank(c), 2, 'zero-vassal is rank 2');
-        _testEqual(vrank(d), 2, 'zero-vassal tie is rank 2');
-        _testEqual(vrank(e), 2, 'zero-vassal tie is rank 2');
+        await dGraphs.updateVassalRank(game._id);
+        let vrank = async function(pid) { let ds = await Dailystats.findOneAsync({playerId: pid}); return ds ? ds.vassalRank : null; };
+        _testEqual(await vrank(a), 1, 'top vassal count is rank 1');
+        _testEqual(await vrank(b), 1, 'tie with top is also rank 1');
+        _testEqual(await vrank(c), 2, 'zero-vassal is rank 2');
+        _testEqual(await vrank(d), 2, 'zero-vassal tie is rank 2');
+        _testEqual(await vrank(e), 2, 'zero-vassal tie is rank 2');
 
-        dTest.settle(dGraphs.updateIncomeRank(game._id));
-        let irank = function(pid) { let ds = Dailystats.findOne({playerId: pid}); return ds ? ds.incomeRank : null; };
-        _testEqual(irank(a), 1, 'top income is rank 1');
-        _testEqual(irank(b), 1, 'income tie with top is rank 1');
-        _testEqual(irank(c), 2, 'zero income is rank 2');
+        await dGraphs.updateIncomeRank(game._id);
+        let irank = async function(pid) { let ds = await Dailystats.findOneAsync({playerId: pid}); return ds ? ds.incomeRank : null; };
+        _testEqual(await irank(a), 1, 'top income is rank 1');
+        _testEqual(await irank(b), 1, 'income tie with top is rank 1');
+        _testEqual(await irank(c), 2, 'zero income is rank 2');
 
-        Dailystats.remove({gameId: game._id});
-        _testCleanup(game._id);
+        await Dailystats.removeAsync({gameId: game._id});
+        await _testCleanup(game._id);
       });
 
   });

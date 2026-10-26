@@ -23,7 +23,7 @@ if (Meteor.isServer) {
   var GOLDEN = 'tests/golden/seo.json';
 
   Meteor.startup(function() {
-    dTest.addSuite('SEO pages (server/seoPageTests.js)', function(run, t) {
+    dTest.addSuite('SEO pages (server/seoPageTests.js)', async function(run, t) {
       var assert = t.assert;
       var equal = t.equal;
 
@@ -48,42 +48,42 @@ if (Meteor.isServer) {
         };
       };
 
-      var removeFixture = function() {
-        Games.remove({_id: {$in: [IDS.ended, IDS.older, IDS.live, IDS.soon]}});
-        Players.remove({gameId: {$in: [IDS.ended, IDS.older, IDS.live]}});
-        Meteor.users.remove({_id: {$in: [IDS.winner, IDS.second, IDS.thin]}});
+      var removeFixture = async function() {
+        await Games.removeAsync({_id: {$in: [IDS.ended, IDS.older, IDS.live, IDS.soon]}});
+        await Players.removeAsync({gameId: {$in: [IDS.ended, IDS.older, IDS.live]}});
+        await Meteor.users.removeAsync({_id: {$in: [IDS.winner, IDS.second, IDS.thin]}});
       };
 
       // isStarting and a start in 2099 keep the game start job away from the
       // upcoming game: a real start bakes the map to S3
-      var insertFixture = function() {
-        removeFixture();
-        Meteor.users.insert({_id: IDS.winner, username: 'seo_test_<winner>',
+      var insertFixture = async function() {
+        await removeFixture();
+        await Meteor.users.insertAsync({_id: IDS.winner, username: 'seo_test_<winner>',
           rankingRegular: {numGames: 2, wins: 1, overallRank: 1, overallPoints: 1234567},
           rankingPro: {numGames: 1, wins: 0, overallRank: 2, overallPoints: 999}});
-        Meteor.users.insert({_id: IDS.second, username: 'seo_test_second',
+        await Meteor.users.insertAsync({_id: IDS.second, username: 'seo_test_second',
           rankingRegular: {numGames: 1, wins: 0, overallRank: 2, overallPoints: 50.6}});
-        Meteor.users.insert({_id: IDS.thin, username: 'seo_test_thin'});
+        await Meteor.users.insertAsync({_id: IDS.thin, username: 'seo_test_thin'});
 
-        Games.insert({_id: IDS.ended, name: 'SEO <Test> & "Game"', hasEnded: true, hasStarted: true,
+        await Games.insertAsync({_id: IDS.ended, name: 'SEO <Test> & "Game"', hasEnded: true, hasStarted: true,
           startedAt: day(1), endDate: day(15), numPlayers: 3, maxPlayers: 10, isSpeed: true, isKingOfHill: true,
           desc: 'A game made for the SEO tests.', winningPlayer: {userId: IDS.winner, username: 'seo_test_<winner>'},
           results: standings([[IDS.winner, 'seo_test_<winner>', 4, 123456.7, 10, 2500], [IDS.second, 'seo_test_second', 1, 900, 1200, 300000]])});
-        Games.insert({_id: IDS.older, name: 'SEO Older Game', hasEnded: true, hasStarted: true,
+        await Games.insertAsync({_id: IDS.older, name: 'SEO Older Game', hasEnded: true, hasStarted: true,
           startedAt: day(2), endDate: day(3), numPlayers: 2, isProOnly: true, winningPlayer: 'seo_test_second'});
-        Games.insert({_id: IDS.live, name: 'SEO Live Game', hasEnded: false, hasStarted: true, startAt: day(20), numPlayers: 2, maxPlayers: 8, isCrazyFast: true});
-        Games.insert({_id: IDS.soon, name: 'SEO Soon Game', hasEnded: false, hasStarted: false, isStarting: true, startAt: new Date(Date.UTC(2099, 0, 28, 12, 0, 0)), numPlayers: 0, isRelaxed: true});
+        await Games.insertAsync({_id: IDS.live, name: 'SEO Live Game', hasEnded: false, hasStarted: true, startAt: day(20), numPlayers: 2, maxPlayers: 8, isCrazyFast: true});
+        await Games.insertAsync({_id: IDS.soon, name: 'SEO Soon Game', hasEnded: false, hasStarted: false, isStarting: true, startAt: new Date(Date.UTC(2099, 0, 28, 12, 0, 0)), numPlayers: 0, isRelaxed: true});
 
-        Players.insert({gameId: IDS.ended, userId: IDS.winner, gameIsOver: true, wonGame: true, rankByVassals: 1, rankByIncome: 1});
-        Players.insert({gameId: IDS.older, userId: IDS.winner, gameIsOver: true, wonGame: false, rankByVassals: 2, rankByIncome: 2});
-        Players.insert({gameId: IDS.ended, userId: IDS.second, gameIsOver: true, wonGame: false, rankByVassals: 2, rankByIncome: 2});
-        Players.insert({gameId: IDS.live, userId: IDS.thin, gameIsOver: false});
+        await Players.insertAsync({gameId: IDS.ended, userId: IDS.winner, gameIsOver: true, wonGame: true, rankByVassals: 1, rankByIncome: 1});
+        await Players.insertAsync({gameId: IDS.older, userId: IDS.winner, gameIsOver: true, wonGame: false, rankByVassals: 2, rankByIncome: 2});
+        await Players.insertAsync({gameId: IDS.ended, userId: IDS.second, gameIsOver: true, wonGame: false, rankByVassals: 2, rankByIncome: 2});
+        await Players.insertAsync({gameId: IDS.live, userId: IDS.thin, gameIsOver: false});
       };
 
       // --- Fetching pages ---
 
-      function request(urlPath) {
-        return dTest.settle(new Promise(function(resolve, reject) {
+      async function request(urlPath) {
+        return await new Promise(function(resolve, reject) {
           var req = http.request({host: '127.0.0.1', port: process.env.PORT, method: 'GET', path: urlPath, headers: {accept: 'text/html'}}, function(res) {
             var body = '';
             res.setEncoding('utf8');
@@ -92,13 +92,13 @@ if (Meteor.isServer) {
           });
           req.on('error', reject);
           req.end();
-        }));
+        });
       }
 
       // the part of the page the SEO code wrote: the end of <head>, and the
       // crawlable block in <body>
-      function page(urlPath) {
-        var res = request(urlPath);
+      async function page(urlPath) {
+        var res = await request(urlPath);
         var html = res.body;
         var headAt = html.indexOf('<title>');
         var headEnd = html.indexOf('</head>');
@@ -118,12 +118,12 @@ if (Meteor.isServer) {
       };
 
       // as production serves them: robots from each page, not the dev blanket
-      function asProduction(fn) {
+      async function asProduction(fn) {
         var was = SEO.IS_DEV;
         SEO.IS_DEV = false;
         SEO.clearDynamicCache();
         try {
-          return fn();
+          return await fn();
         } finally {
           SEO.IS_DEV = was;
           SEO.clearDynamicCache();
@@ -141,11 +141,11 @@ if (Meteor.isServer) {
       };
 
       var pagesOnce = null;
-      var fetchPages = function() {
+      var fetchPages = async function() {
         if (!pagesOnce) {
-          pagesOnce = asProduction(function() {
+          pagesOnce = await asProduction(async function() {
             var out = {};
-            _.each(PAGES, function(urlPath, key) { out[key] = page(urlPath); });
+            await dTest.eachAsync(PAGES, async function(urlPath, key) { out[key] = await page(urlPath); });
             return out;
           });
           var dir = repoPath('.test-results/seo');
@@ -156,10 +156,10 @@ if (Meteor.isServer) {
       };
 
       try {
-        insertFixture();
+        await insertFixture();
 
-        run('SEO pages: a finished game\'s result page has its name, winner and standings, escaped', function() {
-          var p = fetchPages().resultEnded;
+        await run('SEO pages: a finished game\'s result page has its name, winner and standings, escaped', async function() {
+          var p = (await fetchPages()).resultEnded;
           equal(p.status, 200, 'status');
           equal(p.robotsHeader, null, 'no X-Robots-Tag: it is indexed');
           equal(title(p), 'SEO &lt;Test&gt; &amp; &quot;Game&quot; Results - Won by seo_test_&lt;winner&gt; | Dominus', 'title');
@@ -171,8 +171,8 @@ if (Meteor.isServer) {
           assert(p.body.indexOf('<Test>') == -1 && p.head.indexOf('<Test>') == -1, 'the name is escaped everywhere');
         });
 
-        run('SEO pages: a live game\'s page is not indexed, and an unknown game is a 404', function() {
-          var pages = fetchPages();
+        await run('SEO pages: a live game\'s page is not indexed, and an unknown game is a 404', async function() {
+          var pages = await fetchPages();
           equal(pages.resultLive.status, 200, 'a live game: 200');
           equal(pages.resultLive.robotsHeader, 'noindex, follow', 'not indexed');
           equal(title(pages.resultLive), 'SEO Live Game | Dominus', 'its title');
@@ -182,8 +182,8 @@ if (Meteor.isServer) {
           equal(title(pages.resultOlder), 'SEO Older Game Results - Won by seo_test_second | Dominus', 'its title');
         });
 
-        run('SEO pages: a profile lists its finished games, newest first; one with none is not indexed; an unknown user is a 404', function() {
-          var pages = fetchPages();
+        await run('SEO pages: a profile lists its finished games, newest first; one with none is not indexed; an unknown user is a 404', async function() {
+          var pages = await fetchPages();
           var p = pages.profileWinner;
           equal(p.status, 200, 'status');
           equal(title(p), 'seo_test_&lt;winner&gt; - Player Profile | Dominus', 'title');
@@ -197,8 +197,8 @@ if (Meteor.isServer) {
           equal(pages.profileMissing.status, 404, 'an unknown user: 404');
         });
 
-        run('SEO pages: every result and profile page matches the pages recorded before (tests/golden/seo.json)', function() {
-          var pages = fetchPages();
+        await run('SEO pages: every result and profile page matches the pages recorded before (tests/golden/seo.json)', async function() {
+          var pages = await fetchPages();
           var goldenFile = repoPath(GOLDEN);
           if (!fs.existsSync(goldenFile)) {
             throw new Error('FAIL: no ' + GOLDEN + ' to compare with (record it from .test-results/seo/actual.json)');
@@ -212,8 +212,8 @@ if (Meteor.isServer) {
           });
         });
 
-        run('SEO pages: /results lists finished games newest first, linked, with the winner', function() {
-          var p = asProduction(function() { return page('/results'); });
+        await run('SEO pages: /results lists finished games newest first, linked, with the winner', async function() {
+          var p = await asProduction(function() { return page('/results'); });
           equal(p.status, 200, 'status');
           var ended = p.body.indexOf('<a href="/result/' + IDS.ended + '">SEO &lt;Test&gt; &amp; &quot;Game&quot;</a>');
           var older = p.body.indexOf('<a href="/result/' + IDS.older + '">SEO Older Game</a>');
@@ -223,8 +223,8 @@ if (Meteor.isServer) {
           equal(p.body.indexOf(IDS.live), -1, 'a live game is not listed');
         });
 
-        run('SEO pages: /rankings lists ranked players by rank, regular and pro', function() {
-          var p = asProduction(function() { return page('/rankings'); });
+        await run('SEO pages: /rankings lists ranked players by rank, regular and pro', async function() {
+          var p = await asProduction(function() { return page('/rankings'); });
           equal(p.status, 200, 'status');
           var regular = p.body.indexOf('<h2>Regular games</h2>');
           var pro = p.body.indexOf('<h2>Pro games</h2>');
@@ -235,8 +235,8 @@ if (Meteor.isServer) {
           equal(p.body.indexOf(IDS.thin), -1, 'an unranked player is not listed');
         });
 
-        run('SEO pages: /games lists games starting soon and in progress, without links', function() {
-          var p = asProduction(function() { return page('/games'); });
+        await run('SEO pages: /games lists games starting soon and in progress, without links', async function() {
+          var p = await asProduction(function() { return page('/games'); });
           equal(p.status, 200, 'status');
           var soon = p.body.indexOf('<td>SEO Soon Game</td><td>Relaxed</td><td>0</td><td>2099-01-28</td>');
           var live = p.body.indexOf('<td>SEO Live Game</td><td>Crazy fast</td><td>2 / 8</td><td>2026-01-20</td>');
@@ -248,21 +248,21 @@ if (Meteor.isServer) {
           assert(p.body.indexOf('<a href="/createaccount">Create a free account</a>') != -1, 'the signup link');
         });
 
-        run('SEO pages: a page is read from the database once in five minutes', function() {
-          asProduction(function() {
-            equal(title(page(PAGES.resultOlder)), 'SEO Older Game Results - Won by seo_test_second | Dominus', 'first');
-            Games.update(IDS.older, {$set: {name: 'SEO Renamed Game'}});
+        await run('SEO pages: a page is read from the database once in five minutes', async function() {
+          await asProduction(async function() {
+            equal(title(await page(PAGES.resultOlder)), 'SEO Older Game Results - Won by seo_test_second | Dominus', 'first');
+            await Games.updateAsync(IDS.older, {$set: {name: 'SEO Renamed Game'}});
             try {
-              equal(title(page(PAGES.resultOlder)), 'SEO Older Game Results - Won by seo_test_second | Dominus', 'the rename is not read again yet');
+              equal(title(await page(PAGES.resultOlder)), 'SEO Older Game Results - Won by seo_test_second | Dominus', 'the rename is not read again yet');
               SEO.clearDynamicCache();
-              equal(title(page(PAGES.resultOlder)), 'SEO Renamed Game Results - Won by seo_test_second | Dominus', 'once the cache is cleared it is');
+              equal(title(await page(PAGES.resultOlder)), 'SEO Renamed Game Results - Won by seo_test_second | Dominus', 'once the cache is cleared it is');
             } finally {
-              Games.update(IDS.older, {$set: {name: 'SEO Older Game'}});
+              await Games.updateAsync(IDS.older, {$set: {name: 'SEO Older Game'}});
             }
           });
         });
 
-        run('SEO pages: if building a page fails, it falls back to the route\'s own title, logs the error, and the page still answers', function() {
+        await run('SEO pages: if building a page fails, it falls back to the route\'s own title, logs the error, and the page still answers', async function() {
           var errors = [];
           var error = console.error;
           var htmlPara = SEO.htmlPara;
@@ -270,7 +270,7 @@ if (Meteor.isServer) {
           console.error = function() { errors.push(_.toArray(arguments).join(' ')); };
           SEO.htmlPara = function() { throw new Error('planted'); };
           try {
-            p = asProduction(function() { return page(PAGES.resultEnded); });
+            p = await asProduction(function() { return page(PAGES.resultEnded); });
           } finally {
             SEO.htmlPara = htmlPara;
             console.error = error;
@@ -283,7 +283,7 @@ if (Meteor.isServer) {
         });
 
       } finally {
-        removeFixture();
+        await removeFixture();
         SEO.clearDynamicCache();
       }
     });

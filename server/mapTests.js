@@ -35,77 +35,77 @@ if (Meteor.isServer) {
 
   var resultsDir = function() { return repoPath('.test-results/map'); };
 
-  var countries = function(sim) {
-    return Countries.find({gameId: sim.gameId}, {sort: {_id: 1}}).fetch();
+  var countries = async function(sim) {
+    return await Countries.find({gameId: sim.gameId}, {sort: {_id: 1}}).fetchAsync();
   };
 
-  var hexCount = function(sim, find) {
-    return Hexes.find(_.extend({gameId: sim.gameId}, find)).count();
+  var hexCount = async function(sim, find) {
+    return await Hexes.find(_.extend({gameId: sim.gameId}, find)).countAsync();
   };
 
-  var facts = function(sim) {
+  var facts = async function(sim) {
     return {
-      countries: countries(sim).map(function(c) {
+      countries: await await dTest.mapAsync(await countries(sim), async function(c) {
         return {
           _id: c._id,
           hexes: c.hexes.length,
-          hexDocs: Hexes.find({countryId: c._id}).count(),
+          hexDocs: await Hexes.find({countryId: c._id}).countAsync(),
           borders: _.filter(c.hexes, function(h) { return h.isBorder; }).length,
           extents: _.pick(c, 'minX', 'maxX', 'minY', 'maxY', 'minZ', 'maxZ'),
           neighbors: _.clone(c.neighbors || []).sort(),
           paths: c.paths ? c.paths.map(function(p) { return p.length; }) : null
         };
       }),
-      hexes: hexCount(sim, {}),
-      withBuilding: hexCount(sim, {hasBuilding: true}),
-      nearBuilding: hexCount(sim, {nearbyBuildings: true})
+      hexes: await hexCount(sim, {}),
+      withBuilding: await hexCount(sim, {hasBuilding: true}),
+      nearBuilding: await hexCount(sim, {nearbyBuildings: true})
     };
   };
 
   var at = {};
 
   var SCENARIO = [
-    {name: 'four countries', run: function(sim) {
+    {name: 'four countries', run: async function(sim) {
       for (var i = 0; i < 4; i++) {
-        at.added = (at.added || []).concat([dTest.settle(Mapmaker.addCountry(sim.gameId, true))]);
+        at.added = (at.added || []).concat([await Mapmaker.addCountry(sim.gameId, true)]);
       }
     }},
 
-    {name: 'king of the hill grows the first country', run: function(sim) {
-      at.grown = countries(sim)[0]._id;
-      at.grownBy = dTest.settle(Mapmaker.addToCountry(sim.gameId, at.grown, true));
+    {name: 'king of the hill grows the first country', run: async function(sim) {
+      at.grown = (await countries(sim))[0]._id;
+      at.grownBy = await Mapmaker.addToCountry(sim.gameId, at.grown, true);
     }},
 
-    {name: 'castle spots, with buildings on two and one taken away', run: function(sim) {
+    {name: 'castle spots, with buildings on two and one taken away', run: async function(sim) {
       at.spots = [];
       for (var i = 0; i < 3; i++) {
-        var spot = dTest.settle(Mapmaker.findHexForCastle(sim.gameId));
+        var spot = await Mapmaker.findHexForCastle(sim.gameId);
         if (!spot) throw new Error('FAIL: no castle spot ' + i);
-        spot.countryId = dTest.settle(Mapmaker.coordsToCountryId(sim.gameId, spot.x, spot.y));
+        spot.countryId = await Mapmaker.coordsToCountryId(sim.gameId, spot.x, spot.y);
         at.spots.push(spot);
         if (i < 2) {
-          Capitals.insert(_.extend({gameId: sim.gameId, x: spot.x, y: spot.y, countryId: spot.countryId, name: 'Map ' + i,
+          await Capitals.insertAsync(_.extend({gameId: sim.gameId, x: spot.x, y: spot.y, countryId: spot.countryId, name: 'Map ' + i,
             created_at: dClock.now()}, dTest.soldierCounts({})));
         }
-        dTest.settle(Mapmaker.buildingAdded(sim.gameId, spot.x, spot.y));
+        await Mapmaker.buildingAdded(sim.gameId, spot.x, spot.y);
       }
-      at.nearBeforeRemove = hexCount(sim, {nearbyBuildings: true});
-      dTest.settle(Mapmaker.buildingRemoved(sim.gameId, at.spots[2].x, at.spots[2].y));
-      at.outside = dTest.settle(Mapmaker.coordsToCountryId(sim.gameId, 1000, 1000));
+      at.nearBeforeRemove = await hexCount(sim, {nearbyBuildings: true});
+      await Mapmaker.buildingRemoved(sim.gameId, at.spots[2].x, at.spots[2].y);
+      at.outside = await Mapmaker.coordsToCountryId(sim.gameId, 1000, 1000);
     }},
 
-    {name: 'the countries\' masks and the minimap', run: function(sim) {
-      countries(sim).forEach(function(c) {
-        dTest.runJob('createCountryMask', {countryId: c._id});
+    {name: 'the countries\' masks and the minimap', run: async function(sim) {
+      await dTest.eachAsync(await countries(sim), async function(c) {
+        await dTest.runJob('createCountryMask', {countryId: c._id});
       });
-      dTest.runJob('generateGameMinimap', {gameId: sim.gameId});
-      var border = Hexes.find({gameId: sim.gameId, isBorder: true}, {sort: {x: 1, y: 1}, limit: 6}).fetch();
-      at.water = border.map(function(h) { return dTest.settle(Shorefinder.waterDirection(h)); });
+      await dTest.runJob('generateGameMinimap', {gameId: sim.gameId});
+      var border = await Hexes.find({gameId: sim.gameId, isBorder: true}, {sort: {x: 1, y: 1}, limit: 6}).fetchAsync();
+      at.water = await dTest.mapAsync(border, async function(h) { return await Shorefinder.waterDirection(h); });
     }},
 
-    {name: 'each country baked to SVG', run: function(sim) {
-      at.bakes = countries(sim).map(function(c) {
-        var data = dTest.settle(Mapbaker.bakeCountry(c._id));
+    {name: 'each country baked to SVG', run: async function(sim) {
+      at.bakes = await await dTest.mapAsync(await countries(sim), async function(c) {
+        var data = await Mapbaker.bakeCountry(c._id);
         if (!data) throw new Error('FAIL: ' + c._id + ' did not bake');
         var images = [data.imageObject, data.imageObjectWithCoords];
         var svgs = images.map(function(image) {
@@ -121,39 +121,39 @@ if (Meteor.isServer) {
     }}
   ];
 
-  var play = function() {
+  var play = async function() {
     at = {};
-    var sim = dTest.simulation({seed: SEED, startAt: START_AT, dumpDir: resultsDir()});
+    var sim = await dTest.simulation({seed: SEED, startAt: START_AT, dumpDir: resultsDir()});
     try {
-      var game = dTest.helpers.createTestGame({name: 'Map', startAt: dClock.now(), createdAt: dClock.now()});
+      var game = await dTest.helpers.createTestGame({name: 'Map', startAt: dClock.now(), createdAt: dClock.now()});
       sim.gameId = game._id;
-      SCENARIO.forEach(function(step) {
-        step.run(sim);
-        sim.endStep(step.name, facts);
+      await dTest.eachAsync(SCENARIO, async function(step) {
+        await step.run(sim);
+        await sim.endStep(step.name, facts);
       });
       return {steps: sim.steps, at: JSON.parse(JSON.stringify(at))};
     } finally {
-      sim.finish();
+      await sim.finish();
     }
   };
 
   Meteor.startup(function() {
-    dTest.addSuite('map (server/mapTests.js)', function(run, t) {
+    dTest.addSuite('map (server/mapTests.js)', async function(run, t) {
       var assert = t.assert;
       var equal = t.equal;
 
       if (process.env.DOMINUS_WORKER != 'true') {
-        run('map: needs the worker', function() { return 'skip'; });
+        await run('map: needs the worker', function() { return 'skip'; });
         return;
       }
 
       var played = null;
       var playedError = null;
-      var playOnce = function() {
+      var playOnce = async function() {
         if (playedError) throw playedError;
         if (played) return played;
         try {
-          played = play();
+          played = await play();
           var record = {
             about: 'What the map test (server/mapTests.js) left behind after each step. ' +
               'Recorded from the code before the mapmaker, minimap and mapbaker became async; see that file before recording it again.',
@@ -170,14 +170,14 @@ if (Meteor.isServer) {
         }
       };
 
-      var stepFacts = function(name) {
-        return _.findWhere(playOnce().steps, {step: name}).facts;
+      var stepFacts = async function(name) {
+        return _.findWhere((await playOnce()).steps, {step: name}).facts;
       };
 
-      run('map: four countries, each with its own hexes, its borders and its neighbours', function() {
-        var f = stepFacts('four countries');
+      await run('map: four countries, each with its own hexes, its borders and its neighbours', async function() {
+        var f = await stepFacts('four countries');
         equal(f.countries.length, 4, 'four countries');
-        equal(JSON.stringify(_.pluck(f.countries, '_id')), JSON.stringify(_.clone(playOnce().at.added).sort()), 'the ones addCountry gave');
+        equal(JSON.stringify(_.pluck(f.countries, '_id')), JSON.stringify(_.clone((await playOnce()).at.added).sort()), 'the ones addCountry gave');
         f.countries.forEach(function(c) {
           assert(c.hexes >= _s.mapmaker.minHexesInCountry && c.hexes <= _s.mapmaker.maxHexesInCountry, c._id + ' has ' + c.hexes + ' hexes');
           equal(c.hexDocs, c.hexes, c._id + ': a hex document for each of its hexes');
@@ -190,17 +190,17 @@ if (Meteor.isServer) {
         equal(f.hexes, _.reduce(_.pluck(f.countries, 'hexes'), function(a, b) { return a + b; }, 0), 'no hex in two countries');
       });
 
-      run('map: king of the hill adds 200 hexes to the country', function() {
-        var before = _.findWhere(stepFacts('four countries').countries, {_id: playOnce().at.grown});
-        var after = _.findWhere(stepFacts('king of the hill grows the first country').countries, {_id: playOnce().at.grown});
-        equal(playOnce().at.grownBy, playOnce().at.grown, 'addToCountry gives the country');
+      await run('map: king of the hill adds 200 hexes to the country', async function() {
+        var before = _.findWhere((await stepFacts('four countries')).countries, {_id: (await playOnce()).at.grown});
+        var after = _.findWhere((await stepFacts('king of the hill grows the first country')).countries, {_id: (await playOnce()).at.grown});
+        equal((await playOnce()).at.grownBy, (await playOnce()).at.grown, 'addToCountry gives the country');
         equal(after.hexes, before.hexes + 200, '200 more hexes');
         equal(after.hexDocs, after.hexes, 'and their documents');
       });
 
-      run('map: castle spots are free grain hexes inside a country, and buildings mark the hexes around them', function() {
-        var a = playOnce().at;
-        var f = stepFacts('castle spots, with buildings on two and one taken away');
+      await run('map: castle spots are free grain hexes inside a country, and buildings mark the hexes around them', async function() {
+        var a = (await playOnce()).at;
+        var f = await stepFacts('castle spots, with buildings on two and one taken away');
         equal(a.spots.length, 3, 'three spots');
         a.spots.forEach(function(s) { assert(s.countryId, s.x + ',' + s.y + ' is in a country'); });
         equal(_.uniq(a.spots.map(function(s) { return s.x + ',' + s.y; })).length, 3, 'all different');
@@ -210,24 +210,24 @@ if (Meteor.isServer) {
         equal(a.outside, null, 'no country off the map');
       });
 
-      run('map: each country gets its mask, and the game its map size and minimap', function() {
-        var f = stepFacts('the countries\' masks and the minimap');
+      await run('map: each country gets its mask, and the game its map size and minimap', async function() {
+        var f = await stepFacts('the countries\' masks and the minimap');
         f.countries.forEach(function(c) {
           assert(c.paths && c.paths.length >= 1 && c.paths[0] >= 6, c._id + ' has a border path');
         });
-        assert(_.every(playOnce().at.water, function(d) { return d === false || (d >= 0 && d <= 5); }), 'water directions are 0 to 5 or false');
+        assert(_.every((await playOnce()).at.water, function(d) { return d === false || (d >= 0 && d <= 5); }), 'water directions are 0 to 5 or false');
       });
 
-      run('map: each country bakes to two SVGs, one with the coordinates', function() {
-        playOnce().at.bakes.forEach(function(b) {
+      await run('map: each country bakes to two SVGs, one with the coordinates', async function() {
+        await (await playOnce()).at.bakes.forEach(function(b) {
           equal(b.images[0].hasCoords, false, 'one without');
           equal(b.images[1].hasCoords, true, 'one with');
           assert(b.svgs[1].bytes > b.svgs[0].bytes, 'the one with coordinates is bigger');
         });
       });
 
-      run('map: every step matches the map recorded before (tests/golden/map.json)', function() {
-        var result = playOnce();
+      await run('map: every step matches the map recorded before (tests/golden/map.json)', async function() {
+        var result = await playOnce();
         var goldenFile = repoPath(GOLDEN);
         if (!fs.existsSync(goldenFile)) {
           throw new Error('FAIL: no ' + GOLDEN + ' to compare with (record it from ' + path.join(resultsDir(), 'actual.json') + ')');

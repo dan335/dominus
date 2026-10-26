@@ -7,7 +7,7 @@ test.beforeAll(() => { server('dTest.e2e.reset()'); });
 test.afterEach(() => { server("Meteor.call('resumeJobQueue')"); });
 test.afterAll(() => { server('dTest.e2e.reset()'); });
 
-const queueSettings = () => server("_.pick(dTest.e2e.findOne('Settings', {}) || {}, 'isPaused', 'manualPause')");
+const queueSettings = () => server("dTest.e2e.findOne('Settings', {}).then(function(s) { return _.pick(s || {}, 'isPaused', 'manualPause'); })");
 
 test('an admin adds a game, it is listed as starting soon, edits it and removes it again', async ({ page }) => {
   server("dTest.e2e.user('boss', {admin: true})");

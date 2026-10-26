@@ -12,13 +12,13 @@ const J = JSON.stringify;
 
 // makes an alert the way the game does, then dates it secondsAgo, so the
 // panel's order (newest first) is known
-const makeAlert = (gameId, type, args, secondsAgo) => server(`(function() {
-  dTest.settle(dAlerts.${type}.apply(dAlerts, [${J(gameId)}].concat(${J(args)})));
-  return Alerts.update({gameId: ${J(gameId)}, type: ${J(type)}}, {$set: {created_at: new Date(Date.now() - ${secondsAgo} * 1000)}});
+const makeAlert = (gameId, type, args, secondsAgo) => server(`(async function() {
+  await dAlerts.${type}.apply(dAlerts, [${J(gameId)}].concat(${J(args)}));
+  return Alerts.updateAsync({gameId: ${J(gameId)}, type: ${J(type)}}, {$set: {created_at: new Date(Date.now() - ${secondsAgo} * 1000)}});
 })()`);
 
 // the read flags of a player's copy of each of their alerts, newest first
-const readFlags = (playerId) => server(`Alerts.find({'playerIds.playerId': ${J(playerId)}}, {sort: {created_at: -1}}).map(function(a) {
+const readFlags = (playerId) => server(`Alerts.find({'playerIds.playerId': ${J(playerId)}}, {sort: {created_at: -1}}).mapAsync(function(a) {
   return _.findWhere(a.playerIds, {playerId: ${J(playerId)}}).read; })`);
 
 test('open an alert to mark it read, then mark all of them read; the unread count follows', async ({ page }) => {

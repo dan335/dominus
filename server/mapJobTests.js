@@ -20,7 +20,7 @@ if (Meteor.isServer) {
   var path = Npm.require('path');
 
   Meteor.startup(function() {
-    dTest.addSuite('jobs: map and minimap (server/mapJobTests.js)', function(run, t) {
+    dTest.addSuite('jobs: map and minimap (server/mapJobTests.js)', async function(run, t) {
       var assert = t.assert;
       var equal = t.equal;
       var runJob = dTest.runJob;
@@ -51,7 +51,7 @@ if (Meteor.isServer) {
         return file;
       };
 
-      run('imageExists: true for a 200, false for a 404 or a network error, and true without asking in development', function() {
+      await run('imageExists: true for a 200, false for a 404 or a network error, and true without asking in development', async function() {
         var urls = [];
         try {
           var errors = quietErrors();
@@ -62,21 +62,21 @@ if (Meteor.isServer) {
             if (/down/.test(url)) return Promise.reject(new Error('connect ECONNREFUSED'));
             return answer(200);
           });
-          equal(dTest.settle(Mapbaker.imageExists('https://bakes.example.invalid/a.jpg')), true, '200');
-          equal(dTest.settle(Mapbaker.imageExists('https://bakes.example.invalid/gone.jpg')), false, '404');
-          equal(dTest.settle(Mapbaker.imageExists('https://down.example.invalid/a.jpg')), false, 'network error');
+          equal(await Mapbaker.imageExists('https://bakes.example.invalid/a.jpg'), true, '200');
+          equal(await Mapbaker.imageExists('https://bakes.example.invalid/gone.jpg'), false, '404');
+          equal(await Mapbaker.imageExists('https://down.example.invalid/a.jpg'), false, 'network error');
           equal(errors.length, 2, 'the two failures logged');
           assert(/404/.test(errors[0]), 'with the status: ' + errors[0]);
           process.env.NODE_ENV = 'development';
-          equal(dTest.settle(Mapbaker.imageExists('https://bakes.example.invalid/dev.jpg')), true, 'development');
+          equal(await Mapbaker.imageExists('https://bakes.example.invalid/dev.jpg'), true, 'development');
           equal(urls.length, 3, 'development asks nothing');
-          assert(dTest.throws(function() { return Mapbaker.imageExists(5); }), 'a url that is not a string is refused');
+          assert(await dTest.throws(function() { return Mapbaker.imageExists(5); }), 'a url that is not a string is refused');
         } finally {
           putBack();
         }
       });
 
-      run('uploadToS3: puts the file with its size and a year\'s caching, then checks it is there', function() {
+      await run('uploadToS3: puts the file with its size and a year\'s caching, then checks it is there', async function() {
         var file = tempFile('jpeg bytes');
         var puts = [];
         var image = {gameId: 'mapGame', filename: 'mapCountry'};
@@ -91,7 +91,7 @@ if (Meteor.isServer) {
           }});
           replace(Mapbaker, 'imageExists', async function(u) { return u == url && exists; });
 
-          equal(dTest.settle(Mapbaker.uploadToS3(file, image)), url, 'the image\'s url');
+          equal(await Mapbaker.uploadToS3(file, image), url, 'the image\'s url');
           equal(puts[0].from, file, 'the file');
           equal(puts[0].to, Meteor.settings.public.s3.bakePath + 'mapGame/mapCountry.jpg', 'under the game\'s bakes');
           equal(puts[0].headers['Content-Length'], 10, 'its size');
@@ -99,15 +99,15 @@ if (Meteor.isServer) {
           equal(puts[0].headers['Cache-Control'], 'max-age=31557600', 'cached for a year');
 
           exists = false;
-          equal(dTest.settle(Mapbaker.uploadToS3(file, image)), false, 'not there after the put');
+          equal(await Mapbaker.uploadToS3(file, image), false, 'not there after the put');
           exists = true;
           putResult = {statusCode: 403};
-          equal(dTest.settle(Mapbaker.uploadToS3(file, image)), false, 'a 403');
+          equal(await Mapbaker.uploadToS3(file, image), false, 'a 403');
           putResult = {error: new Error('socket hang up')};
-          equal(dTest.settle(Mapbaker.uploadToS3(file, image)), false, 'a put that fails');
+          equal(await Mapbaker.uploadToS3(file, image), false, 'a put that fails');
           var before = puts.length;
-          equal(dTest.settle(Mapbaker.uploadToS3(file + '.missing', image)), false, 'a missing file');
-          equal(dTest.settle(Mapbaker.uploadToS3(os.tmpdir(), image)), false, 'a folder');
+          equal(await Mapbaker.uploadToS3(file + '.missing', image), false, 'a missing file');
+          equal(await Mapbaker.uploadToS3(os.tmpdir(), image), false, 'a folder');
           equal(puts.length, before, 'neither is put');
           equal(errors.length, 5, 'each failure logged');
         } finally {
@@ -116,7 +116,7 @@ if (Meteor.isServer) {
         }
       });
 
-      run('createJpgImage: the JPG when svgexport makes it, false when it fails or makes nothing', function() {
+      await run('createJpgImage: the JPG when svgexport makes it, false when it fails or makes nothing', async function() {
         var out = tempFile('');
         fs.unlinkSync(out);
         var renders = [];
@@ -131,12 +131,12 @@ if (Meteor.isServer) {
               callback(null);
             }, 5);
           }});
-          equal(dTest.settle(Mapbaker.createJpgImage('in.svg', out, 'jpg', '90%')), out, 'the JPG');
+          equal(await Mapbaker.createJpgImage('in.svg', out, 'jpg', '90%'), out, 'the JPG');
           equal(renders[0][0].output, out + ' jpg 90%', 'with its type and quality');
           equal((fs.statSync(out).mode & 0o777).toString(8), '755', 'readable by all');
           fs.unlinkSync(out);
-          equal(dTest.settle(Mapbaker.createJpgImage('fail.svg', out, 'jpg', '90%')), false, 'svgexport fails');
-          equal(dTest.settle(Mapbaker.createJpgImage('nothing.svg', out, 'jpg', '90%')), false, 'no file made');
+          equal(await Mapbaker.createJpgImage('fail.svg', out, 'jpg', '90%'), false, 'svgexport fails');
+          equal(await Mapbaker.createJpgImage('nothing.svg', out, 'jpg', '90%'), false, 'no file made');
           equal(errors.length, 2, 'the failure logged');
         } finally {
           putBack();
@@ -144,7 +144,7 @@ if (Meteor.isServer) {
         }
       });
 
-      run('deleteS3BakesForGame: deletes every file under the game\'s bakes, and gives false when S3 fails', function() {
+      await run('deleteS3BakesForGame: deletes every file under the game\'s bakes, and gives false when S3 fails', async function() {
         var listed = [];
         var deleted = [];
         var fail = {};
@@ -162,53 +162,53 @@ if (Meteor.isServer) {
               setTimeout(function() { fail.delete ? callback(new Error('delete failed')) : callback(null, {statusCode: 200}); }, 5);
             }
           });
-          equal(dTest.settle(Mapbaker.deleteS3BakesForGame('mapGame')), true, 'deleted');
+          equal(await Mapbaker.deleteS3BakesForGame('mapGame'), true, 'deleted');
           equal(listed[0], 'bakes/mapGame/', 'the game\'s bakes');
           equal(JSON.stringify(deleted[0]), JSON.stringify(['bakes/mapGame/a.jpg', 'bakes/mapGame/b.jpg']), 'each file');
           fail.delete = true;
-          equal(dTest.settle(Mapbaker.deleteS3BakesForGame('mapGame')), false, 'the delete fails');
+          equal(await Mapbaker.deleteS3BakesForGame('mapGame'), false, 'the delete fails');
           fail.list = true;
-          equal(dTest.settle(Mapbaker.deleteS3BakesForGame('mapGame')), false, 'the list fails');
+          equal(await Mapbaker.deleteS3BakesForGame('mapGame'), false, 'the list fails');
           equal(deleted.length, 2, 'nothing deleted when the list fails');
           equal(errors.length, 2, 'each failure logged');
-          assert(dTest.throws(function() { return Mapbaker.deleteS3BakesForGame(5); }), 'a game id that is not a string is refused');
+          assert(await dTest.throws(function() { return Mapbaker.deleteS3BakesForGame(5); }), 'a game id that is not a string is refused');
         } finally {
           putBack();
         }
       });
 
       if (process.env.DOMINUS_WORKER != 'true') {
-        run('map jobs: need the worker', function() { return 'skip'; });
+        await run('map jobs: need the worker', function() { return 'skip'; });
         return;
       }
 
-      var w = dTest.buildGameWorld({players: 2});
+      var w = await dTest.buildGameWorld({players: 2});
       var test = dTest.contractTest(run);
 
-      function country() {
-        return Countries.findOne({gameId: w.gameId});
+      async function country() {
+        return await Countries.findOneAsync({gameId: w.gameId});
       }
 
       try {
 
-        test('bakeCountries: queues a bakeCountry for each of the game\'s countries and reports progress', function() {
-          var countries = Countries.find({gameId: w.gameId}).fetch();
+        await test('bakeCountries: queues a bakeCountry for each of the game\'s countries and reports progress', async function() {
+          var countries = await Countries.find({gameId: w.gameId}).fetchAsync();
           assert(countries.length >= 1, 'the world has countries');
           var job;
-          var jobs = dTest.recordJobs(function() {
-            runJob('bakeCountries', {gameId: w.gameId}, {job: function(j) { job = j; }});
+          var jobs = await dTest.recordJobs(async function() {
+            await runJob('bakeCountries', {gameId: w.gameId}, {job: function(j) { job = j; }});
           });
           var bakes = dTest.jobsNamed(jobs, 'bakeCountry');
           equal(JSON.stringify(_.pluck(bakes, 'uniqueId').sort()), JSON.stringify(_.pluck(countries, '_id').sort()), 'one per country, unique by country');
           equal(_.last(job.progressed), 100, 'progress ends at 100');
           equal(job.progressed.length, countries.length, 'progress after each country');
 
-          jobs = dTest.recordJobs(function() { runJob('bakeCountries', {}); });
+          jobs = await dTest.recordJobs(async function() { await runJob('bakeCountries', {}); });
           equal(jobs.length, 0, 'no gameId: nothing queued');
         });
 
-        test('bakeCountry: writes the country\'s two SVGs, makes JPGs of them and queues finishImage for each, without S3', function() {
-          var c = country();
+        await test('bakeCountry: writes the country\'s two SVGs, makes JPGs of them and queues finishImage for each, without S3', async function() {
+          var c = await country();
           var made = [];
           var uploads = [];
           var baked = null;
@@ -220,8 +220,8 @@ if (Meteor.isServer) {
           Mapbaker.bakeCountry = async function(countryId) { baked = await bake.apply(this, arguments); return baked; };
           var jobs;
           try {
-            jobs = dTest.recordJobs(function() {
-              runJob('bakeCountry', {countryId: c._id});
+            jobs = await dTest.recordJobs(async function() {
+              await runJob('bakeCountry', {countryId: c._id});
             });
           } finally {
             Mapbaker.createJpgImage = createJpg;
@@ -248,30 +248,30 @@ if (Meteor.isServer) {
             JSON.stringify([baked.imageObject.filename, baked.imageObjectWithCoords.filename]), 'one per image');
 
           // a country that doesn't exist bakes nothing
-          jobs = dTest.recordJobs(function() { runJob('bakeCountry', {countryId: 'noSuchCountry'}); });
+          jobs = await dTest.recordJobs(async function() { await runJob('bakeCountry', {countryId: 'noSuchCountry'}); });
           equal(jobs.length, 0, 'missing country: nothing queued');
         });
 
-        test('finishImage: saves the image on its country, with or without coordinates', function() {
-          var c = country();
+        await test('finishImage: saves the image on its country, with or without coordinates', async function() {
+          var c = await country();
           var image = {filename: 'f1', posX: 1, posY: 2, width: 30, height: 40, created_at: new Date(), hasCoords: false,
             gameId: w.gameId, countryId: c._id};
-          runJob('finishImage', {imageObject: image});
-          runJob('finishImage', {imageObject: _.extend({}, image, {filename: 'f2', hasCoords: true})});
-          var after = Countries.findOne(c._id);
+          await runJob('finishImage', {imageObject: image});
+          await runJob('finishImage', {imageObject: _.extend({}, image, {filename: 'f2', hasCoords: true})});
+          var after = await Countries.findOneAsync(c._id);
           equal(after.image.filename, 'f1', 'image');
           equal(after.image.width, 30, 'image width');
           equal(after.imageWithCoords.filename, 'f2', 'imageWithCoords');
           equal(after.image.countryId, undefined, 'only the image fields are kept');
         });
 
-        test('createCountryMask: traces the country\'s border into paths and queues the game\'s minimap', function() {
-          var c = country();
-          Countries.update(c._id, {$unset: {paths: ''}});
-          var jobs = dTest.recordJobs(function() {
-            runJob('createCountryMask', {countryId: c._id});
+        await test('createCountryMask: traces the country\'s border into paths and queues the game\'s minimap', async function() {
+          var c = await country();
+          await Countries.updateAsync(c._id, {$unset: {paths: ''}});
+          var jobs = await dTest.recordJobs(async function() {
+            await runJob('createCountryMask', {countryId: c._id});
           });
-          var paths = Countries.findOne(c._id).paths;
+          var paths = (await Countries.findOneAsync(c._id)).paths;
           assert(paths && paths.length >= 1, 'at least one path');
           assert(_.every(paths, function(path) { return path.length >= 6 && _.has(path[0], 'x') && _.has(path[0], 'y'); }), 'each a ring of points');
           for (var i = 1; i < paths.length; i++) {
@@ -282,28 +282,28 @@ if (Meteor.isServer) {
           equal(minimap[0].uniqueId, w.gameId, 'once per game');
         });
 
-        test('generateAllMinimaps and generateGameMinimap: each running game gets its map size and a minimap of its countries', function() {
-          var jobs = dTest.recordJobs(function() { runJob('generateAllMinimaps', {}); });
+        await test('generateAllMinimaps and generateGameMinimap: each running game gets its map size and a minimap of its countries', async function() {
+          var jobs = await dTest.recordJobs(async function() { await runJob('generateAllMinimaps', {}); });
           assert(_.contains(_.pluck(dTest.jobsNamed(jobs, 'generateGameMinimap'), 'uniqueId'), w.gameId), 'queued for the world');
 
-          var c = country();
-          if (!c.paths) runJob('createCountryMask', {countryId: c._id});
-          Games.update(w.gameId, {$unset: {minimap: '', map_size: ''}});
-          runJob('generateGameMinimap', {gameId: w.gameId});
-          var game = Games.findOne(w.gameId);
-          var border = Hexes.find({gameId: w.gameId, isBorder: true}, {fields: {x: 1}}).fetch();
+          var c = await country();
+          if (!c.paths) await runJob('createCountryMask', {countryId: c._id});
+          await Games.updateAsync(w.gameId, {$unset: {minimap: '', map_size: ''}});
+          await runJob('generateGameMinimap', {gameId: w.gameId});
+          var game = await Games.findOneAsync(w.gameId);
+          var border = await Hexes.find({gameId: w.gameId, isBorder: true}, {fields: {x: 1}}).fetchAsync();
           equal(game.map_size.minX, _.min(_.pluck(border, 'x')), 'map_size.minX from the border hexes');
           equal(game.map_size.maxX, _.max(_.pluck(border, 'x')), 'map_size.maxX');
-          equal(game.minimap.length, Countries.find({gameId: w.gameId}).count(), 'one entry per country');
+          equal(game.minimap.length, await Countries.find({gameId: w.gameId}).countAsync(), 'one entry per country');
           assert(game.minimap[0].country.length >= 1 && /^( -?[0-9.]+,-?[0-9.]+)+$/.test(game.minimap[0].country[0].points),
             'SVG points (' + (game.minimap[0].country[0] && game.minimap[0].country[0].points.slice(0, 40)) + ')');
 
           // a missing game fails the job, so Bull retries it
-          assert(dTest.throws(function() { return runJob('generateGameMinimap', {gameId: 'noSuchGame'}); }), 'a missing game fails the job');
+          assert(await dTest.throws(function() { return runJob('generateGameMinimap', {gameId: 'noSuchGame'}); }), 'a missing game fails the job');
         });
 
       } finally {
-        w.cleanup();
+        await w.cleanup();
       }
     });
   });

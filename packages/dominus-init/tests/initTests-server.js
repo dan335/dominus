@@ -1,12 +1,12 @@
-stubTestGame = function() {
-  Games.remove({});
+stubTestGame = async function() {
+  await Games.removeAsync({});
   let game = {
     _id: 'testgameinit',
     isSpeed: false,
     hasEnded: false,
     maxPlayers: 200
   }
-  game._id = Games.insert(game);
+  game._id = await Games.insertAsync(game);
   return game._id;
 }
 
@@ -40,19 +40,19 @@ stubTestGame = function() {
 // })
 
 
-Tinytest.add('init.setLordVassal', function(test) {
-  Players.remove({});
-  let gameId = stubTestGame();
+Tinytest.addAsync('init.setLordVassal', async function(test) {
+  await Players.removeAsync({});
+  let gameId = await stubTestGame();
 
   let player1 = {_id:'1', allies_above:[], allies_below:[], team:['1'], king:null, is_king:true, gameId:gameId};
   let player2 = {_id:'2', allies_above:[], allies_below:[], team:['2'], king:null, is_king:true, gameId:gameId};
 
-  player1._id = Players.insert(player1);
-  player2._id = Players.insert(player2);
+  player1._id = await Players.insertAsync(player1);
+  player2._id = await Players.insertAsync(player2);
 
-  Promise.await(dInit.set_lord_and_vassal(player1._id, player2._id));
-  player1 = Players.findOne(player1._id);
-  player2 = Players.findOne(player2._id);
+  await dInit.set_lord_and_vassal(player1._id, player2._id);
+  player1 = await Players.findOneAsync(player1._id);
+  player2 = await Players.findOneAsync(player2._id);
 
   test.isTrue(player1.is_king);
   test.isFalse(player2.is_king);
@@ -72,8 +72,8 @@ Tinytest.add('init.setLordVassal', function(test) {
 });
 
 
-Tinytest.add('init.getRelationType.enemy', function(test) {
-  Players.remove({});
+Tinytest.addAsync('init.getRelationType.enemy', async function(test) {
+  await Players.removeAsync({});
 
   var user1 = {_id:'1', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:1, lord:null, king:null, is_dominus:false};
   var user2 = {_id:'2', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:2, lord:null, king:null, is_dominus:false};
@@ -82,8 +82,8 @@ Tinytest.add('init.getRelationType.enemy', function(test) {
 });
 
 
-Tinytest.add('init.getRelationType.direct_lord', function(test) {
-  Players.remove({});
+Tinytest.addAsync('init.getRelationType.direct_lord', async function(test) {
+  await Players.removeAsync({});
 
   var user1 = {_id:'1', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:1, lord:null, king:null, is_dominus:false};
   var user2 = {_id:'2', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:2, lord:null, king:null, is_dominus:false};
@@ -100,8 +100,8 @@ Tinytest.add('init.getRelationType.direct_lord', function(test) {
 });
 
 
-Tinytest.add('init.getRelationType.lord', function(test) {
-  Players.remove({});
+Tinytest.addAsync('init.getRelationType.lord', async function(test) {
+  await Players.removeAsync({});
 
   var user1 = {_id:'1', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:1, lord:null, king:null, is_dominus:false};
   var user2 = {_id:'2', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:2, lord:null, king:null, is_dominus:false};
@@ -119,8 +119,8 @@ Tinytest.add('init.getRelationType.lord', function(test) {
 });
 
 
-Tinytest.add('init.getRelationType.enemy_ally', function(test) {
-  Players.remove({});
+Tinytest.addAsync('init.getRelationType.enemy_ally', async function(test) {
+  await Players.removeAsync({});
 
   var user1 = {_id:'1', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:1, lord:null, king:null, is_dominus:false};
   var user2 = {_id:'2', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:2, lord:null, king:null, is_dominus:false};
@@ -138,8 +138,8 @@ Tinytest.add('init.getRelationType.enemy_ally', function(test) {
 })
 
 
-Tinytest.add('init.getRelationType.vassal', function(test) {
-  Players.remove({});
+Tinytest.addAsync('init.getRelationType.vassal', async function(test) {
+  await Players.removeAsync({});
 
   var user1 = {_id:'1', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:1, lord:null, king:null, is_dominus:false};
   var user2 = {_id:'2', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:2, lord:null, king:null, is_dominus:false};
@@ -156,8 +156,8 @@ Tinytest.add('init.getRelationType.vassal', function(test) {
 });
 
 
-Tinytest.add('init.getRelationType.direct_vassal', function(test) {
-  Players.remove({});
+Tinytest.addAsync('init.getRelationType.direct_vassal', async function(test) {
+  await Players.removeAsync({});
 
   var user1 = {_id:'1', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:1, lord:null, king:null, is_dominus:false};
   var user2 = {_id:'2', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:2, lord:null, king:null, is_dominus:false};
@@ -174,8 +174,8 @@ Tinytest.add('init.getRelationType.direct_vassal', function(test) {
 });
 
 
-Tinytest.add('init.getRelationType.king', function(test) {
-  Players.remove({});
+Tinytest.addAsync('init.getRelationType.king', async function(test) {
+  await Players.removeAsync({});
 
   var user1 = {_id:'1', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:1, lord:null, king:null, is_dominus:false};
   var user2 = {_id:'2', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:2, lord:null, king:null, is_dominus:false};
@@ -194,8 +194,8 @@ Tinytest.add('init.getRelationType.king', function(test) {
 });
 
 
-Tinytest.add('init.getRelationType.mine', function(test) {
-  Players.remove({});
+Tinytest.addAsync('init.getRelationType.mine', async function(test) {
+  await Players.removeAsync({});
 
   var user1 = {_id:'1', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:1, lord:null, king:null, is_dominus:false};
   var user2 = {_id:'2', allies_above:[], allies_below:[], team:[], vassals:[], castle_id:2, lord:null, king:null, is_dominus:false};
