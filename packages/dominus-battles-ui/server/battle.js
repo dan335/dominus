@@ -174,7 +174,7 @@ BattleJob.prototype.processBattleResults = async function() {
         if (army.destroyed) {
           self.battleData.showBattle = true;
 
-          dAlerts.alert_villageDestroyed(self.gameId, army.playerId, self.battleData._id, army.name);
+          await dAlerts.alert_villageDestroyed(self.gameId, army.playerId, self.battleData._id, army.name);
           await Villages.removeAsync(army._id);
           await Mapmaker.buildingRemoved(self.gameId, army.x, army.y);
         } else {
@@ -187,7 +187,7 @@ BattleJob.prototype.processBattleResults = async function() {
         if (army.destroyed) {
           self.battleData.showBattle = true;
 
-          dAlerts.alert_armyDestroyed(self.gameId, army.playerId, self.battleData._id, army.name);
+          await dAlerts.alert_armyDestroyed(self.gameId, army.playerId, self.battleData._id, army.name);
           await dArmies.destroyArmy(army._id);
 
         } else {
@@ -323,9 +323,9 @@ BattleJob.prototype.handleEnteredAlert = async function(army) {
     // if army is on it's own capital then send capital alert
     if (army.unitType == 'army') {
       if (self.currentRound.capital && self.currentRound.capital.playerId == army.playerId) {
-        dAlerts.alert_battleStart(self.gameId, army.playerId, self.currentRound.capital._id, 'capital', self.battleData._id);
+        await dAlerts.alert_battleStart(self.gameId, army.playerId, self.currentRound.capital._id, 'capital', self.battleData._id);
       } else {
-        dAlerts.alert_battleStart(self.gameId, army.playerId, army._id, 'army', self.battleData._id);
+        await dAlerts.alert_battleStart(self.gameId, army.playerId, army._id, 'army', self.battleData._id);
       }
     }
 
@@ -333,16 +333,16 @@ BattleJob.prototype.handleEnteredAlert = async function(army) {
     // allies_above is filled in when battle is run
     // so have to get it here
     if (army.unitType == 'castle') {
-      dAlerts.alert_battleStart(self.gameId, army.playerId, army._id, 'castle', self.battleData._id);
+      await dAlerts.alert_battleStart(self.gameId, army.playerId, army._id, 'castle', self.battleData._id);
 
       var player = await Players.findOneAsync(army.playerId,  {fields: {allies_above:1}});
       if (player && player.allies_above) {
-        dAlerts.alert_vassalIsUnderAttack(self.gameId, player.allies_above, army.playerId, self.battleData._id);
+        await dAlerts.alert_vassalIsUnderAttack(self.gameId, player.allies_above, army.playerId, self.battleData._id);
       }
     }
 
     if (army.unitType == 'village') {
-      dAlerts.alert_battleStart(self.gameId, army.playerId, army._id, 'village', self.battleData._id);
+      await dAlerts.alert_battleStart(self.gameId, army.playerId, army._id, 'village', self.battleData._id);
     }
 
     // add to array so that we know not to send alert next round

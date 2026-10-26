@@ -71,7 +71,7 @@ if (Meteor.isServer) {
     }
 
     function storedIds(jobName) {
-      return Queues.getUniqueIds(jobName).sort();
+      return dTest.settle(Queues.getUniqueIds(jobName)).sort();
     }
 
     function fakeJob(jobName, uniqueId, isFailed) {
@@ -89,98 +89,98 @@ if (Meteor.isServer) {
     run('removeUniqueId removes only the given id and keeps the others', function() {
       testQueue();
       var name = 'perfFixTestQueue';
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       try {
-        assert(Queues.addUniqueId(name, 'a'), 'a added');
-        assert(Queues.addUniqueId(name, 'b'), 'b added');
-        assert(Queues.addUniqueId(name, 'c'), 'c added');
+        assert(dTest.settle(Queues.addUniqueId(name, 'a')), 'a added');
+        assert(dTest.settle(Queues.addUniqueId(name, 'b')), 'b added');
+        assert(dTest.settle(Queues.addUniqueId(name, 'c')), 'c added');
 
-        Queues.removeUniqueId(name, 'b');
+        dTest.settle(Queues.removeUniqueId(name, 'b'));
 
         equal(JSON.stringify(storedIds(name)), JSON.stringify(['a', 'c']), 'a and c are still stored');
       } finally {
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
     run('addUniqueId keeps the ids already stored (they used to be dropped on every add)', function() {
       testQueue();
       var name = 'perfFixTestQueue';
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       try {
-        Queues.addUniqueId(name, 'a');
-        Queues.addUniqueId(name, 'b');
-        Queues.addUniqueId(name, 'c');
+        dTest.settle(Queues.addUniqueId(name, 'a'));
+        dTest.settle(Queues.addUniqueId(name, 'b'));
+        dTest.settle(Queues.addUniqueId(name, 'c'));
         equal(JSON.stringify(storedIds(name)), JSON.stringify(['a', 'b', 'c']), 'all three stored');
-        equal(Queues.addUniqueId(name, 'a'), false, 'a is still deduped after later adds');
+        equal(dTest.settle(Queues.addUniqueId(name, 'a')), false, 'a is still deduped after later adds');
       } finally {
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
     run('removeUniqueId of an id that is not stored changes nothing', function() {
       testQueue();
       var name = 'perfFixTestQueue';
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       try {
-        Queues.addUniqueId(name, 'a');
-        Queues.addUniqueId(name, 'b');
+        dTest.settle(Queues.addUniqueId(name, 'a'));
+        dTest.settle(Queues.addUniqueId(name, 'b'));
 
-        Queues.removeUniqueId(name, 'zzz');
+        dTest.settle(Queues.removeUniqueId(name, 'zzz'));
 
         equal(JSON.stringify(storedIds(name)), JSON.stringify(['a', 'b']), 'a and b are still stored');
       } finally {
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
     run('addUniqueId refuses a stored id and accepts it again once removed', function() {
       testQueue();
       var name = 'perfFixTestQueue';
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       try {
-        assert(Queues.addUniqueId(name, 'a'), 'first add');
-        Queues.addUniqueId(name, 'b');
-        equal(Queues.addUniqueId(name, 'a'), false, 'duplicate refused');
+        assert(dTest.settle(Queues.addUniqueId(name, 'a')), 'first add');
+        dTest.settle(Queues.addUniqueId(name, 'b'));
+        equal(dTest.settle(Queues.addUniqueId(name, 'a')), false, 'duplicate refused');
 
-        Queues.removeUniqueId(name, 'b');
-        equal(Queues.addUniqueId(name, 'a'), false, 'removing another id does not release a');
+        dTest.settle(Queues.removeUniqueId(name, 'b'));
+        equal(dTest.settle(Queues.addUniqueId(name, 'a')), false, 'removing another id does not release a');
 
-        Queues.removeUniqueId(name, 'a');
-        equal(Queues.addUniqueId(name, 'a'), true, 'accepted after its own removal');
+        dTest.settle(Queues.removeUniqueId(name, 'a'));
+        equal(dTest.settle(Queues.addUniqueId(name, 'a')), true, 'accepted after its own removal');
       } finally {
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
     run('ids are scoped to their job type', function() {
       testQueue();
       var name = 'perfFixTestQueue';
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       try {
-        Queues.addUniqueId(name, 'shared');
-        equal(Queues.getUniqueIds('runBattle').indexOf('shared'), -1, 'not visible under another job');
+        dTest.settle(Queues.addUniqueId(name, 'shared'));
+        equal(dTest.settle(Queues.getUniqueIds('runBattle')).indexOf('shared'), -1, 'not visible under another job');
         equal(Queues.getKeyString(name, 'shared'), 'dominus:unique:perfFixTestQueue:shared', 'key layout');
       } finally {
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
     run('a stored id expires after 20 minutes', function() {
       var queue = testQueue();
       var name = 'perfFixTestQueue';
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       try {
-        Queues.addUniqueId(name, 'a');
+        dTest.settle(Queues.addUniqueId(name, 'a'));
         var ttl = awaitPromise(queue.client.pttl(Queues.getKeyString(name, 'a')));
         assert(ttl > 1000*60*19.5 && ttl <= 1000*60*20, 'ttl is 20 minutes, got ' + ttl);
 
         // an id whose key has expired can be added again
         awaitPromise(queue.client.set(Queues.getKeyString(name, 'b'), '1', 'PX', 50));
         Meteor._sleepForMs(150);
-        equal(Queues.addUniqueId(name, 'b'), true, 'expired id accepted');
+        equal(dTest.settle(Queues.addUniqueId(name, 'b')), true, 'expired id accepted');
       } finally {
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
@@ -188,16 +188,16 @@ if (Meteor.isServer) {
       testQueue();
       var name = 'perfFixTestQueue';
       var Future = Npm.require('fibers/future');
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       try {
         // keep0..keep29 are added; drop0..drop29 are added and removed, all interleaved
         var tasks = [];
         for (var i = 0; i < 30; i++) {
           (function(i) {
-            tasks.push(Future.task(function() { Queues.addUniqueId(name, 'keep' + i); }));
+            tasks.push(Future.task(function() { dTest.settle(Queues.addUniqueId(name, 'keep' + i)); }));
             tasks.push(Future.task(function() {
-              Queues.addUniqueId(name, 'drop' + i);
-              Queues.removeUniqueId(name, 'drop' + i);
+              dTest.settle(Queues.addUniqueId(name, 'drop' + i));
+              dTest.settle(Queues.removeUniqueId(name, 'drop' + i));
             }));
           })(i);
         }
@@ -208,7 +208,7 @@ if (Meteor.isServer) {
         equal(ids.length, 30, 'exactly the 30 kept ids remain');
         assert(ids.every(function(id) { return id.indexOf('keep') === 0; }), 'no removed id came back');
       } finally {
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
@@ -220,10 +220,10 @@ if (Meteor.isServer) {
         stub(console, 'error', function() {})
       ];
       try {
-        equal(Queues.addUniqueId(name, 'a'), true, 'job is queued rather than lost');
+        equal(dTest.settle(Queues.addUniqueId(name, 'a')), true, 'job is queued rather than lost');
       } finally {
         restoreAll(restores);
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
@@ -231,73 +231,73 @@ if (Meteor.isServer) {
       var queue = testQueue();
       var name = 'perfFixTestQueue';
       try {
-        Queues.addUniqueId(name, 'a');
-        Queues.addUniqueId(name, 'b');
+        dTest.settle(Queues.addUniqueId(name, 'a'));
+        dTest.settle(Queues.addUniqueId(name, 'b'));
         awaitPromise(queue.client.set(Queues.getKeyString(name), '["old$1"]'));
 
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
 
         equal(storedIds(name).length, 0, 'ids removed');
         equal(awaitPromise(queue.client.exists(Queues.getKeyString(name))), 0, 'old list key removed');
       } finally {
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
     run('onJobFailed keeps the id while Bull will retry the job', function() {
       testQueue();
       var name = 'perfFixTestQueue';
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       try {
-        Queues.addUniqueId(name, 'a');
-        Queues.onJobFailed(fakeJob(name, 'a', function() { return Promise.resolve(false); }));
+        dTest.settle(Queues.addUniqueId(name, 'a'));
+        dTest.settle(Queues.onJobFailed(fakeJob(name, 'a', function() { return Promise.resolve(false); })));
         equal(JSON.stringify(storedIds(name)), JSON.stringify(['a']), 'id kept');
       } finally {
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
     run('onJobFailed releases the id after the final failure, and only that id', function() {
       testQueue();
       var name = 'perfFixTestQueue';
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       try {
-        Queues.addUniqueId(name, 'a');
-        Queues.addUniqueId(name, 'b');
-        Queues.onJobFailed(fakeJob(name, 'a', function() { return Promise.resolve(true); }));
+        dTest.settle(Queues.addUniqueId(name, 'a'));
+        dTest.settle(Queues.addUniqueId(name, 'b'));
+        dTest.settle(Queues.onJobFailed(fakeJob(name, 'a', function() { return Promise.resolve(true); })));
         equal(JSON.stringify(storedIds(name)), JSON.stringify(['b']), 'only a released');
       } finally {
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
     run('onJobFailed releases the id when the job state cannot be read', function() {
       testQueue();
       var name = 'perfFixTestQueue';
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       var restores = [stub(console, 'error', function() {})];
       try {
-        Queues.addUniqueId(name, 'a');
-        Queues.onJobFailed(fakeJob(name, 'a', function() { return Promise.reject(new Error('redis down')); }));
+        dTest.settle(Queues.addUniqueId(name, 'a'));
+        dTest.settle(Queues.onJobFailed(fakeJob(name, 'a', function() { return Promise.reject(new Error('redis down')); })));
         equal(storedIds(name).length, 0, 'id released');
       } finally {
         restoreAll(restores);
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
     run('onJobFailed ignores a job without a uniqueId', function() {
       testQueue();
       var name = 'perfFixTestQueue';
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       try {
-        Queues.addUniqueId(name, 'a');
+        dTest.settle(Queues.addUniqueId(name, 'a'));
         var asked = false;
-        Queues.onJobFailed({data: {jobName: name}, isFailed: function() { asked = true; return Promise.resolve(true); }});
+        dTest.settle(Queues.onJobFailed({data: {jobName: name}, isFailed: function() { asked = true; return Promise.resolve(true); }}));
         equal(asked, false, 'state not read');
         equal(JSON.stringify(storedIds(name)), JSON.stringify(['a']), 'other ids untouched');
       } finally {
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
@@ -311,38 +311,38 @@ if (Meteor.isServer) {
     run('onJobFailed keeps the id of a job whose work is still running here, or that timed out', function() {
       testQueue();
       var name = 'perfFixTestQueue';
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       var asked = false;
       var job = {id: 'running1', data: {jobName: name, uniqueId: 'a'}, isFailed: function() { asked = true; return Promise.resolve(true); }};
       var key = Queues.runningKey(name, 'running1');
       try {
-        Queues.addUniqueId(name, 'a');
+        dTest.settle(Queues.addUniqueId(name, 'a'));
         Queues.running[key] = {jobName: name};
-        Queues.onJobFailed(job, new Error('job stalled more than allowable limit'));
+        dTest.settle(Queues.onJobFailed(job, new Error('job stalled more than allowable limit')));
         delete Queues.running[key];
         equal(JSON.stringify(storedIds(name)), JSON.stringify(['a']), 'kept while its work runs');
 
         var timeout = new Error('Promise timed out after 300 milliseconds');
         timeout.name = 'TimeoutError';
-        Queues.onJobFailed(job, timeout);
+        dTest.settle(Queues.onJobFailed(job, timeout));
         equal(JSON.stringify(storedIds(name)), JSON.stringify(['a']), 'kept after a timeout: the work is running somewhere here');
         equal(asked, false, 'without reading the job state');
 
-        Queues.onJobFailed(job, new Error('job stalled more than allowable limit'));
+        dTest.settle(Queues.onJobFailed(job, new Error('job stalled more than allowable limit')));
         equal(storedIds(name).length, 0, 'released for a job left behind by a worker that stopped');
       } finally {
         delete Queues.running[key];
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
-    run('Queues.add never asks Bull for retries, and keeps the other options', function() {
+    run('Queues.addAsync never asks Bull for retries, and keeps the other options', function() {
       var calls = [];
       var queue = testQueue();
       var restore = stub(queue, 'add', function(data, options) { calls.push(options); return Promise.resolve(); });
       try {
-        Queues.add('perfFixTestQueue', {}, {attempts: 10, backoff: {type: 'fixed', delay: 15000}, delay: 3000, timeout: 60000}, false);
-        Queues.add('perfFixTestQueue', {}, {delay: 0}, false);
+        dTest.settle(Queues.addAsync('perfFixTestQueue', {}, {attempts: 10, backoff: {type: 'fixed', delay: 15000}, delay: 3000, timeout: 60000}, false));
+        dTest.settle(Queues.addAsync('perfFixTestQueue', {}, {delay: 0}, false));
       } finally {
         restore();
       }
@@ -350,27 +350,29 @@ if (Meteor.isServer) {
       equal(JSON.stringify(calls[1]), JSON.stringify({delay: 0, attempts: 1}), 'attempts 1 when none was given');
     });
 
-    run('Queues.add releases the uniqueId when Redis refuses the job', function() {
+    run('Queues.addAsyncOrLog logs a job Redis refuses, and releases its uniqueId', function() {
       var queue = testQueue();
       var name = 'perfFixTestQueue';
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
+      var logged = [];
       var restores = [
         stub(queue, 'add', function() { return Promise.reject(new Error('redis down')); }),
-        stub(console, 'error', function() {})
+        stub(console, 'error', function() { logged.push(_.toArray(arguments).join(' ')); })
       ];
       try {
-        Queues.add(name, {}, {delay: 0}, 'refused');
-        assert(waitFor(function() { return storedIds(name).length === 0; }, 5000), 'id released');
+        equal(dTest.settle(Queues.addAsyncOrLog(name, {}, {delay: 0}, 'refused')), false, 'resolves with false');
+        equal(storedIds(name).length, 0, 'id released');
+        assert(logged.length === 1 && logged[0].indexOf('could not add job ' + name) === 0 && logged[0].indexOf('redis down') !== -1, 'logged: ' + logged.join(' | '));
       } finally {
         restoreAll(restores);
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
     run('Queues.addAsync adds a job once Redis has it, and skips a duplicate', function() {
       var queue = testQueue();
       var name = 'perfFixTestQueue';
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       var calls = [];
       var restore = stub(queue, 'add', function(data, options) { calls.push({data: data, options: options}); return Promise.resolve(); });
       try {
@@ -392,7 +394,7 @@ if (Meteor.isServer) {
         equal(JSON.stringify(storedIds(name)), JSON.stringify(['async1']), 'and its id is released');
       } finally {
         restore();
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
@@ -457,7 +459,7 @@ if (Meteor.isServer) {
       if (!isWorker) return 'skip';
       var queue = testQueue();
       var name = 'perfFixTestQueue';
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       var attempts = 0;
       testQueueBehavior = function(job) {
         attempts++;
@@ -469,18 +471,18 @@ if (Meteor.isServer) {
       var listener = function(job) { if (job.data.test == 'retry') completed = job; };
       queue.on('completed', listener);
       try {
-        Queues.add(name, {test: 'retry'}, {attempts: 3, backoff: {type: 'fixed', delay: 200}, delay: 0}, 'retryJob');
+        dTest.settle(Queues.addAsync(name, {test: 'retry'}, {attempts: 3, backoff: {type: 'fixed', delay: 200}, delay: 0}, 'retryJob'));
         assert(waitFor(function() { return completed; }, 10000), 'Bull counted the job done');
         assert(waitFor(function() { return storedIds(name).length === 0; }, 5000), 'id released');
         Meteor._sleepForMs(800);
         equal(attempts, 1, 'it ran once');
         assert(_.some(logged, function(line) { return line.indexOf('Exception in job perfFixTestQueue') === 0 && line.indexOf('planted failure') !== -1; }), 'the rejection was logged: ' + logged.join(' | '));
-        equal(Queues.addUniqueId(name, 'retryJob'), true, 'same id can be queued again');
+        equal(dTest.settle(Queues.addUniqueId(name, 'retryJob')), true, 'same id can be queued again');
       } finally {
         queue.removeListener('completed', listener);
         restore();
         testQueueBehavior = null;
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
@@ -496,7 +498,7 @@ if (Meteor.isServer) {
       queue.on('completed', listener);
       try {
         var start = Date.now();
-        Queues.add('perfFixTestQueue', {test: 'slow'}, {delay: 0}, false);
+        dTest.settle(Queues.addAsync('perfFixTestQueue', {test: 'slow'}, {delay: 0}, false));
         assert(waitFor(function() { return doneAtCompletion !== null; }, 10000), 'job completed');
         equal(doneAtCompletion, true, 'its work had finished');
         assert(Date.now() - start >= 1500, 'not before 1.5 seconds');
@@ -510,7 +512,7 @@ if (Meteor.isServer) {
       if (!isWorker) return 'skip';
       var queue = testQueue();
       var name = 'perfFixTestQueue';
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       var runs = 0;
       var workDone = false;
       testQueueBehavior = function(job) {
@@ -521,13 +523,13 @@ if (Meteor.isServer) {
       var listener = function(job, error) { if (job.data.test == 'timeout') failedWith = error; };
       queue.on('failed', listener);
       try {
-        Queues.add(name, {test: 'timeout'}, {delay: 0, timeout: 300}, 'slowJob');
+        dTest.settle(Queues.addAsync(name, {test: 'timeout'}, {delay: 0, timeout: 300}, 'slowJob'));
         assert(waitFor(function() { return failedWith; }, 10000), 'Bull failed the job');
         equal(failedWith.name, 'TimeoutError', 'on its timeout');
         equal(workDone, false, 'while its work still ran');
         Meteor._sleepForMs(200);
         equal(JSON.stringify(storedIds(name)), JSON.stringify(['slowJob']), 'the id is still held');
-        Queues.add(name, {test: 'timeout'}, {delay: 0, timeout: 300}, 'slowJob');
+        dTest.settle(Queues.addAsync(name, {test: 'timeout'}, {delay: 0, timeout: 300}, 'slowJob'));
         assert(waitFor(function() { return workDone; }, 5000), 'the work finished');
         assert(waitFor(function() { return storedIds(name).length === 0; }, 5000), 'and then the id was released');
         Meteor._sleepForMs(300);
@@ -535,7 +537,7 @@ if (Meteor.isServer) {
       } finally {
         queue.removeListener('failed', listener);
         testQueueBehavior = null;
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
       }
     });
 
@@ -558,7 +560,7 @@ if (Meteor.isServer) {
       };
       try {
         for (var i = 0; i < 3; i++) {
-          Queues.add('perfFixTestQueue', {test: 'serial' + i}, {delay: 0}, false);
+          dTest.settle(Queues.addAsync('perfFixTestQueue', {test: 'serial' + i}, {delay: 0}, false));
         }
         assert(waitFor(function() { return finished >= 3; }, 10000), 'all three ran');
         equal(most, 1, 'never two at once');
@@ -584,7 +586,7 @@ if (Meteor.isServer) {
       });
       try {
         for (var i = 0; i < 3; i++) {
-          Queues.add('createPlayer', {gameId: 'perfFixNoGame', userId: 'perfFixUser' + i, username: 'perfFix' + i, makePro: false}, {delay: 0, timeout: 1000*60}, false);
+          dTest.settle(Queues.addAsync('createPlayer', {gameId: 'perfFixNoGame', userId: 'perfFixUser' + i, username: 'perfFix' + i, makePro: false}, {delay: 0, timeout: 1000*60}, false));
         }
         assert(waitFor(function() { return ran >= 3; }, 10000), 'all three ran');
         equal(most, 1, 'never two at once');
@@ -604,7 +606,7 @@ if (Meteor.isServer) {
       };
       var restore = stub(console, 'log', function() {});
       try {
-        Queues.add('perfFixTestQueue', {test: 'shutdown'}, {delay: 0}, false);
+        dTest.settle(Queues.addAsync('perfFixTestQueue', {test: 'shutdown'}, {delay: 0}, false));
         assert(waitFor(function() { return started; }, 10000), 'job started');
         var idle = dTest.settle(Queues.stopWorker(5000));
         equal(idle, true, 'stopWorker reports all work done');
@@ -630,7 +632,7 @@ if (Meteor.isServer) {
       var ranAfter = false;
       testQueueBehavior = function() { ranAfter = true; return Promise.resolve(); };
       try {
-        Queues.add('perfFixTestQueue', {test: 'after'}, {delay: 0}, false);
+        dTest.settle(Queues.addAsync('perfFixTestQueue', {test: 'after'}, {delay: 0}, false));
         assert(waitFor(function() { return ranAfter; }, 10000), 'a job runs after resuming');
       } finally {
         testQueueBehavior = null;
@@ -656,7 +658,7 @@ if (Meteor.isServer) {
     // every test in this section must leave the server running
     function ensureResumed() {
       try {
-        Queues.resumeAll();
+        dTest.settle(Queues.resumeAllAsync());
       } catch (e) {
         console.error('perfFixTests could not resume the queues', e);
       }
@@ -668,14 +670,14 @@ if (Meteor.isServer) {
       assert(Queues.queueNames.indexOf('runBattle') !== -1, 'queueNames lists runBattle');
       assert(Queues.queueNames.indexOf('updateAllKingsAllies') !== -1, 'queueNames lists updateAllKingsAllies');
       try {
-        Queues.pauseAll(false);
+        dTest.settle(Queues.pauseAllAsync(false));
         equal(pausedQueues().length, Queues.queueNames.length, 'every queue paused');
         var settings = settingsDoc();
         equal(settings.isPaused, true, 'isPaused');
         equal(settings.manualPause, false, 'server pause is not manual');
         assert(settings.pausedAt && Date.now() - settings.pausedAt.getTime() < 60000, 'pausedAt is now');
 
-        Queues.resumeAll();
+        dTest.settle(Queues.resumeAllAsync());
         equal(pausedQueues().length, 0, 'no queue paused');
         settings = settingsDoc();
         equal(settings.isPaused, false, 'isPaused cleared');
@@ -729,7 +731,7 @@ if (Meteor.isServer) {
       var threw = null;
       try {
         try {
-          Queues.pauseAll(false);
+          dTest.settle(Queues.pauseAllAsync(false));
         } catch (e) {
           threw = e;
         }
@@ -750,11 +752,11 @@ if (Meteor.isServer) {
       var restores = [];
       var threw = null;
       try {
-        Queues.pauseAll(false);
+        dTest.settle(Queues.pauseAllAsync(false));
         restores.push(stub(queue, 'resume', function() { return Promise.reject(new Error('redis down')); }));
         restores.push(stub(console, 'error', function() {}));
         try {
-          Queues.resumeAll();
+          dTest.settle(Queues.resumeAllAsync());
         } catch (e) {
           threw = e;
         }
@@ -764,7 +766,7 @@ if (Meteor.isServer) {
 
         restoreAll(restores);
         restores = [];
-        Queues.resumeAll();
+        dTest.settle(Queues.resumeAllAsync());
         equal(pausedQueues().length, 0, 'second resume clears it');
       } finally {
         restoreAll(restores);
@@ -780,11 +782,11 @@ if (Meteor.isServer) {
       var restores = [stub(console, 'error', function() {})];
       try {
         Settings.upsert({}, {$set: {isPaused: false}, $unset: {pausedAt: '', manualPause: ''}});
-        equal(Queues.resumeIfStuck(), false, 'not paused');
+        equal(dTest.settle(Queues.resumeIfStuck()), false, 'not paused');
 
-        Queues.pauseAll(false);
+        dTest.settle(Queues.pauseAllAsync(false));
         var later = new Date(Date.now() + Queues.stuckPauseMaxMs - 60000);
-        equal(Queues.resumeIfStuck(later), false, 'paused for less than the limit');
+        equal(dTest.settle(Queues.resumeIfStuck(later)), false, 'paused for less than the limit');
         equal(pausedQueues().length, Queues.queueNames.length, 'still paused');
       } finally {
         restoreAll(restores);
@@ -795,9 +797,9 @@ if (Meteor.isServer) {
     run('resumeIfStuck resumes a server pause older than the limit', function() {
       var restores = [stub(console, 'error', function() {})];
       try {
-        Queues.pauseAll(false);
+        dTest.settle(Queues.pauseAllAsync(false));
         var later = new Date(Date.now() + Queues.stuckPauseMaxMs + 60000);
-        equal(Queues.resumeIfStuck(later), true, 'resumed');
+        equal(dTest.settle(Queues.resumeIfStuck(later)), true, 'resumed');
         equal(pausedQueues().length, 0, 'no queue paused');
         equal(settingsDoc().isPaused, false, 'isPaused cleared');
       } finally {
@@ -809,9 +811,9 @@ if (Meteor.isServer) {
     run('resumeIfStuck never resumes a pause made from the admin panel', function() {
       var restores = [stub(console, 'error', function() {})];
       try {
-        Queues.pauseAll(true);
+        dTest.settle(Queues.pauseAllAsync(true));
         var muchLater = new Date(Date.now() + 1000*60*60*24);
-        equal(Queues.resumeIfStuck(muchLater), false, 'left alone');
+        equal(dTest.settle(Queues.resumeIfStuck(muchLater)), false, 'left alone');
         equal(pausedQueues().length, Queues.queueNames.length, 'still paused');
       } finally {
         restoreAll(restores);
@@ -823,7 +825,7 @@ if (Meteor.isServer) {
       var restores = [stub(console, 'error', function() {})];
       try {
         Settings.upsert({}, {$set: {isPaused: true}, $unset: {pausedAt: '', manualPause: ''}});
-        equal(Queues.resumeIfStuck(), true, 'resumed');
+        equal(dTest.settle(Queues.resumeIfStuck()), true, 'resumed');
         equal(settingsDoc().isPaused, false, 'isPaused cleared');
       } finally {
         restoreAll(restores);
@@ -849,7 +851,7 @@ if (Meteor.isServer) {
           log.rebuilt.push(gameId);
         }),
         stub(dManager, 'checkForDominus', function(gameId) { log.dominus.push(gameId); }),
-        stub(Queues, 'add', function(jobName, data) {
+        stub(Queues, 'addAsync', async function(jobName, data) {
           if (jobName == 'cleanupAllKingChatrooms') log.chatrooms.push(data.gameId);
         }),
         stub(console, 'error', function() {})
@@ -966,11 +968,11 @@ if (Meteor.isServer) {
       if (!isWorker || !SyncedCron._entries || !SyncedCron._entries['midnight job']) return 'skip';
       var game = t.createTestGame({hasStarted: true, hasEnded: false, startedAt: new Date()});
       var calls = [];
-      var restore = stub(Queues, 'add', function(jobName, data, options, uniqueId) {
+      var restore = stub(Queues, 'addAsync', async function(jobName, data, options, uniqueId) {
         calls.push({jobName: jobName, data: data, options: options, uniqueId: uniqueId});
       });
       try {
-        SyncedCron._entries['midnight job'].job();
+        dTest.settle(SyncedCron._entries['midnight job'].job());
         restore();
         var rebuilds = calls.filter(function(c) { return c.jobName == 'updateAllKingsAllies'; });
         equal(rebuilds.length, 1, 'one job');

@@ -42,28 +42,28 @@ dInit.set_lord_and_vassal = async function(winner_id, loser_id) {
 	// do opposite for gained
 
 	if (process.env.DOMINUS_TEST != 'true') {
-		_.each(loser.allies_above, function(above_loser_lord_id) {
+		for (const above_loser_lord_id of loser.allies_above || []) {
 			if (_.indexOf(winner.allies_above, above_loser_lord_id) == -1) {
 
 				// make sure we don't send it to winner or loser
 				if (above_loser_lord_id != winner._id && above_loser_lord_id != loser._id) {
-					dAlerts.alert_lostVassal(winner.gameId, above_loser_lord_id, loser._id, winner._id);
+					await dAlerts.alert_lostVassal(winner.gameId, above_loser_lord_id, loser._id, winner._id);
 				}
 			}
-		});
+		}
 
-		_.each(winner.allies_above, function(above_winner_lord_id) {
+		for (const above_winner_lord_id of winner.allies_above || []) {
 			if (_.indexOf(loser.allies_above, above_winner_lord_id) == -1) {
 
 				// make sure we don't send it to winner or loser
 				if (above_winner_lord_id != winner._id && above_winner_lord_id != loser._id) {
-					dAlerts.alert_gainedVassal(winner.gameId, above_winner_lord_id, loser._id, winner._id);
+					await dAlerts.alert_gainedVassal(winner.gameId, above_winner_lord_id, loser._id, winner._id);
 				}
 			}
-		});
+		}
 
 		// send notification to winner
-		dAlerts.alert_gainedVassal(winner.gameId, winner._id, loser._id, winner._id);
+		await dAlerts.alert_gainedVassal(winner.gameId, winner._id, loser._id, winner._id);
 
 		// vassal is no longer a king, he had no lord, now he does
 		// destroy king chatroom
@@ -104,7 +104,7 @@ dInit.set_lord_and_vassal = async function(winner_id, loser_id) {
 
 	if (process.env.DOMINUS_TEST != 'true') {
 		// send notification
-		dAlerts.alert_newLord(loser.gameId, loser._id, winner._id);
+		await dAlerts.alert_newLord(loser.gameId, loser._id, winner._id);
 
 		await Queues.addAsyncOrLog('enemies_together_check', {gameId:loser.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:3000, timeout:1000*60*5}, loser.gameId);
 		await Queues.addAsyncOrLog('enemy_on_building_check', {gameId:loser.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:3000, timeout:1000*60*5}, loser.gameId);

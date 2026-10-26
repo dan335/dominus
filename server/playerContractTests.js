@@ -196,6 +196,67 @@ if (Meteor.isServer) {
           equal(readFlag(theirs, 1), false, 'still unread');
         });
 
+        // The alert methods run as a simulation in the browser too (upgrade
+        // PR 18): each is sync, and ends where the real calls do.
+        test('alert simulations: each is sync, and ends where the real calls do', function() {
+          var user = w.users[0]._id;
+          var me = w.players[0]._id;
+          var simulation = {userId: user, isSimulation: true, connection: null, unblock: function() {}, setUserId: function() {}};
+          var server = {userId: user, isSimulation: false, connection: null, unblock: function() {}, setUserId: function() {}};
+          var simulate = function(name, args) {
+            var returned = Meteor.server.method_handlers[name].apply(simulation, args);
+            assert(!dTest.isPromise(returned), name + ': the simulation is sync');
+            equal(returned, undefined, name + ' simulation returns nothing');
+          };
+          var real = function(name, args) {
+            dTest.ddp.resetRateLimits();
+            equal(clients[0].call.apply(null, [name].concat(args)), undefined, name + ' returns nothing');
+          };
+          var ids = [];
+          var state = function() {
+            return JSON.stringify({
+              hidden: w.player(0).hideAlertsMine,
+              read: ids.map(function(id) { return _.pluck(Alerts.findOne(id).playerIds, 'read'); })
+            });
+          };
+          var play = function(call) {
+            Players.update(me, {$set: {hideAlertsMine: []}});
+            ids = [insertAlert('alert_receivedArmy', [0, 1]), insertAlert('alert_battleStart', [0]), insertAlert('alert_battleStart', [0, 1])];
+            call('hideAlertMine', [me, 'alert_receivedArmy']);
+            call('hideAlertMine', [me, 'alert_battleStart']);
+            call('showAlertMine', [me, 'alert_receivedArmy']);
+            call('markAlertAsRead', [w.gameId, ids[0]]);
+            var middle = state();
+            call('markAllAlertsAsRead', [me]);
+            var end = state();
+            Alerts.remove({_id: {$in: ids}});
+            return [middle, end];
+          };
+
+          var fromServer = play(real);
+          var fromSimulations = play(simulate);
+          equal(fromSimulations[0], fromServer[0], 'after hiding, showing and reading one');
+          equal(fromSimulations[1], fromServer[1], 'after reading all');
+          equal(fromServer[0], JSON.stringify({hidden: ['alert_battleStart'], read: [[true, false], [false], [false, false]]}), 'the middle');
+          equal(fromServer[1], JSON.stringify({hidden: ['alert_battleStart'], read: [[true, false], [true], [true, false]]}), 'the end');
+          Players.update(me, {$set: {hideAlertsMine: []}});
+
+          // the server's part is async
+          var returned = Meteor.server.method_handlers.markAllAlertsAsRead.apply(server, [me]);
+          assert(dTest.isPromise(returned), 'the server\'s part is a promise');
+          equal(dTest.settle(returned), undefined, 'that returns nothing');
+
+          // a refused simulation throws, as the real call does
+          var error = dTest.throws(function() {
+            return Meteor.server.method_handlers.markAllAlertsAsRead.apply(simulation, [w.players[1]._id]);
+          });
+          equal(error && error.error, 'No player found.', 'refused in the simulation too');
+          error = dTest.throws(function() {
+            return Meteor.server.method_handlers.hideAlertMine.apply(simulation, [me, 'alert_madeUp']);
+          });
+          equal(error && error.error, 'Alert type not found.', 'an unknown type too');
+        });
+
 
         // --- markers ---
 

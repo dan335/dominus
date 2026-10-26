@@ -249,8 +249,8 @@ Meteor.methods({
             if (player._id != building.playerId) {
               var from = player._id;
               var to = building.playerId;
-              dAlerts.alert_receivedArmy(gameId, to, from, army);
-              dAlerts.gAlert_sentArmy(gameId, from, to, army);
+              await dAlerts.alert_receivedArmy(gameId, to, from, army);
+              await dAlerts.gAlert_sentArmy(gameId, from, to, army);
             }
 
             return true

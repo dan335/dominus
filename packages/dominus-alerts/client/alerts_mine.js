@@ -8,7 +8,7 @@ Template.alerts_mine.helpers({
 Template.alerts_mine.events({
     'click #markAllAlertsAsReadButton': function(event, template) {
       event.preventDefault();
-      Meteor.call('markAllAlertsAsRead', Session.get('playerId'));
+      dFunc.callAndForget('markAllAlertsAsRead', Session.get('playerId'));
     },
 
     'click #showMoreButton': function(event, template) {

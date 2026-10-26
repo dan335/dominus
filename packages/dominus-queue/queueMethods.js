@@ -1,38 +1,38 @@
 Meteor.methods({
-  pauseJobQueue: function() {
+  pauseJobQueue: async function() {
     // allow trusted server-side calls (this.connection === null, e.g. the
     // relationship-rebuild job that pauses the queue while it runs); block
     // client (DDP) calls from non-admins -- otherwise any player could freeze
     // battles/income/movement for every game on the server.
     if (this.connection) {
-      var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
+      var user = await Meteor.users.findOneAsync(this.userId, {fields:{admin:1}});
       if (!user || !user.admin) {
         throw new Meteor.Error('not-authorized', 'Must be admin.');
       }
     }
 
     // a pause from the admin panel is deliberate; the stuck-pause safety net leaves it alone
-    Queues.pauseAll(!!this.connection);
+    await Queues.pauseAllAsync(!!this.connection);
   },
 
 
-  resumeJobQueue: function() {
+  resumeJobQueue: async function() {
     // allow trusted server-side calls; block non-admin client calls (see pauseJobQueue).
     if (this.connection) {
-      var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
+      var user = await Meteor.users.findOneAsync(this.userId, {fields:{admin:1}});
       if (!user || !user.admin) {
         throw new Meteor.Error('not-authorized', 'Must be admin.');
       }
     }
 
-    Queues.resumeAll();
+    await Queues.resumeAllAsync();
   },
 
 
-  clearUniqueIdsForJob: function(jobName) {
+  clearUniqueIdsForJob: async function(jobName) {
     // allow trusted server-side calls; block non-admin client calls (see pauseJobQueue).
     if (this.connection) {
-      var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
+      var user = await Meteor.users.findOneAsync(this.userId, {fields:{admin:1}});
       if (!user || !user.admin) {
         throw new Meteor.Error('not-authorized', 'Must be admin.');
       }
@@ -47,18 +47,18 @@ Meteor.methods({
       return;
     }
 
-    Queues.clearUniqueIdsForJob(jobName);
+    await Queues.clearUniqueIdsForJob(jobName);
   },
 
-  runBullJob: function(jobName, jobData) {
+  runBullJob: async function(jobName, jobData) {
     check(jobName, String);
     check(jobData, Match.Any);
-    var user = Meteor.users.findOne(this.userId, {fields:{admin:1}});
+    var user = await Meteor.users.findOneAsync(this.userId, {fields:{admin:1}});
     if (!user || !user.admin) {
       throw new Meteor.Error('control.games.addGame', 'Must be admin.');
     }
 
     console.log('running job', jobName, jobData);
-    Queues.add(jobName, jobData, {delay:0, timeout:1000*60*5}, false);
+    await Queues.addAsync(jobName, jobData, {delay:0, timeout:1000*60*5}, false);
   }
 });

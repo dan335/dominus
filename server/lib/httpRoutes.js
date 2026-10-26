@@ -7,10 +7,10 @@
 // compression and the app's HTML, and anything that doesn't match falls
 // through to those. (Meteor 3 renames rawConnectHandlers to rawHandlers.)
 //
-// A handler gets (req, res) and may be async. Until the server code is async
-// it runs in a Fiber, as Picker ran it, so it can still use the synchronous
-// collection API. If it throws or rejects, the request gets a 500 and the
-// server carries on.
+// A handler gets (req, res) and may be async. It runs in Meteor's environment
+// (Meteor.bindEnvironment; on Meteor 2.16 that is a fiber, which the *Async
+// collection calls still need there). If it throws or rejects, the request
+// gets a 500 and the server carries on.
 
 if (Meteor.isServer) {
 

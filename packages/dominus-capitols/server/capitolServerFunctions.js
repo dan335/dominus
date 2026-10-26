@@ -60,11 +60,11 @@ dCapitals.setOwner = async function(gameId, playerId, capital_id) {
   if (capital) {
     if (capital.playerId != playerId) {
       if (capital.playerId) {
-        dAlerts.alert_lostCapital(gameId, capital.playerId, capital._id);
+        await dAlerts.alert_lostCapital(gameId, capital.playerId, capital._id);
       }
 
       await Capitals.updateAsync(capital_id, {$set:{playerId:playerId}});
-      dAlerts.alert_capturedCapital(gameId, playerId, capital._id);
+      await dAlerts.alert_capturedCapital(gameId, playerId, capital._id);
     }
   }
 }

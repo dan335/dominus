@@ -62,7 +62,7 @@ dChat.removeOwnerFromRoom = async function(room_id) {
 								$pull:{admins:highest_id}
 							})
 
-							dAlerts.alert_chatroomNowOwner(highest_id, room_id)
+							await dAlerts.alert_chatroomNowOwner(highest_id, room_id)
 						} else {
 							throw new Meteor.Error('Cannot find someone make owner of room.')
 						}
@@ -88,7 +88,7 @@ dChat.removeOwnerFromRoom = async function(room_id) {
 									$set:{owner:highest_id}
 								})
 
-								dAlerts.alert_chatroomNowOwner(highest_id, room_id)
+								await dAlerts.alert_chatroomNowOwner(highest_id, room_id)
 							} else {
 								throw new Meteor.Error('Cannot find someone make owner of room.')
 							}
@@ -146,7 +146,7 @@ dChat.updateKingChatroom = async function(gameId, playerId) {
 				} else {
 					// create a room for king
 					await dChat.createChatroom(gameId, 'King '+king.username+' and Vassals', 'king', king._id, members, memberData)
-					dAlerts.alert_newKingChatroom(player.gameId, king._id)
+					await dAlerts.alert_newKingChatroom(player.gameId, king._id)
 				}
 			} else {
 				// destroy room if there is one

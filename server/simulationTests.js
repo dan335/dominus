@@ -377,7 +377,7 @@ if (Meteor.isServer) {
       });
 
       run('simulation: a start that fails half way puts back everything it replaced', function() {
-        var originals = {add: Queues.add, makeNewID: Players._makeNewID, send: Email.send};
+        var originals = {addAsync: Queues.addAsync, makeNewID: Players._makeNewID, send: Email.send};
         var createWithSeeds = Random.createWithSeeds;
         var calls = 0;
         var e;
@@ -394,7 +394,7 @@ if (Meteor.isServer) {
         assert(e && e.message == 'planted failure', 'the failure: ' + (e && e.message));
         assert(!dClock.isFixed() && !dRandom.isSeeded(), 'the clock and random numbers are back to normal');
         assert(Players._makeNewID === originals.makeNewID, 'Players ids are back to normal');
-        assert(Queues.add === originals.add && Email.send === originals.send, 'Queues.add and Email.send are back');
+        assert(Queues.addAsync === originals.addAsync && Email.send === originals.send, 'Queues.addAsync and Email.send are back');
         assert(!_.some(Queues.queueNames, function(name) { return Queues[name].paused; }), 'Bull is taking jobs again');
       });
 
@@ -447,9 +447,10 @@ if (Meteor.isServer) {
       run('simulation: a skipped relationship update breaks an invariant', function() {
         var played = dTest.playSimulation({steps: 4, before: function() {
           // the job that recounts vassals after a castle is taken is lost
-          var add = Queues.add;
-          Queues.add = function(name) {
-            if (name != 'updateVassalAllyCountMultiple') return add.apply(this, arguments);
+          var addAsync = Queues.addAsync;
+          Queues.addAsync = async function(name) {
+            if (name != 'updateVassalAllyCountMultiple') return addAsync.apply(this, arguments);
+            return false;
           };
         }});
         var problems = played[3].invariantProblems;

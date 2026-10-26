@@ -8,7 +8,7 @@ if (process.env.DOMINUS_WORKER == 'true') {
     check(job.data.username, String);
 
     await dGame.deleteGameAccount(job.data.playerId);
-    dAlerts.gAlert_accountDeleted(job.data.gameId, job.data.username);
+    await dAlerts.gAlert_accountDeleted(job.data.gameId, job.data.username);
   });
 }
 

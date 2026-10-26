@@ -109,19 +109,27 @@ function propertyKey(property) {
   return property.key.type === 'Identifier' ? property.key.name : String(property.key.value);
 }
 
-// the names of the app's async functions, as {name: 'file:line'}
+// The names of the app's async functions, as {name: 'file:line'}. A bare
+// name counts here only when it is the file's own top-level function or an
+// implicit global (`foo = async function`); a function declared inside
+// another one is found by scope instead (localDefinition).
 function asyncDefinitions(asts) {
   const names = Object.create(null);
   const add = function(name, file, node) {
     if (name && !name.startsWith('this.') && !name.includes('?')) names[name] = names[name] || file + ':' + node.loc.start.line;
   };
+  const nested = function(node) { return !!enclosingFunction(node.type === 'FunctionDeclaration' ? node : node.parent); };
   for (const [file, ast] of Object.entries(asts)) {
     each(ast, function(node) {
       if (!isFunction(node) || !node.async) return;
       const parent = node.parent;
-      if (node.type === 'FunctionDeclaration' && node.id) add(node.id.name, file, node);
-      else if (parent.type === 'VariableDeclarator' && parent.init === node) add(dottedName(parent.id), file, node);
-      else if (parent.type === 'AssignmentExpression' && parent.right === node) add(dottedName(parent.left), file, node);
+      if (node.type === 'FunctionDeclaration' && node.id) { if (!nested(node)) add(node.id.name, file, node); }
+      else if (parent.type === 'VariableDeclarator' && parent.init === node) {
+        if (parent.id.type !== 'Identifier' || !nested(parent)) add(dottedName(parent.id), file, node);
+      }
+      else if (parent.type === 'AssignmentExpression' && parent.right === node) {
+        if (parent.left.type !== 'Identifier' || !localDefinition(parent, parent.left.name)) add(dottedName(parent.left), file, node);
+      }
       else if (parent.type === 'Property' && parent.value === node) {
         const outer = objectName(parent.parent);
         const key = propertyKey(parent);
@@ -132,6 +140,53 @@ function asyncDefinitions(asts) {
   return names;
 }
 
+// The declaration of a bare name in the scopes around node (the functions it
+// is in, then its file's top level), or null: {node, async}, where async is
+// whether it is declared as an async function. A parameter or a variable that
+// isn't set to a function counts as declared, not async.
+function localDefinition(node, name) {
+  for (let scope = enclosingFunction(node) || rootOf(node); scope; scope = scope.parent ? (enclosingFunction(scope) || rootOf(scope)) : null) {
+    const found = declarationIn(scope, name);
+    if (found) return found;
+    if (!scope.parent) break;
+  }
+  return null;
+}
+
+const declarationCache = new WeakMap();
+function declarationIn(scope, name) {
+  let table = declarationCache.get(scope);
+  if (!table) {
+    table = Object.create(null);
+    const set = function(n, value) { if (!(n in table)) table[n] = value; };
+    if (isFunction(scope)) {
+      for (const p of scope.params) if (p.type === 'Identifier') set(p.name, {node: p, async: false});
+      if (scope.type !== 'FunctionDeclaration' && scope.id) set(scope.id.name, {node: scope, async: !!scope.async});
+    }
+    const body = isFunction(scope) ? scope.body : scope;
+    const visit = function(node) {
+      if (!node || typeof node.type !== 'string') return;
+      if (node.type === 'FunctionDeclaration') {
+        if (node.id) set(node.id.name, {node: node, async: !!node.async});
+        return;
+      }
+      if (isFunction(node)) return;
+      if (node.type === 'VariableDeclarator' && node.id.type === 'Identifier') {
+        set(node.id.name, {node: node, async: !!(isFunction(node.init) && node.init.async)});
+      }
+      for (const key of Object.keys(node)) {
+        if (key === 'parent' || key === 'loc') continue;
+        const value = node[key];
+        if (Array.isArray(value)) value.forEach(visit);
+        else if (value && typeof value.type === 'string') visit(value);
+      }
+    };
+    visit(body);
+    declarationCache.set(scope, table);
+  }
+  return table[name] || null;
+}
+
 // why this call returns a promise, or null
 function promiseReason(call, asyncNames, rawNames) {
   const callee = call.callee;
@@ -139,7 +194,15 @@ function promiseReason(call, asyncNames, rawNames) {
   const last = callee.type === 'MemberExpression' && !callee.computed ? callee.property.name :
     callee.type === 'Identifier' ? callee.name : null;
 
-  if (name && asyncNames[name]) return 'async function ' + name + ' (' + asyncNames[name] + ')';
+  if (callee.type === 'Identifier') {
+    // a name declared around the call is that function, whatever other files call theirs
+    const local = localDefinition(call, callee.name);
+    if (local) {
+      if (local.async) return 'async function ' + callee.name + ' (line ' + local.node.loc.start.line + ')';
+    } else if (asyncNames[name]) {
+      return 'async function ' + name + ' (' + asyncNames[name] + ')';
+    }
+  } else if (name && asyncNames[name]) return 'async function ' + name + ' (' + asyncNames[name] + ')';
   if (last && /.Async$/.test(last) && !NOT_PROMISES.has(last)) return (name || last) + '() returns a promise';
   if (callee.type === 'Identifier' && callee.name === 'fetch') return 'fetch() returns a promise';
   if (callee.type !== 'MemberExpression' || callee.computed) return null;

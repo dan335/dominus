@@ -50,7 +50,7 @@ Mapmaker = {
       // find country center x,y for alert
       var x = Math.round(country.minX + (country.maxX - country.minX)/2);
       var y = Math.round(country.minY + (country.maxY - country.minY)/2);
-      dAlerts.gAlert_mapExpanded(gameId, numHexes, numCountries, x, y);
+      await dAlerts.gAlert_mapExpanded(gameId, numHexes, numCountries, x, y);
 		}
 
 		//console.timeEnd('addCountry');
@@ -94,7 +94,7 @@ Mapmaker = {
       // find country center x,y for alert
       var x = Math.round(country.minX + (country.maxX - country.minX)/2);
       var y = Math.round(country.minY + (country.maxY - country.minY)/2);
-      dAlerts.gAlert_mapExpanded(gameId, numHexes, numCountries, x, y);
+      await dAlerts.gAlert_mapExpanded(gameId, numHexes, numCountries, x, y);
 		}
 
 		//console.timeEnd('addCountry');

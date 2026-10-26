@@ -137,31 +137,11 @@ if (Meteor.isServer) {
     };
   };
 
-  // Tests record or stub the jobs code adds by replacing Queues.add. While the
-  // suites run, Queues.addAsync goes through a replaced Queues.add, so they
-  // see the jobs that converted (async) code adds too; it then resolves with
-  // true. Returns the function that puts Queues.addAsync back.
-  dTest.followQueuesAdd = function() {
-    var add = Queues.add;
-    var addAsync = Queues.addAsync;
-    Queues.addAsync = async function(jobName, data, options, uniqueId) {
-      if (Queues.add === add) {
-        return addAsync(jobName, data, options, uniqueId);
-      }
-      Queues.add(jobName, data, options, uniqueId);
-      return true;
-    };
-    return function() {
-      Queues.addAsync = addAsync;
-    };
-  };
-
   dTest.runSuites = function(list, t) {
     var runner = dTest.createRunner();
     dTest.lastRunner = runner;
     var watcher = dTest.watchProcess(runner);
     var resume = dTest.pauseBackground();
-    var unfollow = dTest.followQueuesAdd();
     try {
       list.forEach(function(suite) {
         try {
@@ -176,7 +156,6 @@ if (Meteor.isServer) {
     } finally {
       watcher.stop();
       resume();
-      unfollow();
     }
 
     runner.run('no unhandled rejections or uncaught exceptions during the run', function() {

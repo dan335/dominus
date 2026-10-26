@@ -67,11 +67,11 @@ DDPRateLimiter.addRule(myAlertsSubRule, 30, 5000);
 
 
 // client only collection
-Meteor.publish('alertPlayer', function(playerId) {
+Meteor.publish('alertPlayer', async function(playerId) {
     check(playerId, Match.OneOf(String, null));
     var self = this
     var cur = Players.find(playerId, {fields: {userId:1, username:1, x:1, y:1, castle_id:1}})
-    Mongo.Collection._publishCursor(cur, self, 'alertplayers')
+    await Mongo.Collection._publishCursor(cur, self, 'alertplayers')
     return self.ready();
 })
 
@@ -86,10 +86,10 @@ DDPRateLimiter.addRule(alertPlayerSubRule, 30, 5000);
 
 
 
-Meteor.publish('alertArmy', function(army_id) {
+Meteor.publish('alertArmy', async function(army_id) {
     check(army_id, Match.OneOf(String, null));
     var cur = Armies.find({_id:army_id}, {fields: {playerId:1, name:1, username:1, x:1, y:1, castle_id:1}})
-    Mongo.Collection._publishCursor(cur, this, 'alertarmies')
+    await Mongo.Collection._publishCursor(cur, this, 'alertarmies')
     return this.ready();
 });
 
@@ -104,10 +104,10 @@ DDPRateLimiter.addRule(alertArmySubRule, 30, 5000);
 
 
 
-Meteor.publish('alertVillage', function(village_id) {
+Meteor.publish('alertVillage', async function(village_id) {
     check(village_id, Match.OneOf(String, null));
     var cur = Villages.find({_id:village_id}, {fields: {playerId:1, name:1, username:1, x:1, y:1, castle_id:1}})
-    Mongo.Collection._publishCursor(cur, this, 'alertvillages')
+    await Mongo.Collection._publishCursor(cur, this, 'alertvillages')
     return this.ready();
 });
 
@@ -122,10 +122,10 @@ DDPRateLimiter.addRule(alertVillageSubRule, 30, 5000);
 
 
 
-Meteor.publish('alertCastle', function(castle_id) {
+Meteor.publish('alertCastle', async function(castle_id) {
     check(castle_id, Match.OneOf(String, null));
     var cur = Castles.find({_id:castle_id}, {fields: {playerId:1, name:1, username:1, x:1, y:1, castle_id:1}})
-    Mongo.Collection._publishCursor(cur, this, 'alertcastles')
+    await Mongo.Collection._publishCursor(cur, this, 'alertcastles')
     return this.ready();
 });
 
@@ -141,10 +141,10 @@ DDPRateLimiter.addRule(alertCastleSubRule, 30, 5000);
 
 
 
-Meteor.publish('alertCapital', function(capital_id) {
+Meteor.publish('alertCapital', async function(capital_id) {
   check(capital_id, Match.OneOf(String, null));
   var cur = Capitals.find({_id:capital_id}, {fields:{playerId:1, x:1, y:1}});
-  Mongo.Collection._publishCursor(cur, this, 'alertcapitals');
+  await Mongo.Collection._publishCursor(cur, this, 'alertcapitals');
   return this.ready();
 });
 
@@ -159,11 +159,11 @@ DDPRateLimiter.addRule(alertCapitalSubRule, 30, 5000);
 
 
 
-Meteor.publish('alertChatroom', function(room_id) {
+Meteor.publish('alertChatroom', async function(room_id) {
     check(room_id, Match.OneOf(String, null));
     var self = this
     var cur = Rooms.find(room_id, {fields: {name:1}})
-    Mongo.Collection._publishCursor(cur, self, 'alertchatrooms')
+    await Mongo.Collection._publishCursor(cur, self, 'alertchatrooms')
     return self.ready();
 });
 
@@ -178,7 +178,7 @@ DDPRateLimiter.addRule(alertChatroomSubRule, 30, 5000);
 
 
 
-Meteor.publish('battleAlertTitles', function(gameId, numShow) {
+Meteor.publish('battleAlertTitles', async function(gameId, numShow) {
     check(gameId, Match.OneOf(String, null));
     check(numShow, Match.Integer);
     var self = this
@@ -194,7 +194,7 @@ Meteor.publish('battleAlertTitles', function(gameId, numShow) {
 
     //var cur = Battles2.find({showBattle:true, gameId:gameId},{sort:{updatedAt:-1}, limit:numShow, fields:fields})
     var cur = Battles2.find({gameId:gameId},{sort:{updatedAt:-1}, limit:numShow, fields:fields})
-    Mongo.Collection._publishCursor(cur, self, 'alertbattletitles')
+    await Mongo.Collection._publishCursor(cur, self, 'alertbattletitles')
     return self.ready();
 });
 
@@ -212,7 +212,7 @@ DDPRateLimiter.addRule(battleAlertTitlesSubRule, 30, 5000);
 // unread alerts
 // temporarily disable oplog until issue is fixed
 // https://github.com/meteor/meteor/issues/9087
-Meteor.publish('unreadAlerts', function(playerId, hideAlertsMine) {
+Meteor.publish('unreadAlerts', async function(playerId, hideAlertsMine) {
   check(playerId, String);
   check(hideAlertsMine, Match.OneOf([String], null));
   var self = this;
@@ -223,7 +223,7 @@ Meteor.publish('unreadAlerts', function(playerId, hideAlertsMine) {
   var find = {playerIds: {$elemMatch: {playerId:playerId, read:false}}, type:{$nin:hideAlertsMine}};
   var options = {fields:{_id:1}, disableOplog:true};
   var cur = Alerts.find(find, options);
-  Mongo.Collection._publishCursor(cur, self, 'unreadalerts');
+  await Mongo.Collection._publishCursor(cur, self, 'unreadalerts');
   return self.ready();
 });
 

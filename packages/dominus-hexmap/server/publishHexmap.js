@@ -98,12 +98,12 @@ DDPRateLimiter.addRule(countryOnScreenSubRule, 60, 5000);
 
 var countryIndexFields = {neighbors:1, minX:1, maxX:1, minY:1, maxY:1, minZ:1, maxZ:1, gameId:1};
 // public so logged out spectators can watch
-Meteor.publish('countryIndex', function(gameId) {
+Meteor.publish('countryIndex', async function(gameId) {
 	check(gameId, Match.OneOf(String, null));
 	if (Match.test(gameId, String)) {
 		var sub = this
 		var cur = Countries.find({gameId:gameId}, {fields: countryIndexFields});
-		Mongo.Collection._publishCursor(cur, sub, 'countryindex');
+		await Mongo.Collection._publishCursor(cur, sub, 'countryindex');
 		return sub.ready();
 	} else {
 		this.ready()

@@ -8,7 +8,7 @@ alertSharedEvents = {
       Template.instance().isOpen.set(true)
       // spectators have no alerts to mark, and global alerts have no read state
       if (Session.get('playerId') && template.data.playerIds) {
-        Meteor.call('markAlertAsRead', template.data.gameId, template.data._id)
+        dFunc.callAndForget('markAlertAsRead', template.data.gameId, template.data._id);
       }
     }
   },

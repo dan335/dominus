@@ -1,9 +1,12 @@
-Meteor.startup(function() {
+Meteor.startup(async function() {
   if (process.env.DOMINUS_WORKER == 'true') {
 
-    Meteor.call('resumeJobQueue', function(error, result) {
-      console.log('--- queue started ---');
-    });
+    try {
+      await Queues.resumeAllAsync();
+    } catch (error) {
+      // resumeAllAsync logged it, and Settings keeps isPaused
+    }
+    console.log('--- queue started ---');
 
     ['SIGINT', 'SIGTERM', 'SIGHUP'].forEach(function(signal) {
       process.on(signal, Meteor.bindEnvironment(() => {

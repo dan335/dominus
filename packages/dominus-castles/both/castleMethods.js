@@ -74,8 +74,8 @@ Meteor.methods({
 			// send alert
 			var from = player._id;
 			var to = playerId;
-			dAlerts.alert_receivedGoldFrom(gameId, to, from, amount, tax);
-			dAlerts.gAlert_sentGold(gameId, from, to, amount, tax);
+			await dAlerts.alert_receivedGoldFrom(gameId, to, from, amount, tax);
+			await dAlerts.gAlert_sentGold(gameId, from, to, amount, tax);
 
 			return amount - tax;
 		})();

@@ -82,9 +82,9 @@ Template.settings_panel.events({
 		var alertType = this.type;
 
 		if (hideAlert) {
-			Meteor.call('hideAlertMine', Session.get('playerId'), alertType);
+			dFunc.callAndForget('hideAlertMine', Session.get('playerId'), alertType);
 		} else {
-			Meteor.call('showAlertMine', Session.get('playerId'), alertType);
+			dFunc.callAndForget('showAlertMine', Session.get('playerId'), alertType);
 		}
   },
 

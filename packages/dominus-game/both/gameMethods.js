@@ -212,7 +212,7 @@ Meteor.methods({
 			await Villages.updateAsync({playerId: player._id}, {$set: {username: username}}, {multi: true});
 			await Armies.updateAsync({playerId: player._id}, {$set: {username: username}}, {multi: true});
 
-			dAlerts.gAlert_nameChange(player.gameId, player._id, previousUsername, username);
+			await dAlerts.gAlert_nameChange(player.gameId, player._id, previousUsername, username);
 
 			await Queues.addAsyncOrLog('generateTree', {gameId:player.gameId}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60}, player.gameId);
 		})();

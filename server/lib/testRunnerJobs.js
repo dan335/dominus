@@ -52,19 +52,20 @@ if (Meteor.isServer) {
     return opts.allowError ? {result: result} : result;
   };
 
-  // Replaces Queues.add while fn runs, so the jobs it adds are recorded and
-  // not run (Queues.addAsync too: see dTest.followQueuesAdd). Returns the
-  // jobs: [{name, data, options, uniqueId}].
+  // Replaces Queues.addAsync while fn runs (and the promise it returns
+  // settles), so the jobs it adds are recorded and not run; each resolves with
+  // true. Returns the jobs: [{name, data, options, uniqueId}].
   dTest.recordJobs = function(fn) {
     var jobs = [];
-    var original = Queues.add;
-    Queues.add = function(jobName, data, options, uniqueId) {
+    var original = Queues.addAsync;
+    Queues.addAsync = async function(jobName, data, options, uniqueId) {
       jobs.push({name: jobName, data: data, options: options, uniqueId: uniqueId});
+      return true;
     };
     try {
-      fn(jobs);
+      dTest.settle(fn(jobs));
     } finally {
-      Queues.add = original;
+      Queues.addAsync = original;
     }
     return jobs;
   };

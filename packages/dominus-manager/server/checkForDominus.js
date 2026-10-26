@@ -79,7 +79,7 @@ dManager.checkForDominus = async function(gameId) {
 	//if (dominus) {
   if (game.lastDominusPlayerId) {
 		if (dominus && !is_still_dominus) {
-			dAlerts.alert_noLongerDominus(gameId, dominus._id)
+			await dAlerts.alert_noLongerDominus(gameId, dominus._id)
 		}
 	}
 }
@@ -101,8 +101,8 @@ var remove_dominus = async function(gameId) {
 	check(gameId, String);
 	let dominus = await Players.findOneAsync({is_dominus:true, gameId:gameId}, {fields:{_id:1}})
 	if (dominus) {
-		dAlerts.gAlert_noLongerDominusNewUser(gameId, dominus._id);
-		dAlerts.alert_noLongerDominusNewUser(gameId, dominus._id);
+		await dAlerts.gAlert_noLongerDominusNewUser(gameId, dominus._id);
+		await dAlerts.alert_noLongerDominusNewUser(gameId, dominus._id);
 		await Players.updateAsync(dominus._id, {$set: {is_dominus: false}});
 	}
 }
@@ -141,6 +141,6 @@ var new_dominus_event = async function(gameId, dominusPlayer) {
 	await dManager.createNextGame();
 
 	// send notifications
-	dAlerts.gAlert_newDominus(dominusPlayer.gameId, dominusPlayer._id, lastDominusPlayerId);
-	dAlerts.alert_youAreDominus(dominusPlayer.gameId, dominusPlayer._id);
+	await dAlerts.gAlert_newDominus(dominusPlayer.gameId, dominusPlayer._id, lastDominusPlayerId);
+	await dAlerts.alert_youAreDominus(dominusPlayer.gameId, dominusPlayer._id);
 }
