@@ -176,7 +176,7 @@ BattleJob.prototype.processBattleResults = async function() {
 
           dAlerts.alert_villageDestroyed(self.gameId, army.playerId, self.battleData._id, army.name);
           await Villages.removeAsync(army._id);
-          Mapmaker.buildingRemoved(self.gameId, army.x, army.y);
+          await Mapmaker.buildingRemoved(self.gameId, army.x, army.y);
         } else {
           await Villages.updateAsync(army._id, {$inc:inc});
         }

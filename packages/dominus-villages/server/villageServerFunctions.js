@@ -41,7 +41,7 @@ dVillages.destroyVillage = async function(villageId) {
 
   await Villages.removeAsync(villageId);
   await Markers.removeAsync({unitType:'village', unitId:villageId});
-  Mapmaker.buildingRemoved(village.gameId, village.x, village.y);
+  await Mapmaker.buildingRemoved(village.gameId, village.x, village.y);
 
   if (army) {
     return army._id;

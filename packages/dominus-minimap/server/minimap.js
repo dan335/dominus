@@ -1,10 +1,10 @@
-Minimap.updateMapSizeSetting = function(gameId) {
-  var minX = Hexes.findOne({gameId:gameId, isBorder:true}, {fields:{x:1}, sort:{x:1}});
-  var maxX = Hexes.findOne({gameId:gameId, isBorder:true}, {fields:{x:1}, sort:{x:-1}});
-  var minY = Hexes.findOne({gameId:gameId, isBorder:true}, {fields:{y:1}, sort:{y:1}});
-  var maxY = Hexes.findOne({gameId:gameId, isBorder:true}, {fields:{y:1}, sort:{y:-1}});
-  var minZ = Hexes.findOne({gameId:gameId, isBorder:true}, {fields:{z:1}, sort:{z:1}});
-  var maxZ = Hexes.findOne({gameId:gameId, isBorder:true}, {fields:{z:1}, sort:{z:-1}});
+Minimap.updateMapSizeSetting = async function(gameId) {
+  var minX = await Hexes.findOneAsync({gameId:gameId, isBorder:true}, {fields:{x:1}, sort:{x:1}});
+  var maxX = await Hexes.findOneAsync({gameId:gameId, isBorder:true}, {fields:{x:1}, sort:{x:-1}});
+  var minY = await Hexes.findOneAsync({gameId:gameId, isBorder:true}, {fields:{y:1}, sort:{y:1}});
+  var maxY = await Hexes.findOneAsync({gameId:gameId, isBorder:true}, {fields:{y:1}, sort:{y:-1}});
+  var minZ = await Hexes.findOneAsync({gameId:gameId, isBorder:true}, {fields:{z:1}, sort:{z:1}});
+  var maxZ = await Hexes.findOneAsync({gameId:gameId, isBorder:true}, {fields:{z:1}, sort:{z:-1}});
 
   var map_size = {
     minX: minX ? minX.x : null,
@@ -15,7 +15,7 @@ Minimap.updateMapSizeSetting = function(gameId) {
     maxZ: maxZ ? maxZ.z : null
   }
 
-  Games.update(gameId, {$set: {map_size:map_size}});
+  await Games.updateAsync(gameId, {$set: {map_size:map_size}});
 }
 
 

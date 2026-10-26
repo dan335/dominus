@@ -24,6 +24,11 @@ test('build a village with an army on a grain hex, then upgrade and destroy a fi
   // build: the army joins the new village, and the panel shows it
   await page.goto(`/game/${w.gameId}/army/${hex.x}/${hex.y}/${army}`);
   await expect(page.locator('#rp_info_army')).toBeVisible();
+  // In development a village is built in a second, and the 1 min cron then
+  // finishes it, at the start of each minute: build clear of that tick, so
+  // the village is still under construction when it is read below.
+  const second = new Date().getSeconds();
+  if (second > 45) await page.waitForTimeout((62 - second) * 1000);
   await page.click('#build_village_button');
   await expect(page).toHaveURL(new RegExp(`/game/${w.gameId}/village/${hex.x}/${hex.y}/\\w+$`));
   const built = findOne('Villages', { playerId: me.playerId, x: hex.x, y: hex.y });

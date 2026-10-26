@@ -207,15 +207,33 @@ if (Meteor.isServer) {
 
       run('/astroepatreon tells astroe and dominus 2 about a Patreon update and answers at once', function() {
         var urls = [];
-        var get = HTTP.get;
-        HTTP.get = function(url) { urls.push(url); };
+        var logged = [];
+        var realFetch = fetch;
+        var log = console.log;
+        var answer = function(status) {
+          return Promise.resolve({status: status, arrayBuffer: function() { return Promise.resolve(new ArrayBuffer(0)); }});
+        };
         try {
+          console.log = function(value) { logged.push(value instanceof Error ? 'error: ' + value.message : String(value)); };
+
+          fetch = function(url) { urls.push(url); return answer(200); };
           var res = request('GET', '/astroepatreon');
           equal(res.status, 200, 'status');
           equal(res.body, '', 'no body');
           equal(urls.join(' '), 'http://astroe.io/patreonsync http://dominus2.io/patreonsync', 'both told');
+          dTest.sleep(50);
+          assert(_.contains(logged, 'notifying astroe of patreon update'), 'astroe logged');
+          assert(_.contains(logged, 'notifying dominus 2 of patreon update'), 'dominus 2 logged');
+
+          // a 404 and a network error are logged, as HTTP.get's errors were, and the route still answers
+          logged = [];
+          fetch = function(url) { return /astroe/.test(url) ? answer(404) : Promise.reject(new Error('no route to host')); };
+          equal(request('GET', '/astroepatreon').status, 200, 'status when both fail');
+          dTest.sleep(50);
+          equal(JSON.stringify(logged.sort()), JSON.stringify(['error: failed [404] http://astroe.io/patreonsync', 'error: no route to host']), 'both failures logged');
         } finally {
-          HTTP.get = get;
+          fetch = realFetch;
+          console.log = log;
         }
       });
 

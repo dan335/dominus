@@ -52,8 +52,8 @@ Mappather.findCountriesInPath = async function(path) {
     fromY = lastPath.y;
   }
 
-  const fromCountryId = Mapmaker.coordsToCountryId(path.gameId, fromX, fromY);
-  const toCountryId = Mapmaker.coordsToCountryId(path.gameId, path.x, path.y);
+  const fromCountryId = await Mapmaker.coordsToCountryId(path.gameId, fromX, fromY);
+  const toCountryId = await Mapmaker.coordsToCountryId(path.gameId, path.x, path.y);
 
   if (fromCountryId == toCountryId) {
     path.countryIds = [fromCountryId];

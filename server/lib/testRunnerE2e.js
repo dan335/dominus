@@ -18,7 +18,7 @@ if (Meteor.isServer) {
     var byName = {Players: Players, Castles: Castles, Villages: Villages, Armies: Armies, Armypaths: Armypaths,
       Capitals: Capitals, Market: Market, Battles2: Battles2, Roomchats: Roomchats, Rooms: Rooms, Alerts: Alerts,
       Games: Games, Settings: Settings, Forumtopics: Forumtopics, Forumposts: Forumposts, users: Meteor.users,
-      Markers: Markers, MarkerGroups: MarkerGroups, Gamesignups: Gamesignups, Hexes: Hexes, Rounds: Rounds};
+      Markers: Markers, MarkerGroups: MarkerGroups, Gamesignups: Gamesignups, Hexes: Hexes, Rounds: Rounds, Countries: Countries};
     var collection = byName[collectionName] || _.find(dTest.gameCollections(), function(c) { return c._name == collectionName; });
     if (!collection) throw new Error('no collection ' + collectionName);
     return collection;
@@ -158,7 +158,7 @@ if (Meteor.isServer) {
         username: player.username, name: 'E2E village', level: 1, under_construction: false, created_at: new Date(),
         income: dTest.settle(dVillages.resourcesFromSurroundingHexes(player.gameId, x, y, _s.villages.num_rings_village))},
         dTest.soldierCounts({})));
-      Mapmaker.buildingAdded(player.gameId, x, y);
+      dTest.settle(Mapmaker.buildingAdded(player.gameId, x, y));
       return id;
     },
 
@@ -195,6 +195,18 @@ if (Meteor.isServer) {
       refuseInProduction();
       if (!/^E2E /.test((Games.findOne(gameId, {fields: {name: 1}}) || {}).name)) throw new Error('not an E2E game: ' + gameId);
       return Games.update(gameId, {$set: fields});
+    },
+
+    // queues the jobs that draw an E2E game's minimap, as a new country does:
+    // each country's border mask, which queues the game's minimap. The
+    // worker runs them.
+    queueMinimap: function(gameId) {
+      refuseInProduction();
+      if (!/^E2E /.test((Games.findOne(gameId, {fields: {name: 1}}) || {}).name)) throw new Error('not an E2E game: ' + gameId);
+      Countries.find({gameId: gameId}, {fields: {_id: 1}}).forEach(function(country) {
+        dTest.settle(Queues.addAsync('createCountryMask', {countryId: country._id}, {delay: 0, timeout: 1000 * 60}, country._id));
+      });
+      return Countries.find({gameId: gameId}).count();
     },
 
     // runs a cron's body now, e.g. '1 min job', so the worker takes the jobs

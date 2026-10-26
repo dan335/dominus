@@ -113,10 +113,10 @@ if (Meteor.isServer) {
     // one country to start on; createPlayer adds more when it needs room
     var sizes = _.pick(_s.mapmaker, 'minHexesInCountry', 'maxHexesInCountry');
     try {
-      Mapmaker.eraseMap(w.gameId);
+      dTest.settle(Mapmaker.eraseMap(w.gameId));
       _s.mapmaker.minHexesInCountry = 200;
       _s.mapmaker.maxHexesInCountry = 200;
-      Mapmaker.addCountry(w.gameId, true);
+      dTest.settle(Mapmaker.addCountry(w.gameId, true));
       dTest.settle(dManager.startGame(Games.findOne(w.gameId), true));
     } finally {
       _.extend(_s.mapmaker, sizes);
@@ -162,7 +162,7 @@ if (Meteor.isServer) {
       Villages.find({gameId: w.gameId}).forEach(function(v) { taken[v.x + '_' + v.y] = true; });
       (skip || []).forEach(function(h) { taken[h.x + '_' + h.y] = true; });
       var hex = _.find(Hexes.find({gameId: w.gameId}, {sort: {x: 1, y: 1}}).fetch(), function(h) {
-        return !taken[h.x + '_' + h.y] && !h.hasBuilding && (!filter || filter(h)) && Mapmaker.coordsToCountryId(w.gameId, h.x, h.y);
+        return !taken[h.x + '_' + h.y] && !h.hasBuilding && (!filter || filter(h)) && dTest.settle(Mapmaker.coordsToCountryId(w.gameId, h.x, h.y));
       });
       if (!hex) throw new Error('FAIL: no free hex in the test world');
       return {x: hex.x, y: hex.y};

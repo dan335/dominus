@@ -65,7 +65,7 @@ if (Meteor.isServer) {
 
           // three destinations, chosen the same way every time
           var hexes = Hexes.find({gameId: sim.gameId, hasBuilding: {$ne: true}}, {sort: {x: 1, y: 1}}).fetch();
-          hexes = _.filter(hexes, function(h) { return Mapmaker.coordsToCountryId(sim.gameId, h.x, h.y); });
+          hexes = _.filter(hexes, function(h) { return dTest.settle(Mapmaker.coordsToCountryId(sim.gameId, h.x, h.y)); });
           var near = function(from, d, not) {
             var hex = _.find(hexes, function(h) {
               return hexDistance(from.x, from.y, h.x, h.y) == d && hexDistance(castle.x, castle.y, h.x, h.y) >= 2 &&

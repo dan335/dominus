@@ -59,9 +59,9 @@ if (Meteor.isServer) {
         var hex = fields && _.has(fields, 'x') ? {x: fields.x, y: fields.y} : w.freeHex();
         var id = Villages.insert(_.extend({gameId: w.gameId, x: hex.x, y: hex.y, playerId: w.players[i]._id,
           user_id: w.users[i]._id, username: w.players[i].username, name: 'Testville', level: 1,
-          countryId: Mapmaker.coordsToCountryId(w.gameId, hex.x, hex.y), income: resources(),
+          countryId: dTest.settle(Mapmaker.coordsToCountryId(w.gameId, hex.x, hex.y)), income: resources(),
           under_construction: false, created_at: new Date(), lastIncomeUpdate: new Date()}, dTest.soldierCounts({}), fields || {}));
-        Mapmaker.buildingAdded(w.gameId, hex.x, hex.y);
+        dTest.settle(Mapmaker.buildingAdded(w.gameId, hex.x, hex.y));
         return Villages.findOne(id);
       }
 
@@ -86,7 +86,7 @@ if (Meteor.isServer) {
           var country = Countries.findOne({gameId: w.gameId});
           c = dTest.settle(dCapitals.createCapital(w.gameId, country._id));
           if (!c) throw new Error('FAIL: could not place a capital');
-          Mapmaker.buildingAdded(w.gameId, c.x, c.y);
+          dTest.settle(Mapmaker.buildingAdded(w.gameId, c.x, c.y));
         }
         return Capitals.findOne(c._id);
       }
@@ -96,7 +96,7 @@ if (Meteor.isServer) {
         Armypaths.remove({gameId: w.gameId});
         Villages.find({gameId: w.gameId}).forEach(function(v) {
           Villages.remove(v._id);
-          Mapmaker.buildingRemoved(w.gameId, v.x, v.y);
+          dTest.settle(Mapmaker.buildingRemoved(w.gameId, v.x, v.y));
         });
         Markers.remove({gameId: w.gameId});
         Dailystats.remove({gameId: w.gameId});

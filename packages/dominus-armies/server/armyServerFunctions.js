@@ -22,7 +22,7 @@ dArmies.create = async function(playerId, soldiers, x, y, last_move_at) {
   var fields = {male:1, gameId:1, playerId:1, userId:1, username:1, x:1, y:1, allies_above:1, allies_below:1, castle_id:1, is_dominus:1};
   var player = await Players.findOneAsync(playerId, {fields:fields});
 
-  var countryId = Mapmaker.coordsToCountryId(player.gameId, x, y);
+  var countryId = await Mapmaker.coordsToCountryId(player.gameId, x, y);
   if (!countryId) {
     console.error('could not get country id in dArmies.create');
     return false;

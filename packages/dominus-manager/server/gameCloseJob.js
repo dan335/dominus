@@ -30,7 +30,7 @@ var checkForGameClose = async function() {
     await cleanupPlayers(game._id);
     await cleanupGame(game._id);
     await closeGame(game._id);
-    Mapbaker.deleteS3BakesForGame(game._id);
+    await Mapbaker.deleteS3BakesForGame(game._id);
   }
 }
 

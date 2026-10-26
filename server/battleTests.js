@@ -49,7 +49,7 @@ if (Meteor.isServer) {
     if (opts.type) find.type = opts.type;
     var hexes = Hexes.find(find, {sort: {x: 1, y: 1}}).fetch();
     hexes = _.filter(hexes, function(h) {
-      return Mapmaker.coordsToCountryId(sim.gameId, h.x, h.y) &&
+      return dTest.settle(Mapmaker.coordsToCountryId(sim.gameId, h.x, h.y)) &&
         !_.some(buildings, function(b) { return hexDistance(b.x, b.y, h.x, h.y) < 2; }) &&
         !_.some(opts.not || [], function(n) { return n.x == h.x && n.y == h.y; });
     });

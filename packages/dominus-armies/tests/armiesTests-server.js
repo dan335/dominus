@@ -20,12 +20,12 @@ Tinytest.add('armies.createName', function(test) {
 
 Tinytest.add('armies.create', function(test) {
   let gameId = stubTestGame();
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   let player = armiesTestsStubPlayer(gameId);
 
   _s.mapmaker.minHexesInCountry = 12;
   _s.mapmaker.maxHexesInCountry = 12;
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
 
   var soldiers = {'footmen':1};
 
@@ -42,12 +42,12 @@ Tinytest.add('armies.create', function(test) {
 
 Tinytest.add('armies.speed', function(test) {
   let gameId = stubTestGame();
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   let player = armiesTestsStubPlayer(gameId);
 
   _s.mapmaker.minHexesInCountry = 12;
   _s.mapmaker.maxHexesInCountry = 12;
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
 
   var soldiers = {'footmen':1};
   var army = Promise.await(dArmies.create(player._id, soldiers, 0, 0));
@@ -70,14 +70,14 @@ Tinytest.add('armies.speed', function(test) {
 // make sure speed is updated after combining
 Tinytest.add('armies.splitCombineLastMoveAt', function(test) {
   let gameId = stubTestGame();
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   let player = armiesTestsStubPlayer(gameId);
 
   Armies.remove({});
 
   _s.mapmaker.minHexesInCountry = 50;
   _s.mapmaker.maxHexesInCountry = 50;
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
 
   Meteor.userId = function() {
     return player._id;
@@ -124,7 +124,7 @@ Tinytest.add('armies.splitCombineLastMoveAt', function(test) {
 //
 //   Armies.remove({});
 //
-//   Mapmaker.eraseMap(gameId);
+//   Promise.await(Mapmaker.eraseMap(gameId));
 //   _s.mapmaker.minHexesInCountry = 100;
 //   _s.mapmaker.maxHexesInCountry = 100;
 //

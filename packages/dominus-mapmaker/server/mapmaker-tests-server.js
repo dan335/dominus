@@ -14,10 +14,10 @@ stubTestGame = function() {
 
 Tinytest.add('mapmaker.buidingAddedRemoved', function(test) {
   let gameId = stubTestGame();
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   _s.mapmaker.minHexesInCountry = 600;
   _s.mapmaker.maxHexesInCountry = 600;
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
 
   var country = Countries.findOne({gameId:gameId});
   var hex;
@@ -41,7 +41,7 @@ Tinytest.add('mapmaker.buidingAddedRemoved', function(test) {
   test.isFalse(hex.nearbyBuildings);
   test.isFalse(hex.hasBuilding);
 
-  Mapmaker.buildingAdded(gameId, 0,0);
+  Promise.await(Mapmaker.buildingAdded(gameId, 0,0));
   country = Countries.findOne({gameId:gameId});
 
   // building at 0,0
@@ -63,7 +63,7 @@ Tinytest.add('mapmaker.buidingAddedRemoved', function(test) {
   test.isFalse(hex.nearbyBuildings);
   test.isFalse(hex.hasBuilding);
 
-  Mapmaker.buildingRemoved(gameId, 0,0);
+  Promise.await(Mapmaker.buildingRemoved(gameId, 0,0));
   country = Countries.findOne({gameId:gameId});
 
   // building rmeoved - return to default
@@ -85,7 +85,7 @@ Tinytest.add('mapmaker.buidingAddedRemoved', function(test) {
   test.isFalse(hex.nearbyBuildings);
   test.isFalse(hex.hasBuilding);
 
-  Mapmaker.buildingAdded(gameId, 0,0);
+  Promise.await(Mapmaker.buildingAdded(gameId, 0,0));
 });
 
 
@@ -93,10 +93,10 @@ Tinytest.add('mapmaker.buidingAddedRemoved', function(test) {
 Tinytest.add('mapmaker.findCountryNeighbors', function(test) {
   let gameId = stubTestGame();
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   _s.mapmaker.minHexesInCountry = 50;
   _s.mapmaker.maxHexesInCountry = 50;
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
 
   var country = Countries.findOne({gameId:gameId});
   test.isNotUndefined(country.neighbors);
@@ -106,11 +106,11 @@ Tinytest.add('mapmaker.findCountryNeighbors', function(test) {
 Tinytest.add('mapmaker.countryHexesDoNotBelongToMultipleCountries', function(test) {
   let gameId = stubTestGame();
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   _s.mapmaker.minHexesInCountry = 50;
   _s.mapmaker.maxHexesInCountry = 50;
-  Mapmaker.addCountry(gameId, true);
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
+  Promise.await(Mapmaker.addCountry(gameId, true));
 
   Countries.find({gameId:gameId}).forEach(function(country) {
     _.each(country.hexes, function(hex) {
@@ -123,11 +123,11 @@ Tinytest.add('mapmaker.countryHexesDoNotBelongToMultipleCountries', function(tes
 
 Tinytest.add('mapmaker.allHexesBelongToOneCountry', function(test) {
   let gameId = stubTestGame();
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   _s.mapmaker.minHexesInCountry = 50;
   _s.mapmaker.maxHexesInCountry = 50;
-  Mapmaker.addCountry(gameId, true);
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
+  Promise.await(Mapmaker.addCountry(gameId, true));
 
   Hexes.find({gameId:gameId}).forEach(function(hex) {
     var num = Countries.find({gameId:gameId, hexes: {$elemMatch: {x:hex.x, y:hex.y}}}).count();
@@ -139,11 +139,11 @@ Tinytest.add('mapmaker.allHexesBelongToOneCountry', function(test) {
 Tinytest.add('mapmaker.noDupeHexesInCountry', function(test) {
   let gameId = stubTestGame();
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   _s.mapmaker.minHexesInCountry = 50;
   _s.mapmaker.maxHexesInCountry = 50;
-  Mapmaker.addCountry(gameId, true);
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
+  Promise.await(Mapmaker.addCountry(gameId, true));
 
   Countries.find().forEach(function(country) {
     _.each(country.hexes, function(hex) {
@@ -159,11 +159,11 @@ Tinytest.add('mapmaker.noDupeHexesInCountry', function(test) {
 Tinytest.add('mapmaker.noDuplicateHexCoordinates', function(test) {
   let gameId = stubTestGame();
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   _s.mapmaker.minHexesInCountry = 50;
   _s.mapmaker.maxHexesInCountry = 150;
-  Mapmaker.addCountry(gameId, true);
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
+  Promise.await(Mapmaker.addCountry(gameId, true));
 
   Hexes.find({gameId:gameId}).forEach(function(hex) {
     var num = Hexes.find({gameId:gameId, x:hex.x, y:hex.y, _id:{$ne:hex._id}}).count();
@@ -175,15 +175,15 @@ Tinytest.add('mapmaker.noDuplicateHexCoordinates', function(test) {
 Tinytest.add('mapmaker.numberOfHexesCreated', function(test) {
   let gameId = stubTestGame();
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   var num = 15;
   _s.mapmaker.minHexesInCountry = num;
   _s.mapmaker.maxHexesInCountry = num;
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
   test.equal(Hexes.find({gameId:gameId}).count(), num);
   test.equal(Countries.findOne({gameId:gameId}).hexes.length, num);
 
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
   test.equal(Countries.find({gameId:gameId}).count(), 2);
   test.equal(Hexes.find({gameId:gameId}).count(), num * 2);
 });
@@ -192,25 +192,25 @@ Tinytest.add('mapmaker.numberOfHexesCreated', function(test) {
 Tinytest.add('mapmaker.coordsToCountryId', function(test) {
   let gameId = stubTestGame();
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   _s.mapmaker.minHexesInCountry = 50;
   _s.mapmaker.maxHexesInCountry = 50;
-  let countryId = Mapmaker.addCountry(gameId, true);
+  let countryId = Promise.await(Mapmaker.addCountry(gameId, true));
 
-  test.equal(Mapmaker.coordsToCountryId(gameId, 1, 1), countryId);
-  test.isNull(Mapmaker.coordsToCountryId(gameId, 1000, 1000));
+  test.equal(Promise.await(Mapmaker.coordsToCountryId(gameId, 1, 1)), countryId);
+  test.isNull(Promise.await(Mapmaker.coordsToCountryId(gameId, 1000, 1000)));
 });
 
 
 Tinytest.add('mapmaker.findHexForCastle', function(test) {
   let gameId = stubTestGame();
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   _s.mapmaker.minHexesInCountry = 100;
   _s.mapmaker.maxHexesInCountry = 100;
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
 
-  var coords = Mapmaker.findHexForCastle(gameId);
+  var coords = Promise.await(Mapmaker.findHexForCastle(gameId));
 
   test.isTrue(coords !== false, 'is not false');
   test.isTrue(Number(coords.x) === coords.x && coords.x%1 === 0, 'x is integer');
@@ -225,10 +225,10 @@ Tinytest.add('mapmaker.findHexForCastle', function(test) {
 Tinytest.add('mapmaker.buildingAdded', function(test) {
   let gameId = stubTestGame();
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   _s.mapmaker.minHexesInCountry = 100;
   _s.mapmaker.maxHexesInCountry = 100;
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
 
   // find hex to test
   var query = {gameId:gameId, isBorder:false, type:'grain', hasBuilding:false, nearbyBuildings:false};
@@ -257,7 +257,7 @@ Tinytest.add('mapmaker.buildingAdded', function(test) {
     }
   })
 
-  Mapmaker.buildingAdded(gameId, hex.x, hex.y);
+  Promise.await(Mapmaker.buildingAdded(gameId, hex.x, hex.y));
 
   var hex = Hexes.findOne(hex._id);
   test.isTrue(hex.hasBuilding, 'hex hasBuilding');
@@ -282,10 +282,10 @@ Tinytest.add('mapmaker.buildingAdded', function(test) {
 Tinytest.add('mapmaker.buildingRemoved', function(test) {
   let gameId = stubTestGame();
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   _s.mapmaker.minHexesInCountry = 100;
   _s.mapmaker.maxHexesInCountry = 100;
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
 
   // find hex to test
   var query = {gameId:gameId, isBorder:false, type:'grain', hasBuilding:false, nearbyBuildings:false};
@@ -293,8 +293,8 @@ Tinytest.add('mapmaker.buildingRemoved', function(test) {
   var randNum = Math.floor(Math.random() * num);
   var hex =  Hexes.findOne(query, {skip:randNum, limit:1});
 
-  Mapmaker.buildingAdded(gameId, hex.x, hex.y);
-  Mapmaker.buildingRemoved(gameId, hex.x, hex.y);
+  Promise.await(Mapmaker.buildingAdded(gameId, hex.x, hex.y));
+  Promise.await(Mapmaker.buildingRemoved(gameId, hex.x, hex.y));
 
   // make sure it's false
   test.isFalse(hex.hasBuilding, 'hasBuilding not set');
@@ -326,13 +326,13 @@ Tinytest.add('mapmaker.eraseMap', function(test) {
 
   Hexes.insert({gameId:gameId, x:2, y:2});
   Countries.insert({gameId:gameId, x:1, y:1});
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   test.equal(Hexes.find().count(), 0);
   test.equal(Countries.find().count(), 0);
 
   Hexes.insert({gameId:'othergame', x:2, y:2});
   Countries.insert({gameId:'othergame', x:1, y:1});
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   test.equal(Hexes.find().count(), 1);
   test.equal(Countries.find().count(), 1);
 });
@@ -341,8 +341,8 @@ Tinytest.add('mapmaker.eraseMap', function(test) {
 Tinytest.add('mapmaker.createHexData', function(test) {
   let gameId = stubTestGame();
 
-  Mapmaker.eraseMap(gameId);
-  var hex = Mapmaker.createHexData(gameId, 0, 0, []);
+  Promise.await(Mapmaker.eraseMap(gameId));
+  var hex = Promise.await(Mapmaker.createHexData(gameId, 0, 0, []));
   test.equal(hex.x, 0);
   test.equal(hex.y, 0);
   test.isNotUndefined(hex.type);
@@ -355,20 +355,20 @@ Tinytest.add('mapmaker.createHexData', function(test) {
 Tinytest.add('mapmaker.findStartHexForNewCountry.notAlreadyInACountry', function(test) {
   let gameId = stubTestGame();
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   _s.mapmaker.minHexesInCountry = 5;
   _s.mapmaker.maxHexesInCountry = 5;
   var num;
   var coords;
 
-  Mapmaker.addCountry(gameId, true);
-  coords = Mapmaker.findStartHexForNewCountry(gameId);
+  Promise.await(Mapmaker.addCountry(gameId, true));
+  coords = Promise.await(Mapmaker.findStartHexForNewCountry(gameId));
   num = Countries.find({gameId:gameId, hexes: {$elemMatch: {x:coords.x, y:coords.y}}}).count();
   test.equal(num, 0);
 
   for (var n=0; n<4; n++) {
-    Mapmaker.addCountry(gameId, true);
-    coords = Mapmaker.findStartHexForNewCountry(gameId);
+    Promise.await(Mapmaker.addCountry(gameId, true));
+    coords = Promise.await(Mapmaker.findStartHexForNewCountry(gameId));
     num = Countries.find({gameId:gameId, hexes: {$elemMatch: {x:coords.x, y:coords.y}}}).count();
     test.equal(num, 0);
   }
@@ -403,16 +403,16 @@ Tinytest.add('mapmaker.findStartHexForNewCountry.notAlreadyInACountry', function
 Tinytest.add('mapmaker.multipleFindStartHexForNewCountry', function(test) {
   let gameId = stubTestGame();
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   _s.mapmaker.minHexesInCountry = 25;
   _s.mapmaker.maxHexesInCountry = 25;
   var num;
   var coords;
 
   for (var n=0; n<8; n++) {
-    Mapmaker.addCountry(gameId, true);
+    Promise.await(Mapmaker.addCountry(gameId, true));
 
-    coords = Mapmaker.findStartHexForNewCountry(gameId);
+    coords = Promise.await(Mapmaker.findStartHexForNewCountry(gameId));
 
     // check that they're integers
     test.isTrue(Number(coords.x) === coords.x && coords.x%1 === 0);
@@ -440,7 +440,7 @@ Tinytest.add('mapmaker.multipleFindStartHexForNewCountry', function(test) {
 Tinytest.add('mapmaker.findBorders', function(test) {
   let gameId = stubTestGame();
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
 
   var country = {
     hexes: []
@@ -477,10 +477,10 @@ Tinytest.add('mapmaker.findBorders', function(test) {
 Tinytest.add('mapmaker.createCountry', function(test) {
   let gameId = stubTestGame();
 
-  Mapmaker.eraseMap(gameId);
+  Promise.await(Mapmaker.eraseMap(gameId));
   _s.mapmaker.minHexesInCountry = 50;
   _s.mapmaker.maxHexesInCountry = 50;
-  Mapmaker.addCountry(gameId, true);
+  Promise.await(Mapmaker.addCountry(gameId, true));
   var country = Countries.findOne({gameId:gameId});
 
   test.equal(country.hexes.length, _s.mapmaker.minHexesInCountry);

@@ -24,7 +24,7 @@ Tinytest.add('mappather.pathTo.multipleCountries', function(test) {
 
   //Mapmaker.createNewMap(true);
   for (x=0;x<numCountries;x++) {
-    Mapmaker.addCountry(gameId, true);
+    Promise.await(Mapmaker.addCountry(gameId, true));
   }
 
   var numHexes = Hexes.find({gameId:gameId}).count();

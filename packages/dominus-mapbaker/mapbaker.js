@@ -1,13 +1,12 @@
 // temp files written to /opt/#/programs/server/hexes/ on server
 
-Future = Npm.require('fibers/future');
-
 
 Mapbaker = {
   fs: Npm.require('fs'),
   imageSavePath: 'hexes/',
   hexImagePath: process.cwd() + '/../web.browser/app/game_images/',
   svgexport: require('svgexport'),
+  fetch: fetch,
   knox: (process.env.S3ACCESSKEYID && process.env.S3SECRETACCESSKEY) || process.env.NODE_ENV !== 'development' ? Knox.createClient({
     key: process.env.S3ACCESSKEYID,
     secret: process.env.S3SECRETACCESSKEY,
@@ -40,43 +39,42 @@ Meteor.startup(function() {
 
 
 
-Mapbaker.deleteS3BakesForGame = function(gameId) {
+Mapbaker.deleteS3BakesForGame = async function(gameId) {
   check(gameId, String);
 
   var self = this;
 
   // don't return until done
-  var fut = new Future();
+  return await new Promise(function(resolve) {
 
-  // delete all files on s3
-  let previx = 'bakes/'+gameId+'/'
-  Mapbaker.knox.list({ prefix:previx }, function(error, data) {
-    if (error) {
-      console.error(error);
-      fut['return'](false);
+    // delete all files on s3
+    let previx = 'bakes/'+gameId+'/'
+    Mapbaker.knox.list({ prefix:previx }, function(error, data) {
+      if (error) {
+        console.error(error);
+        resolve(false);
 
-    } else {
-      var list = [];
+      } else {
+        var list = [];
 
-      for (var i=0; i<data.Contents.length; i++) {
-        var name = data.Contents[i].Key;
-        if (name != self.s3prefix) {
-          list.push(name);
+        for (var i=0; i<data.Contents.length; i++) {
+          var name = data.Contents[i].Key;
+          if (name != self.s3prefix) {
+            list.push(name);
+          }
         }
+
+        Mapbaker.knox.deleteMultiple(list, function(error, result) {
+          if (error) {
+            console.error(error);
+            resolve(false);
+          } else {
+            resolve(true);
+          }
+        });
       }
-
-      Mapbaker.knox.deleteMultiple(list, function(error, result) {
-        if (error) {
-          console.error(error);
-          fut['return'](false);
-        } else {
-          fut['return'](true);
-        }
-      });
-    }
+    });
   });
-
-  return fut.wait();
 };
 
 
@@ -128,21 +126,20 @@ Mapbaker.findTopLeftHexInImage = function(country, extents) {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.bakeCountries.process(Meteor.bindEnvironment(function(job) {
+  Queues.bakeCountries.process(async function(job) {
     if (job.data.gameId) {
       const query = Countries.find({gameId:job.data.gameId}, {fields:{_id:1}});
-      const numCountries = query.count();
+      const numCountries = await query.countAsync();
       let numBaked = 0;
-      query.forEach(function(country) {
-        Queues.add('bakeCountry', {countryId:country._id}, {backoff:{type:'fixed', delay:30000}, attempts:10, delay:0, timeout:1000*60*5}, country._id);
+      for (const country of await query.fetchAsync()) {
+        await Queues.addAsyncOrLog('bakeCountry', {countryId:country._id}, {backoff:{type:'fixed', delay:30000}, attempts:10, delay:0, timeout:1000*60*5}, country._id);
         numBaked++;
         job.progress(100 / numCountries * numBaked).catch(function(error) {
           console.error('could not set the progress of bakeCountries', error);
         });
-      })
+      }
     }
-    return Promise.resolve();
-  }));
+  });
 }
 
 
@@ -158,12 +155,12 @@ if (process.env.DOMINUS_WORKER == 'true') {
 // }
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.bakeCountry.process(Meteor.bindEnvironment(function(job) {
-    return Mapbaker.processBakeCountryJob(job);
-  }));
+  Queues.bakeCountry.process(async function(job) {
+    await Mapbaker.processBakeCountryJob(job);
+  });
 }
 
-Mapbaker.processBakeCountryJob = function(job) {
+Mapbaker.processBakeCountryJob = async function(job) {
     // can't get returning an error to work
     // because of meteor.bindEnvironment and promises i think
     // so just return true for now
@@ -171,7 +168,7 @@ Mapbaker.processBakeCountryJob = function(job) {
 
     //job.progress(1);
 
-    const data = Mapbaker.bakeCountry(job.data.countryId);
+    const data = await Mapbaker.bakeCountry(job.data.countryId);
     //job.progress(12);
 
     if (!data) {
@@ -195,10 +192,10 @@ Mapbaker.processBakeCountryJob = function(job) {
     Mapbaker.fs.chmodSync(file+'.svg', 0755);
     Mapbaker.fs.chmodSync(fileWithCoords+'.svg', 0755);
 
-    const jpgFile = Mapbaker.createJpgImage(file+'.svg', file+'.jpg', 'jpg', '90%');
+    const jpgFile = await Mapbaker.createJpgImage(file+'.svg', file+'.jpg', 'jpg', '90%');
     //job.progress(48);
 
-    const jpgFileWithCoords = Mapbaker.createJpgImage(fileWithCoords+'.svg', fileWithCoords+'.jpg', 'jpg', '90%');
+    const jpgFileWithCoords = await Mapbaker.createJpgImage(fileWithCoords+'.svg', fileWithCoords+'.jpg', 'jpg', '90%');
     //job.progress(60);
 
     if (!jpgFile || !jpgFileWithCoords) {
@@ -209,10 +206,10 @@ Mapbaker.processBakeCountryJob = function(job) {
 
     if (Meteor.settings.public.s3.serveBakesFromS3) {
       if (process.env.DOMINUS_TEST == 'false') {
-        let imageUrl = Mapbaker.uploadToS3(jpgFile, data.imageObject);
+        let imageUrl = await Mapbaker.uploadToS3(jpgFile, data.imageObject);
         //job.progress(72);
 
-        let imageUrlWithCoords = Mapbaker.uploadToS3(jpgFileWithCoords, data.imageObjectWithCoords);
+        let imageUrlWithCoords = await Mapbaker.uploadToS3(jpgFileWithCoords, data.imageObjectWithCoords);
         //job.progress(84);
 
         if (!imageUrl || !imageUrlWithCoords) {
@@ -223,19 +220,17 @@ Mapbaker.processBakeCountryJob = function(job) {
       }
     }
 
-    Queues.add('finishImage', {imageObject: data.imageObject}, {delay:0, timeout:1000*60*5}, false);
-    Queues.add('finishImage', {imageObject: data.imageObjectWithCoords}, {delay:0, timeout:1000*60*5}, false);
+    await Queues.addAsyncOrLog('finishImage', {imageObject: data.imageObject}, {delay:0, timeout:1000*60*5}, false);
+    await Queues.addAsyncOrLog('finishImage', {imageObject: data.imageObjectWithCoords}, {delay:0, timeout:1000*60*5}, false);
     //job.progress(100);
-
-    return Promise.resolve();
 };
 
 
 // also write svg to disk
-Mapbaker.bakeCountry = function(countryId) {
+Mapbaker.bakeCountry = async function(countryId) {
   var self = this;
 
-  var country = Countries.findOne(countryId);
+  var country = await Countries.findOneAsync(countryId);
 
   if (!country) {
     console.error('no country found in bakeCountry', countryId);
@@ -272,7 +267,7 @@ Mapbaker.bakeCountry = function(countryId) {
 
   // svg for each hex
   //var hexes = Hexes.find({gameId:country.gameId, x: {$gte:country.minX, $lte:country.maxX}, y: {$gte:country.minY, $lte:country.maxY}});
-  var hexes = Hexes.find({countryId:countryId});
+  var hexes = await Hexes.find({countryId:countryId}).fetchAsync();
   var svgData = '';
   var svgDataWithCoords = '';
   hexes.forEach(function(hex) {
@@ -370,28 +365,28 @@ Mapbaker.createSvg = function(hex, x, y, withCoords) {
 
 
 
-Mapbaker.createJpgImage = function(inFile, outFile, outFileType, quality) {
+Mapbaker.createJpgImage = async function(inFile, outFile, outFileType, quality) {
   var self = this;
-  var fut = new Future();
-  Mapbaker.svgexport.render([{
-    'input': inFile,
-    'output': outFile+' '+outFileType+' '+quality
-  }], function(error, result) {
-    if (error) {
-      console.error('error creating jpg image');
-      console.error(error);
-      fut['return'](false);
-    } else {
-      if (Mapbaker.fs.existsSync(outFile)) {
-        Mapbaker.fs.chmod(outFile, 0755, () => {
-          fut['return'](outFile);
-        });
+  return await new Promise(function(resolve) {
+    Mapbaker.svgexport.render([{
+      'input': inFile,
+      'output': outFile+' '+outFileType+' '+quality
+    }], function(error, result) {
+      if (error) {
+        console.error('error creating jpg image');
+        console.error(error);
+        resolve(false);
       } else {
-        fut['return'](false);
+        if (Mapbaker.fs.existsSync(outFile)) {
+          Mapbaker.fs.chmod(outFile, 0755, () => {
+            resolve(outFile);
+          });
+        } else {
+          resolve(false);
+        }
       }
-    }
+    });
   });
-  return fut.wait();
 };
 
 
@@ -418,52 +413,55 @@ Mapbaker.createJpgImage = function(inFile, outFile, outFileType, quality) {
 // }
 
 
-Mapbaker.uploadToS3 = function(file, imageObject) {
+Mapbaker.uploadToS3 = async function(file, imageObject) {
     var self = this;
-    var fut = new Future();
 
     var destination = Meteor.settings.public.s3.bakePath + imageObject.gameId + '/' + imageObject.filename + '.jpg';
     var imageUrl = Meteor.settings.public.s3.url + destination;
 
-    Mapbaker.fs.stat(file, Meteor.bindEnvironment(function(error, stat) {
-      if (error) {
-        console.error(error);
-        fut['return'](false);
-      } else {
+    var stat;
+    try {
+      stat = await Mapbaker.fs.promises.stat(file);
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
 
-        if (!stat.isFile()) {
-          console.error('stat is not a file');
-          fut['return'](false);
-        } else {
-          let expireDate = moment().add(1, 'years').toDate().toUTCString();
+    if (!stat.isFile()) {
+      console.error('stat is not a file');
+      return false;
+    }
 
-          Mapbaker.knox.putFile(file, destination, {
-            'Content-Length': stat.size,
-            'Content-Type': 'image/jpg',
-            'Expires': expireDate,
-            'Cache-Control': 'max-age=31557600'
-          }, Meteor.bindEnvironment(function(error, res) {
-            if (error) {
-              console.error(error);
-              fut['return'](false);
+    let expireDate = moment().add(1, 'years').toDate().toUTCString();
 
-            } else {
+    var res;
+    try {
+      res = await new Promise(function(resolve, reject) {
+        Mapbaker.knox.putFile(file, destination, {
+          'Content-Length': stat.size,
+          'Content-Type': 'image/jpg',
+          'Expires': expireDate,
+          'Cache-Control': 'max-age=31557600'
+        }, function(error, res) {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(res);
+          }
+        });
+      });
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
 
-              if (res.statusCode == 200 && Mapbaker.imageExists(imageUrl)) {
-                fut['return'](imageUrl);
-              } else {
-                var err = 'Check of '+imageUrl+' failed, retrying. Status code: '+res.statusCode;
-                console.error(err);
-                fut['return'](false);
-              }
-            }
-          }));
-
-        }
-      }
-    }));
-
-    return fut.wait();
+    if (res.statusCode == 200 && await Mapbaker.imageExists(imageUrl)) {
+      return imageUrl;
+    } else {
+      var err = 'Check of '+imageUrl+' failed, retrying. Status code: '+res.statusCode;
+      console.error(err);
+      return false;
+    }
 };
 
 
@@ -471,7 +469,7 @@ Mapbaker.uploadToS3 = function(file, imageObject) {
 
 
 if (process.env.DOMINUS_WORKER == 'true') {
-  Queues.finishImage.process(4, Meteor.bindEnvironment(function(job) {
+  Queues.finishImage.process(4, async function(job) {
 
     var data = {
       filename: job.data.imageObject.filename,
@@ -490,10 +488,8 @@ if (process.env.DOMINUS_WORKER == 'true') {
       var set = {image:data};
     }
 
-    Countries.update(job.data.imageObject.countryId, {$set:set});
-
-    return Promise.resolve();
-  }));
+    await Countries.updateAsync(job.data.imageObject.countryId, {$set:set});
+  });
 }
 
 
@@ -548,7 +544,8 @@ Mapbaker.resetLocalSavePath = function() {
 
 
 
-Mapbaker.imageExists = function(image_url){
+// a status of 400 or more counts as missing, as it did with HTTP.get, which threw
+Mapbaker.imageExists = async function(image_url){
   check(image_url, String);
 
   if (Meteor.isServer && process.env.NODE_ENV == 'development') {
@@ -556,7 +553,11 @@ Mapbaker.imageExists = function(image_url){
   }
 
   try {
-    var result = HTTP.get(image_url);
+    var response = await Mapbaker.fetch(image_url);
+    await response.arrayBuffer();
+    if (response.status >= 400) {
+      throw new Error('failed [' + response.status + '] ' + image_url);
+    }
     return true;
   } catch (error) {
     console.error(error);

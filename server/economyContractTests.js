@@ -52,7 +52,7 @@ if (Meteor.isServer) {
         var id = Villages.insert(_.extend({gameId: w.gameId, x: hex.x, y: hex.y, playerId: w.players[i]._id,
           user_id: w.users[i]._id, username: w.players[i].username, name: 'Testville', level: 1,
           under_construction: false, created_at: new Date()}, dTest.soldierCounts({}), fields || {}));
-        Mapmaker.buildingAdded(w.gameId, hex.x, hex.y);
+        dTest.settle(Mapmaker.buildingAdded(w.gameId, hex.x, hex.y));
         return Villages.findOne(id);
       }
 
@@ -64,7 +64,7 @@ if (Meteor.isServer) {
         w.removeArmies();
         Villages.find({gameId: w.gameId}).forEach(function(v) {
           Villages.remove(v._id);
-          Mapmaker.buildingRemoved(w.gameId, v.x, v.y);
+          dTest.settle(Mapmaker.buildingRemoved(w.gameId, v.x, v.y));
         });
         Players.update({gameId: w.gameId}, {$set: {allies_below: [], pro: false}}, {multi: true});
         Alerts.remove({gameId: w.gameId});
@@ -384,7 +384,7 @@ if (Meteor.isServer) {
           var removeVillages = function() {
             Villages.find({gameId: w.gameId}).forEach(function(v) {
               Villages.remove(v._id);
-              Mapmaker.buildingRemoved(w.gameId, v.x, v.y);
+              dTest.settle(Mapmaker.buildingRemoved(w.gameId, v.x, v.y));
             });
           };
           var state = function() {
