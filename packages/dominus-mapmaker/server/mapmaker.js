@@ -150,6 +150,7 @@ Mapmaker = {
     check(country._id, String);
 
     await Hexes.removeAsync({countryId:country._id});
+    await this.markBuildings(country.gameId, country.hexes);
 
     let bulk = Hexes.rawCollection().initializeUnorderedBulkOp();
 		let doBulk = false;
@@ -178,6 +179,8 @@ Mapmaker = {
   saveCountry: async function(country) {
 		check(country._id, String);
 
+    await this.markBuildings(country.gameId, country.hexes);
+
     let bulk = Hexes.rawCollection().initializeUnorderedBulkOp();
 		let doBulk = false;
 
@@ -199,6 +202,33 @@ Mapmaker = {
   },
 
 
+
+
+  // sets hasBuilding and nearbyBuildings on hexes about to be saved, from
+  // the buildings already on the map. A country is added next to others, so
+  // its new hexes can be near their castles and capitals (Oct 2026: they used
+  // to start with no building nearby, and only buildingRemoved, which redid
+  // the whole country and its neighbors, put that right).
+  markBuildings: async function(gameId, hexes) {
+    check(gameId, String);
+    if (!hexes.length) {
+      return;
+    }
+
+    var radius = _s.mapmaker.nearbyBuildingCheckRadius;
+    var xs = _.pluck(hexes, 'x');
+    var ys = _.pluck(hexes, 'y');
+    var find = {gameId:gameId, x:{$gte:_.min(xs) - radius, $lte:_.max(xs) + radius}, y:{$gte:_.min(ys) - radius, $lte:_.max(ys) + radius}};
+    var buildings = [];
+    for (const collection of [Castles, Villages, Capitals]) {
+      buildings = buildings.concat(await collection.find(find, {fields:{x:1, y:1}}).fetchAsync());
+    }
+
+    hexes.forEach(function(hex) {
+      hex.hasBuilding = _.some(buildings, function(b) { return b.x == hex.x && b.y == hex.y; });
+      hex.nearbyBuildings = _.some(buildings, function(b) { return Hx.hexDistance(b.x, b.y, hex.x, hex.y) <= radius; });
+    });
+  },
 
 
   // called from both addCountry and addToCountry
@@ -439,54 +469,71 @@ Mapmaker = {
 	},
 
 
+  // A building was taken away from x,y: its hex and the hexes within
+  // nearbyBuildingCheckRadius of it get hasBuilding and nearbyBuildings from
+  // the buildings there now.
+  //
+  // Battles run at the same time (runBattle's concurrency), so another
+  // building nearby can go while this runs. What this read could then be
+  // stale by the time it is written: it used to put hasBuilding back on a
+  // hex whose village another battle had just destroyed and cleared, and the
+  // hex stayed marked for good (found by the 12 hour soak, Oct 2026). So it
+  // reads the buildings again after writing, and writes again until two reads
+  // agree. Whichever call writes last has read after every change it could
+  // have missed, so the hexes end up as the buildings are.
   buildingRemoved: async function(gameId, x, y) {
     check(x, Match.Integer);
     check(y, Match.Integer);
 		check(gameId, String);
 
-    var hexesBulk = Hexes.rawCollection().initializeOrderedBulkOp();
-		var countriesBulk = Countries.rawCollection().initializeOrderedBulkOp();
+		var radius = _s.mapmaker.nearbyBuildingCheckRadius;
+		var area = [{x:x, y:y}].concat(Hx.getSurroundingHexes(x, y, radius));
+		var written = null;
 
-		hexesBulk.find({gameId:gameId, x:x, y:y}).updateOne({$set:{hasBuilding:false, nearbyBuildings:false}});
-		countriesBulk.find({gameId:gameId, hexes: {$elemMatch: {x:x, y:y}}}).updateOne({$set:{"hexes.$.hasBuilding":false, "hexes.$.nearbyBuildings":false}});
+		for (var tries = 0; tries < 10; tries++) {
+			var buildings = await Mapmaker._buildingsNear(gameId, x, y, radius * 2);
+			var flags = area.map(function(hex) {
+				return {
+					x: hex.x,
+					y: hex.y,
+					hasBuilding: _.some(buildings, function(b) { return b.x == hex.x && b.y == hex.y; }),
+					nearbyBuildings: _.some(buildings, function(b) { return Hx.hexDistance(b.x, b.y, hex.x, hex.y) <= radius; })
+				};
+			});
 
-		var coords = Hx.getSurroundingHexes(x, y, _s.mapmaker.nearbyBuildingCheckRadius);
-    _.each(coords, function(coord) {
-			hexesBulk.find({gameId:gameId, x:coord.x, y:coord.y}).updateOne({$set:{nearbyBuildings:false}});
-			countriesBulk.find({gameId:gameId, hexes: {$elemMatch: {x:coord.x, y:coord.y}}}).updateOne({$set:{"hexes.$.nearbyBuildings":false}});
-    })
+			if (written && _.isEqual(flags, written)) {
+				return;
+			}
 
-		// re-add buildings in this country and neighbors
-		var countryId = await Mapmaker.coordsToCountryId(gameId, x, y);
-		var country = await Countries.findOneAsync(countryId, {fields:{neighbors:1}});
-		var countryIds = _.union(country.neighbors, [countryId]);
-		var find = {countryId: {$in:countryIds}};
-		var options = {fields:{x:1, y:1}};
-
-		var coordsToDo = [];
-
-		for (const building of await Castles.find(find, options).fetchAsync()) {
-			coordsToDo.push({x:building.x, y:building.y});
+			var hexesBulk = Hexes.rawCollection().initializeUnorderedBulkOp();
+			var countriesBulk = Countries.rawCollection().initializeUnorderedBulkOp();
+			flags.forEach(function(f) {
+				hexesBulk.find({gameId:gameId, x:f.x, y:f.y}).updateOne({$set:{hasBuilding:f.hasBuilding, nearbyBuildings:f.nearbyBuildings}});
+				countriesBulk.find({gameId:gameId, hexes: {$elemMatch: {x:f.x, y:f.y}}}).update({$set:{"hexes.$.hasBuilding":f.hasBuilding, "hexes.$.nearbyBuildings":f.nearbyBuildings}});
+			});
+			await executeBulk(hexesBulk);
+			await executeBulk(countriesBulk);
+			written = flags;
 		}
 
-		for (const building of await Villages.find(find, options).fetchAsync()) {
-			coordsToDo.push({x:building.x, y:building.y});
-		}
-
-		for (const building of await Capitals.find(find, options).fetchAsync()) {
-			coordsToDo.push({x:building.x, y:building.y});
-		}
-
-		coordsToDo.forEach(function(coords) {
-			var ret = Mapmaker._buildingAddedBulk(gameId, hexesBulk, countriesBulk, coords.x, coords.y);
-			hexesBulk = ret.hexesBulk;
-			countriesBulk = ret.countriesBulk;
-		})
-
-		// run bulk operations
-    await executeBulk(hexesBulk);
-    await executeBulk(countriesBulk);
+		console.error('Mapmaker.buildingRemoved: the buildings near ' + x + ',' + y + ' in game ' + gameId + ' kept changing; their hexes may be out of date');
   },
+
+
+	// the castles, villages and capitals within distance of x,y: [{x, y}]
+	_buildingsNear: async function(gameId, x, y, distance) {
+		var find = {gameId:gameId, x:{$gte:x - distance, $lte:x + distance}, y:{$gte:y - distance, $lte:y + distance}};
+		var options = {fields:{x:1, y:1}};
+		var buildings = [];
+		for (const collection of [Castles, Villages, Capitals]) {
+			for (const building of await collection.find(find, options).fetchAsync()) {
+				if (Hx.hexDistance(building.x, building.y, x, y) <= distance) {
+					buildings.push({x:building.x, y:building.y});
+				}
+			}
+		}
+		return buildings;
+	},
 
 
   findHexForCastle: async function(gameId) {

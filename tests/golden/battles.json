@@ -4,20 +4,20 @@
  "startAt": "2026-01-19T09:00:00.000Z",
  "at": {
   "open": {
-   "x": -1,
-   "y": 9
+   "x": -2,
+   "y": 16
   },
   "village": {
-   "x": 1,
-   "y": 7
+   "x": -1,
+   "y": 15
   },
   "capital": {
    "x": -2,
    "y": 1
   },
   "castle": {
-   "x": 1,
-   "y": 9
+   "x": 0,
+   "y": 16
   }
  },
  "steps": [
@@ -54,8 +54,8 @@
       "footmen": 20,
       "owner": null,
       "pikemen": 20,
-      "x": 8,
-      "y": 0
+      "x": 7,
+      "y": 7
      }
     ],
     "players": {
@@ -132,11 +132,11 @@
    "collections": {
     "players": {
      "count": 3,
-     "hash": "c48346a57c27c021"
+     "hash": "674c1827ee255a2f"
     },
     "castles": {
      "count": 3,
-     "hash": "9271c3dbf3ec2bd7"
+     "hash": "b4ba3bee9444a90d"
     },
     "villages": {
      "count": 0,
@@ -152,19 +152,19 @@
     },
     "capitals": {
      "count": 3,
-     "hash": "1e8a2d64d1bf7f50"
+     "hash": "5c8357ffd4bfed17"
     },
     "hexes": {
      "count": 452,
-     "hash": "a82aa9965d4d33e2"
+     "hash": "090389a5e27aced2"
     },
     "countries": {
      "count": 3,
-     "hash": "2148cffdb2cf44ee"
+     "hash": "e996ea5c0374995b"
     },
     "rooms": {
      "count": 1,
-     "hash": "257a37d0c0020aad"
+     "hash": "270c74051940165f"
     },
     "roomchats": {
      "count": 0,
@@ -220,7 +220,7 @@
     },
     "games": {
      "count": 1,
-     "hash": "8bbabbc2c1470e4d"
+     "hash": "5b45b5e66034ec89"
     },
     "rounds": {
      "count": 0,
@@ -238,7 +238,7 @@
   },
   {
    "step": "two armies meet in the open",
-   "time": "2026-01-19T10:23:40.000Z",
+   "time": "2026-01-19T11:08:00.000Z",
    "facts": {
     "battles": [
      {
@@ -273,8 +273,8 @@
        "sim_hera army destroyed",
        "sim_ares army"
       ],
-      "x": -1,
-      "y": 9
+      "x": -2,
+      "y": 16
      }
     ],
     "capitals": [
@@ -305,8 +305,8 @@
       "footmen": 20,
       "owner": null,
       "pikemen": 20,
-      "x": 8,
-      "y": 0
+      "x": 7,
+      "y": 7
      }
     ],
     "players": {
@@ -323,8 +323,8 @@
         "footmen": 89,
         "onAllyBuilding": false,
         "pikemen": 0,
-        "x": -1,
-        "y": 9
+        "x": -2,
+        "y": 16
        }
       ],
       "castle": {
@@ -392,42 +392,42 @@
     "failed": [],
     "notRun": {},
     "ran": {
-     "checkForGameClose": 81,
-     "checkForGameEnd": 81,
-     "checkForGameStart": 81,
-     "collectCapitalIncome": 245,
-     "collectCastleIncome": 245,
-     "collectVillageIncome": 245,
+     "checkForGameClose": 126,
+     "checkForGameEnd": 126,
+     "checkForGameStart": 126,
+     "collectCapitalIncome": 378,
+     "collectCastleIncome": 378,
+     "collectVillageIncome": 378,
      "enterNewHexCheck": 2,
-     "expirePastMoves": 16,
+     "expirePastMoves": 25,
      "findCountriesInPath": 2,
-     "gamestats_job": 8,
-     "generateTree": 2,
-     "moveArmiesJob": 245,
+     "gamestats_job": 12,
+     "generateTree": 4,
+     "moveArmiesJob": 378,
      "pathToHex": 2,
-     "record_market_history": 2,
-     "removeStuckBattles": 2,
+     "record_market_history": 4,
+     "removeStuckBattles": 4,
      "runBattle": 3,
-     "spendTaxes": 2,
+     "spendTaxes": 4,
      "updateArmyMoveTotals": 2,
-     "updateIncomeRank": 8,
-     "updateIncomeStats": 2,
+     "updateIncomeRank": 12,
+     "updateIncomeStats": 4,
      "updateMoveSpeed": 7,
      "updatePathTime": 2,
-     "updateVassalRank": 8,
+     "updateVassalRank": 12,
      "update_losses_worth": 6,
-     "villageConstructionJob": 81
+     "villageConstructionJob": 126
     }
    },
    "emails": 0,
    "collections": {
     "players": {
      "count": 3,
-     "hash": "4740b548e8dc03da"
+     "hash": "905fc9701bbd2dd8"
     },
     "castles": {
      "count": 3,
-     "hash": "9271c3dbf3ec2bd7"
+     "hash": "b4ba3bee9444a90d"
     },
     "villages": {
      "count": 0,
@@ -435,7 +435,7 @@
     },
     "armies": {
      "count": 1,
-     "hash": "5c7985ffa1580d34"
+     "hash": "b9c2f635a09ea1fa"
     },
     "armypaths2": {
      "count": 0,
@@ -443,19 +443,19 @@
     },
     "capitals": {
      "count": 3,
-     "hash": "98bfded7aa179091"
+     "hash": "85a0f1de47f887c8"
     },
     "hexes": {
      "count": 452,
-     "hash": "a82aa9965d4d33e2"
+     "hash": "090389a5e27aced2"
     },
     "countries": {
      "count": 3,
-     "hash": "2148cffdb2cf44ee"
+     "hash": "e996ea5c0374995b"
     },
     "rooms": {
      "count": 1,
-     "hash": "257a37d0c0020aad"
+     "hash": "270c74051940165f"
     },
     "roomchats": {
      "count": 0,
@@ -467,7 +467,7 @@
     },
     "alerts": {
      "count": 5,
-     "hash": "932ee4f8c658e909"
+     "hash": "67964fdcf5cdb559"
     },
     "globalalerts": {
      "count": 3,
@@ -486,12 +486,12 @@
      "hash": "b04d67bd17f3f781"
     },
     "markethistory": {
-     "count": 2,
-     "hash": "094d330ee3ac5630"
+     "count": 3,
+     "hash": "43120fc7e97091c6"
     },
     "battles2": {
      "count": 1,
-     "hash": "6f7d6d87560cff15"
+     "hash": "8db0be45bb5ca874"
     },
     "reports": {
      "count": 0,
@@ -503,19 +503,19 @@
     },
     "dailystats": {
      "count": 3,
-     "hash": "f80ac091997be253"
+     "hash": "3ada0b8946506d19"
     },
     "gamestats": {
-     "count": 8,
-     "hash": "8ad9562d454f3ae1"
+     "count": 12,
+     "hash": "f7cbea6525b8b73e"
     },
     "games": {
      "count": 1,
-     "hash": "083c2c3e82ec8018"
+     "hash": "75a275ff1916d0a1"
     },
     "rounds": {
      "count": 3,
-     "hash": "9eb4ea316d1b4790"
+     "hash": "dc888d84fb26cde8"
     },
     "countriestemp": {
      "count": 0,
@@ -529,7 +529,7 @@
   },
   {
    "step": "an army burns a village",
-   "time": "2026-01-19T10:49:00.000Z",
+   "time": "2026-01-19T11:26:40.000Z",
    "facts": {
     "battles": [
      {
@@ -564,8 +564,8 @@
        "sim_hera army destroyed",
        "sim_ares army"
       ],
-      "x": -1,
-      "y": 9
+      "x": -2,
+      "y": 16
      },
      {
       "isOver": true,
@@ -599,8 +599,8 @@
        "sim_hera village destroyed",
        "sim_ares army"
       ],
-      "x": 1,
-      "y": 7
+      "x": -1,
+      "y": 15
      }
     ],
     "capitals": [
@@ -631,8 +631,8 @@
       "footmen": 20,
       "owner": null,
       "pikemen": 20,
-      "x": 8,
-      "y": 0
+      "x": 7,
+      "y": 7
      }
     ],
     "players": {
@@ -649,8 +649,8 @@
         "footmen": 86,
         "onAllyBuilding": false,
         "pikemen": 0,
-        "x": 1,
-        "y": 7
+        "x": -1,
+        "y": 15
        }
       ],
       "castle": {
@@ -719,42 +719,37 @@
     "failed": [],
     "notRun": {},
     "ran": {
-     "checkForGameClose": 26,
-     "checkForGameEnd": 26,
-     "checkForGameStart": 26,
-     "collectCapitalIncome": 76,
-     "collectCastleIncome": 76,
-     "collectVillageIncome": 76,
+     "checkForGameClose": 18,
+     "checkForGameEnd": 18,
+     "checkForGameStart": 18,
+     "collectCapitalIncome": 56,
+     "collectCastleIncome": 56,
+     "collectVillageIncome": 56,
      "enterNewHexCheck": 1,
-     "expirePastMoves": 5,
+     "expirePastMoves": 4,
      "findCountriesInPath": 2,
      "gamestats_job": 2,
-     "generateTree": 1,
-     "moveArmiesJob": 76,
+     "moveArmiesJob": 56,
      "pathToHex": 2,
-     "record_market_history": 1,
-     "removeStuckBattles": 1,
      "runBattle": 1,
-     "spendTaxes": 1,
-     "updateArmyMoveTotals": 2,
+     "updateArmyMoveTotals": 1,
      "updateIncomeRank": 2,
-     "updateIncomeStats": 1,
      "updateMoveSpeed": 2,
      "updatePathTime": 1,
      "updateVassalRank": 2,
      "update_losses_worth": 2,
-     "villageConstructionJob": 26
+     "villageConstructionJob": 18
     }
    },
    "emails": 0,
    "collections": {
     "players": {
      "count": 3,
-     "hash": "01ad2e538f183d49"
+     "hash": "f36299d6edb1d377"
     },
     "castles": {
      "count": 3,
-     "hash": "9271c3dbf3ec2bd7"
+     "hash": "b4ba3bee9444a90d"
     },
     "villages": {
      "count": 0,
@@ -762,7 +757,7 @@
     },
     "armies": {
      "count": 1,
-     "hash": "1084067faf83483f"
+     "hash": "4abf60634117689e"
     },
     "armypaths2": {
      "count": 0,
@@ -770,19 +765,19 @@
     },
     "capitals": {
      "count": 3,
-     "hash": "5af0266e7cfcb481"
+     "hash": "290275669c273296"
     },
     "hexes": {
      "count": 452,
-     "hash": "33c1b35a8e4a2e20"
+     "hash": "090389a5e27aced2"
     },
     "countries": {
      "count": 3,
-     "hash": "987bb39cadde928f"
+     "hash": "e996ea5c0374995b"
     },
     "rooms": {
      "count": 1,
-     "hash": "257a37d0c0020aad"
+     "hash": "270c74051940165f"
     },
     "roomchats": {
      "count": 0,
@@ -794,7 +789,7 @@
     },
     "alerts": {
      "count": 10,
-     "hash": "7a42f60b5196f4a4"
+     "hash": "aceb019587b4a589"
     },
     "globalalerts": {
      "count": 3,
@@ -813,12 +808,12 @@
      "hash": "b04d67bd17f3f781"
     },
     "markethistory": {
-     "count": 2,
-     "hash": "094d330ee3ac5630"
+     "count": 3,
+     "hash": "43120fc7e97091c6"
     },
     "battles2": {
      "count": 2,
-     "hash": "61569d6bf423f331"
+     "hash": "98d56db00848e643"
     },
     "reports": {
      "count": 0,
@@ -830,19 +825,19 @@
     },
     "dailystats": {
      "count": 3,
-     "hash": "a54a0e9218dad1a7"
+     "hash": "c873defafe8b8d31"
     },
     "gamestats": {
-     "count": 10,
-     "hash": "e9327f009cf5090d"
+     "count": 14,
+     "hash": "6379addd3bdf56fe"
     },
     "games": {
      "count": 1,
-     "hash": "083c2c3e82ec8018"
+     "hash": "75a275ff1916d0a1"
     },
     "rounds": {
      "count": 4,
-     "hash": "848bef96bf50d101"
+     "hash": "1ce2f78cb85392d7"
     },
     "countriestemp": {
      "count": 0,
@@ -856,7 +851,7 @@
   },
   {
    "step": "an army takes a capital",
-   "time": "2026-01-19T11:45:20.000Z",
+   "time": "2026-01-19T12:23:00.000Z",
    "facts": {
     "battles": [
      {
@@ -891,8 +886,8 @@
        "sim_hera army destroyed",
        "sim_ares army"
       ],
-      "x": -1,
-      "y": 9
+      "x": -2,
+      "y": 16
      },
      {
       "isOver": true,
@@ -926,8 +921,8 @@
        "sim_hera village destroyed",
        "sim_ares army"
       ],
-      "x": 1,
-      "y": 7
+      "x": -1,
+      "y": 15
      },
      {
       "isOver": true,
@@ -993,8 +988,8 @@
       "footmen": 20,
       "owner": null,
       "pikemen": 20,
-      "x": 8,
-      "y": 0
+      "x": 7,
+      "y": 7
      }
     ],
     "players": {
@@ -1022,8 +1017,8 @@
         "footmen": 86,
         "onAllyBuilding": false,
         "pikemen": 0,
-        "x": 1,
-        "y": 7
+        "x": -1,
+        "y": 15
        }
       ],
       "castle": {
@@ -1092,14 +1087,14 @@
     "failed": [],
     "notRun": {},
     "ran": {
-     "checkForGameClose": 56,
-     "checkForGameEnd": 56,
-     "checkForGameStart": 56,
+     "checkForGameClose": 57,
+     "checkForGameEnd": 57,
+     "checkForGameStart": 57,
      "collectCapitalIncome": 169,
      "collectCastleIncome": 169,
      "collectVillageIncome": 169,
      "enterNewHexCheck": 1,
-     "expirePastMoves": 12,
+     "expirePastMoves": 11,
      "findCountriesInPath": 1,
      "gamestats_job": 6,
      "generateTree": 2,
@@ -1116,18 +1111,18 @@
      "updatePathTime": 1,
      "updateVassalRank": 6,
      "update_losses_worth": 3,
-     "villageConstructionJob": 56
+     "villageConstructionJob": 57
     }
    },
    "emails": 0,
    "collections": {
     "players": {
      "count": 3,
-     "hash": "783603494745d1bd"
+     "hash": "9cdf4d8f59af8e90"
     },
     "castles": {
      "count": 3,
-     "hash": "9271c3dbf3ec2bd7"
+     "hash": "b4ba3bee9444a90d"
     },
     "villages": {
      "count": 0,
@@ -1135,7 +1130,7 @@
     },
     "armies": {
      "count": 2,
-     "hash": "a3d6e355731f365a"
+     "hash": "de0b0d5de4b4f290"
     },
     "armypaths2": {
      "count": 0,
@@ -1143,19 +1138,19 @@
     },
     "capitals": {
      "count": 3,
-     "hash": "5fbd7e69aac86bd1"
+     "hash": "61b55b212b851be3"
     },
     "hexes": {
      "count": 452,
-     "hash": "33c1b35a8e4a2e20"
+     "hash": "090389a5e27aced2"
     },
     "countries": {
      "count": 3,
-     "hash": "987bb39cadde928f"
+     "hash": "e996ea5c0374995b"
     },
     "rooms": {
      "count": 1,
-     "hash": "257a37d0c0020aad"
+     "hash": "270c74051940165f"
     },
     "roomchats": {
      "count": 0,
@@ -1167,7 +1162,7 @@
     },
     "alerts": {
      "count": 13,
-     "hash": "f709e3e24cbc6e90"
+     "hash": "3ef6bb2828db2799"
     },
     "globalalerts": {
      "count": 3,
@@ -1186,12 +1181,12 @@
      "hash": "b04d67bd17f3f781"
     },
     "markethistory": {
-     "count": 3,
-     "hash": "43120fc7e97091c6"
+     "count": 4,
+     "hash": "9b2b8966ace26874"
     },
     "battles2": {
      "count": 3,
-     "hash": "63622386cafc5337"
+     "hash": "4cb8a181247fc164"
     },
     "reports": {
      "count": 0,
@@ -1202,20 +1197,20 @@
      "hash": "97d170e1550eee4a"
     },
     "dailystats": {
-     "count": 3,
-     "hash": "4e5e98b373ffef9f"
+     "count": 6,
+     "hash": "6b97b768862223cb"
     },
     "gamestats": {
-     "count": 16,
-     "hash": "72d511459d5729e4"
+     "count": 20,
+     "hash": "d97edf6f4b5346bf"
     },
     "games": {
      "count": 1,
-     "hash": "083c2c3e82ec8018"
+     "hash": "75a275ff1916d0a1"
     },
     "rounds": {
      "count": 7,
-     "hash": "378af08844bc8641"
+     "hash": "e43f0bf0e114b834"
     },
     "countriestemp": {
      "count": 0,
@@ -1229,7 +1224,7 @@
   },
   {
    "step": "an army takes a castle",
-   "time": "2026-01-19T14:55:00.000Z",
+   "time": "2026-01-19T17:20:00.000Z",
    "facts": {
     "battles": [
      {
@@ -1264,8 +1259,8 @@
        "sim_hera army destroyed",
        "sim_ares army"
       ],
-      "x": -1,
-      "y": 9
+      "x": -2,
+      "y": 16
      },
      {
       "isOver": true,
@@ -1299,8 +1294,8 @@
        "sim_hera village destroyed",
        "sim_ares army"
       ],
-      "x": 1,
-      "y": 7
+      "x": -1,
+      "y": 15
      },
      {
       "isOver": true,
@@ -1380,8 +1375,8 @@
        "sim_hera castle destroyed",
        "sim_ares army took the castle"
       ],
-      "x": 1,
-      "y": 9
+      "x": 0,
+      "y": 16
      }
     ],
     "capitals": [
@@ -1412,8 +1407,8 @@
       "footmen": 20,
       "owner": null,
       "pikemen": 20,
-      "x": 8,
-      "y": 0
+      "x": 7,
+      "y": 7
      }
     ],
     "players": {
@@ -1433,8 +1428,8 @@
         "footmen": 143,
         "onAllyBuilding": true,
         "pikemen": 0,
-        "x": 1,
-        "y": 9
+        "x": 0,
+        "y": 16
        },
        {
         "archers": 26,
@@ -1453,8 +1448,8 @@
         "footmen": 86,
         "onAllyBuilding": false,
         "pikemen": 0,
-        "x": 1,
-        "y": 7
+        "x": -1,
+        "y": 15
        }
       ],
       "castle": {
@@ -1527,48 +1522,48 @@
     "notRun": {},
     "ran": {
      "checkForDominus": 1,
-     "checkForGameClose": 190,
-     "checkForGameEnd": 190,
-     "checkForGameStart": 190,
+     "checkForGameClose": 297,
+     "checkForGameEnd": 297,
+     "checkForGameStart": 297,
      "cleanupAllKingChatrooms": 1,
-     "collectCapitalIncome": 569,
-     "collectCastleIncome": 569,
-     "collectVillageIncome": 569,
+     "collectCapitalIncome": 891,
+     "collectCastleIncome": 891,
+     "collectVillageIncome": 891,
      "destroyKingChatroom": 1,
      "enemies_together_check": 1,
      "enemy_on_building_check": 1,
      "enterNewHexCheck": 2,
-     "expirePastMoves": 38,
+     "expirePastMoves": 60,
      "findCountriesInPath": 1,
-     "gamestats_job": 19,
-     "generateTree": 7,
-     "moveArmiesJob": 569,
+     "gamestats_job": 30,
+     "generateTree": 11,
+     "moveArmiesJob": 891,
      "pathToHex": 1,
-     "record_market_history": 6,
-     "removeStuckBattles": 6,
+     "record_market_history": 10,
+     "removeStuckBattles": 10,
      "runBattle": 3,
-     "spendTaxes": 6,
+     "spendTaxes": 10,
      "updateArmyMoveTotals": 1,
-     "updateIncomeRank": 19,
-     "updateIncomeStats": 6,
+     "updateIncomeRank": 30,
+     "updateIncomeStats": 10,
      "updateKingChatroom": 1,
      "updateMoveSpeed": 6,
      "updatePathTime": 1,
      "updateVassalAllyCountMultiple": 1,
-     "updateVassalRank": 19,
+     "updateVassalRank": 30,
      "update_losses_worth": 8,
-     "villageConstructionJob": 190
+     "villageConstructionJob": 297
     }
    },
    "emails": 0,
    "collections": {
     "players": {
      "count": 3,
-     "hash": "13ca39540b7d432a"
+     "hash": "1389584b3874ab5e"
     },
     "castles": {
      "count": 3,
-     "hash": "07f96cd16a6f8067"
+     "hash": "60150275674092f5"
     },
     "villages": {
      "count": 0,
@@ -1576,7 +1571,7 @@
     },
     "armies": {
      "count": 3,
-     "hash": "0076f17208323e22"
+     "hash": "65c5e2406cf6e2f5"
     },
     "armypaths2": {
      "count": 0,
@@ -1584,19 +1579,19 @@
     },
     "capitals": {
      "count": 3,
-     "hash": "3798bf09ea379f4f"
+     "hash": "5c723ea0580ff0ed"
     },
     "hexes": {
      "count": 452,
-     "hash": "33c1b35a8e4a2e20"
+     "hash": "090389a5e27aced2"
     },
     "countries": {
      "count": 3,
-     "hash": "987bb39cadde928f"
+     "hash": "e996ea5c0374995b"
     },
     "rooms": {
      "count": 2,
-     "hash": "0f9e49837815fc8c"
+     "hash": "83072792124c41cb"
     },
     "roomchats": {
      "count": 0,
@@ -1608,7 +1603,7 @@
     },
     "alerts": {
      "count": 22,
-     "hash": "02da56a805028f28"
+     "hash": "a8d8c76e6ba2ae61"
     },
     "globalalerts": {
      "count": 3,
@@ -1627,12 +1622,12 @@
      "hash": "b04d67bd17f3f781"
     },
     "markethistory": {
-     "count": 6,
-     "hash": "16399e00c94c67fb"
+     "count": 9,
+     "hash": "4ce3efdb549b62dc"
     },
     "battles2": {
      "count": 4,
-     "hash": "0879bec61d623d9f"
+     "hash": "e8927d7cc16b65e2"
     },
     "reports": {
      "count": 0,
@@ -1644,19 +1639,19 @@
     },
     "dailystats": {
      "count": 6,
-     "hash": "c62d8b9ecff3b014"
+     "hash": "2f528eaf98f45590"
     },
     "gamestats": {
-     "count": 35,
-     "hash": "05ec1b096688d96d"
+     "count": 50,
+     "hash": "31537d26f77dd71a"
     },
     "games": {
      "count": 1,
-     "hash": "9b00ef357af17f6f"
+     "hash": "cc088d3ddf0d0e9a"
     },
     "rounds": {
      "count": 10,
-     "hash": "06d766762f3b7142"
+     "hash": "4c77b1d44d653ce5"
     },
     "countriestemp": {
      "count": 0,
@@ -1670,7 +1665,7 @@
   },
   {
    "step": "a lord's army defends its new vassal's castle",
-   "time": "2026-01-19T16:04:20.000Z",
+   "time": "2026-01-19T19:13:40.000Z",
    "facts": {
     "battles": [
      {
@@ -1705,8 +1700,8 @@
        "sim_hera army destroyed",
        "sim_ares army"
       ],
-      "x": -1,
-      "y": 9
+      "x": -2,
+      "y": 16
      },
      {
       "isOver": true,
@@ -1740,8 +1735,8 @@
        "sim_hera village destroyed",
        "sim_ares army"
       ],
-      "x": 1,
-      "y": 7
+      "x": -1,
+      "y": 15
      },
      {
       "isOver": true,
@@ -1821,8 +1816,8 @@
        "sim_hera castle destroyed",
        "sim_ares army took the castle"
       ],
-      "x": 1,
-      "y": 9
+      "x": 0,
+      "y": 16
      },
      {
       "isOver": true,
@@ -1868,8 +1863,8 @@
        "sim_ares army",
        "sim_zeus army destroyed"
       ],
-      "x": 1,
-      "y": 9
+      "x": 0,
+      "y": 16
      }
     ],
     "capitals": [
@@ -1900,8 +1895,8 @@
       "footmen": 20,
       "owner": null,
       "pikemen": 20,
-      "x": 8,
-      "y": 0
+      "x": 7,
+      "y": 7
      }
     ],
     "players": {
@@ -1922,8 +1917,8 @@
         "footmen": 132,
         "onAllyBuilding": true,
         "pikemen": 0,
-        "x": 1,
-        "y": 9
+        "x": 0,
+        "y": 16
        },
        {
         "archers": 26,
@@ -1942,8 +1937,8 @@
         "footmen": 86,
         "onAllyBuilding": false,
         "pikemen": 0,
-        "x": 1,
-        "y": 7
+        "x": -1,
+        "y": 15
        }
       ],
       "castle": {
@@ -2025,42 +2020,42 @@
     "failed": [],
     "notRun": {},
     "ran": {
-     "checkForGameClose": 69,
-     "checkForGameEnd": 69,
-     "checkForGameStart": 69,
-     "collectCapitalIncome": 208,
-     "collectCastleIncome": 208,
-     "collectVillageIncome": 208,
+     "checkForGameClose": 113,
+     "checkForGameEnd": 113,
+     "checkForGameStart": 113,
+     "collectCapitalIncome": 341,
+     "collectCastleIncome": 341,
+     "collectVillageIncome": 341,
      "enterNewHexCheck": 1,
-     "expirePastMoves": 13,
+     "expirePastMoves": 22,
      "findCountriesInPath": 1,
-     "gamestats_job": 7,
-     "generateTree": 3,
-     "moveArmiesJob": 208,
+     "gamestats_job": 11,
+     "generateTree": 4,
+     "moveArmiesJob": 341,
      "pathToHex": 1,
-     "record_market_history": 3,
-     "removeStuckBattles": 3,
+     "record_market_history": 4,
+     "removeStuckBattles": 4,
      "runBattle": 4,
-     "spendTaxes": 3,
+     "spendTaxes": 4,
      "updateArmyMoveTotals": 1,
-     "updateIncomeRank": 7,
-     "updateIncomeStats": 3,
+     "updateIncomeRank": 11,
+     "updateIncomeStats": 4,
      "updateMoveSpeed": 8,
      "updatePathTime": 1,
-     "updateVassalRank": 7,
+     "updateVassalRank": 11,
      "update_losses_worth": 12,
-     "villageConstructionJob": 69
+     "villageConstructionJob": 113
     }
    },
    "emails": 0,
    "collections": {
     "players": {
      "count": 3,
-     "hash": "fdc9b07d71c18adc"
+     "hash": "68f1fe0c77eaf613"
     },
     "castles": {
      "count": 3,
-     "hash": "07f96cd16a6f8067"
+     "hash": "60150275674092f5"
     },
     "villages": {
      "count": 0,
@@ -2068,7 +2063,7 @@
     },
     "armies": {
      "count": 3,
-     "hash": "5092dc81abf62ec0"
+     "hash": "d8660ddab56a4cfc"
     },
     "armypaths2": {
      "count": 0,
@@ -2076,19 +2071,19 @@
     },
     "capitals": {
      "count": 3,
-     "hash": "7842d1fb7e60c7d5"
+     "hash": "b015b1824b883cba"
     },
     "hexes": {
      "count": 452,
-     "hash": "33c1b35a8e4a2e20"
+     "hash": "090389a5e27aced2"
     },
     "countries": {
      "count": 3,
-     "hash": "987bb39cadde928f"
+     "hash": "e996ea5c0374995b"
     },
     "rooms": {
      "count": 2,
-     "hash": "0f9e49837815fc8c"
+     "hash": "83072792124c41cb"
     },
     "roomchats": {
      "count": 0,
@@ -2100,7 +2095,7 @@
     },
     "alerts": {
      "count": 28,
-     "hash": "2ff578ceb2fcb26c"
+     "hash": "a09091989aea561e"
     },
     "globalalerts": {
      "count": 3,
@@ -2119,12 +2114,12 @@
      "hash": "b04d67bd17f3f781"
     },
     "markethistory": {
-     "count": 8,
-     "hash": "a3d146cf9c854d67"
+     "count": 11,
+     "hash": "b81a08fd79a79c8e"
     },
     "battles2": {
      "count": 5,
-     "hash": "9b515b80063d0b08"
+     "hash": "171bd0c6785c4de3"
     },
     "reports": {
      "count": 0,
@@ -2135,20 +2130,20 @@
      "hash": "97d170e1550eee4a"
     },
     "dailystats": {
-     "count": 6,
-     "hash": "b4a1007f0d7ab0bd"
+     "count": 9,
+     "hash": "118d4b501a848f93"
     },
     "gamestats": {
-     "count": 42,
-     "hash": "8fa6243ce9ef4f37"
+     "count": 61,
+     "hash": "104b6e98a1f754eb"
     },
     "games": {
      "count": 1,
-     "hash": "9b00ef357af17f6f"
+     "hash": "cc088d3ddf0d0e9a"
     },
     "rounds": {
      "count": 14,
-     "hash": "20f95337d6ea0cb9"
+     "hash": "2789d60e156f1354"
     },
     "countriestemp": {
      "count": 0,
