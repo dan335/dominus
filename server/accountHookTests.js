@@ -232,6 +232,33 @@ if (Meteor.isServer) {
           equal((await Players.findOneAsync({userId: userId})).pro, false, 'its player is not pro');
         });
 
+        // AccountsEmail.extract gives no address for these: an account whose
+        // emails list is gone, and one from a service it doesn't know (where
+        // it gives back the account itself)
+        await dTest.eachAsync([
+          ['with no emails list', {$unset: {emails: 1}}],
+          ['whose email has no address', {$set: {emails: [{verified: true}]}}],
+          ['signed up through Twitter', {$unset: {emails: 1}, $set: {'services.twitter': {id: 'ah_twitter'}}}]
+        ], async function(c) {
+          await test('login: an account ' + c[0] + ' is not made pro by whatever is on the old pro list', async function() {
+            oldProIds.push(await OldProUsers.insertAsync({email: name('ah_oldpro_') + '@example.com', purchases: {castles: ['castle_02_keep', 'ah_castle_a', 'ah_castle_b']}}));
+            oldProIds.push(await OldProUsers.insertAsync({purchases: {castles: ['castle_02_keep', 'ah_castle_c']}}));
+            var userId = keep(await Accounts.createUser({username: name('ah_noemail_'), email: name('ah_noemail_') + '@example.com', password: PASSWORD}));
+            await Meteor.users.updateAsync(userId, c[1]);
+            playerIds.push(await Players.insertAsync({gameId: 'ah_game_1', userId: userId, pro: false}));
+            equal(typeof AccountsEmail.extract(await user(userId)), c[0] == 'signed up through Twitter' ? 'object' : 'undefined', 'no address to look up');
+            var before = (await user(userId)).purchases;
+
+            await connect(userId);
+
+            var u = await user(userId);
+            equal(u.pro, false, 'the account is not pro');
+            equal(JSON.stringify(u.purchases), JSON.stringify(before), 'and gets no castles');
+            equal((await Players.findOneAsync({userId: userId})).pro, false, 'nor is its player');
+            equal(u.isNewUser, false, 'isNewUser is still cleared');
+          });
+        });
+
         await test('Google signup: the profile name is the username, the address is its Google email, and only the admin\'s email is made admin', async function() {
           var adminEmail = name('ah_admin_') + '@example.com';
           var hadAdminEmail = _.has(process.env, 'DOMINUS_ADMIN_EMAIL');
@@ -339,11 +366,8 @@ if (Meteor.isServer) {
       } finally {
         clients.forEach(function(client) { client.close(); });
         await Players.removeAsync({_id: {$in: playerIds}});
-        // and any an earlier run that was stopped half way left behind: while
-        // one is there, every account without an email that logs in is made
-        // pro (server/accounts.js looks it up by {email: undefined}, which
-        // matches any document)
-        await OldProUsers.removeAsync({$or: [{_id: {$in: oldProIds}}, {email: /^ah_oldpro_/}]});
+        // and any an earlier run that was stopped half way left behind
+        await OldProUsers.removeAsync({$or: [{_id: {$in: oldProIds}}, {email: /^ah_oldpro_/}, {'purchases.castles': 'ah_castle_c'}]});
         await Meteor.users.removeAsync({_id: {$in: userIds}});
       }
     });
