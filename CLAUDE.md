@@ -152,7 +152,7 @@ The app runs on Meteor 3, which has no fibers: the server's collection, cursor a
 - **Framework**: Meteor.js 3.5.3 (Node 24) with Blaze templating
 - **Database**: MongoDB (via Meteor's mongo package)
 - **Queue**: Redis + Bull
-- **CSS**: LESS + Bootstrap 3 (built once into `lib/client/bootstrap/bootstrap.generated.*` by `packages/bootstrap/build-static.js`; run it again after changing the bootstrap settings or variables)
+- **CSS**: LESS + Bootstrap 3 (built once into `lib/client/bootstrap/bootstrap-settings.generated.*` by `packages/bootstrap/build-static.js`; run it again after changing the bootstrap settings or variables)
 - **Client libs**: jQuery, D3.js (v3), Moment.js, Underscore.js (the underscore.string functions the game uses are in `lib/underscoreString.js`)
 - **Auth**: Meteor accounts with password, Google OAuth, Facebook OAuth
 - **Payments**: Stripe

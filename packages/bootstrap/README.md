@@ -3,8 +3,8 @@
 This folder held the huttonr:bootstrap3 build plugin, which compiled Bootstrap
 3.3.6 from `lib/client/bootstrap/bootstrap-settings.json` on every build. Its
 assets package calls `Assets.getText`, which Meteor 3 removed, so the output is
-now committed instead: `lib/client/bootstrap/bootstrap.generated.css` and
-`bootstrap.generated.js`. `build-static.js` makes them the way the plugin did;
+now committed instead: `lib/client/bootstrap/bootstrap-settings.generated.css` and
+`bootstrap-settings.generated.js`. `build-static.js` makes them the way the plugin did;
 its header says how to run it after changing the settings or
 `bootstrap-variables.less`. The rest of this README describes the original
 package.
