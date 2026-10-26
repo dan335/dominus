@@ -75,9 +75,31 @@ if (Meteor.isServer) {
       var names = _.keys(Meteor.server.publish_handlers);
       assert(names.length > 50, 'publications are registered (' + names.length + ')');
       _.each(Meteor.server.publish_handlers, function(handler, name) {
-        if (handler.length > 0) {
+        if (handler.length > 0 && !publicationGateExempt[name]) {
           assert(handler.publicationGate, name + ' is gated');
         }
+      });
+    });
+
+    await run('publication gate: the browser\'s subscriptions to Meteor\'s own publications are not refused', async function() {
+      // each exempt publication still exists and takes an argument; when
+      // Meteor drops or renames one, its entry goes too
+      _.each(publicationGateExempt, function(yes, name) {
+        var handler = Meteor.server.publish_handlers[name];
+        assert(handler, name + ' is registered');
+        assert(handler && handler.length > 0 && !handler.publicationGate, name + ' takes an argument and is not gated');
+      });
+
+      // autoupdate's client subscribes with no arguments. Refused, open
+      // pages never learn about a new deploy.
+      var autoupdate = await subscribe('meteor_autoupdate_clientVersions', []);
+      assert(autoupdate.ready, 'meteor_autoupdate_clientVersions with no appId is ready' + (autoupdate.error ? ': ' + autoupdate.error.message : ''));
+
+      // the other publications Meteor's packages subscribe to take no
+      // arguments, so the gate doesn't touch them
+      _.each(['meteor.loginServiceConfiguration', 'meteor_facts'], function(name) {
+        var handler = Meteor.server.publish_handlers[name];
+        assert(!handler || (handler.length === 0 && !handler.publicationGate), name + ' takes no arguments');
       });
     });
 
