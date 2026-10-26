@@ -82,8 +82,8 @@ email@3.2.0
 es5-shim@4.8.1
 facebook-config-ui@1.1.0
 facebook-oauth@1.12.0
-facts@1.0.2-pre.1
 facts-base@1.0.2
+facts-ui@1.0.2
 fetch@0.2.0
 fortawesome:fontawesome@4.7.0
 forum-base@0.0.1

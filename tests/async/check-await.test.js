@@ -114,23 +114,24 @@ test('an ignore comment with a reason skips its line or the next', function() {
   ].join('\n')), [5]);
 });
 
-test('--meteor3 flags observe, observeChanges and _publishCursor outside client files', function() {
+test('observe, observeChanges and _publishCursor, which return a promise on Meteor 3, are flagged outside client files', function() {
   const source = [
     'function a() { Players.find().observe({added: function() {}}); }',
     'function b() { var h = Players.find().observeChanges({}); }',
     'function c(sub) { Mongo.Collection._publishCursor(Players.find(), sub, "players"); }',
     'async function d(sub) { await Mongo.Collection._publishCursor(Players.find(), sub, "players"); }',
     'async function e() { await Players.find().observeAsync({}); }',
-    'function f() { return Players.find().observe({}); }'
+    'function f() { return Players.find().observe({}); }',
+    'function g(cursor, sub) { cursor._publishCursor(sub); }',
+    'async function h(cursor, sub) { await cursor._publishCursor(sub); }'
   ].join('\n');
-  const lines = function(name, options) {
-    return checkSources({[name]: source}, options).map(function(f) { return f.line; });
+  const lines = function(name) {
+    return checkSources({[name]: source}).map(function(f) { return f.line; });
   };
-  assert.deepStrictEqual(lines('server/a.js', {meteor3: true}), [1, 2, 3]);
-  assert.deepStrictEqual(lines('lib/a.js', {meteor3: true}), [1, 2, 3], 'shared files too');
-  assert.deepStrictEqual(lines('client/a.js', {meteor3: true}), [], 'not client files: observe stays sync there');
-  assert.deepStrictEqual(lines('server/a.js'), [], 'not without the option');
-  const finding = checkSources({'server/a.js': source}, {meteor3: true})[0];
+  assert.deepStrictEqual(lines('server/a.js'), [1, 2, 3, 7]);
+  assert.deepStrictEqual(lines('lib/a.js'), [1, 2, 3, 7], 'shared files too');
+  assert.deepStrictEqual(lines('client/a.js'), [], 'not client files: observe stays sync there');
+  const finding = checkSources({'server/a.js': source})[0];
   assert.strictEqual(finding.kind, 'meteor3');
 });
 
@@ -222,4 +223,46 @@ test('an async function passed by name to map() is an async callback', function(
     'async function b(ids) { return await dTest.mapAsync(ids, load); }',
     'function c(load) { return _.map(load, String); }'
   ].join('\n')), [2]);
+});
+
+test('in a server file, the sync collection API is flagged: Meteor 3\'s server has none', function() {
+  const lines = function(file, source) {
+    return checkSources({[file]: source}).filter(function(f) { return f.kind === 'sync-api'; }).map(function(f) { return f.line; });
+  };
+  const source = [
+    'Games.findOne("x");',
+    'Meteor.users.update("x", {});',
+    'Games.find({}).forEach(function() {});',
+    'async function a() { await Games.find({}).forEachAsync(function() {}); await Games.findOneAsync("x"); }',
+    'queue.remove();'
+  ].join('\n');
+  assert.deepStrictEqual(lines('server/x.js', source), [1, 2, 3]);
+  // shared and client files keep it: minimongo and the method simulations are sync
+  assert.deepStrictEqual(lines('packages/p/both/x.js', source), []);
+});
+
+test('an async method or publication that checks an argument after its first await or throw is flagged: Meteor 3 audits at the first await', function() {
+  const late = function(source) {
+    return checkSources({'server/x.js': source}).filter(function(f) { return f.kind === 'late-check'; }).map(function(f) { return f.line + ' ' + f.message.split(':')[1].trim().split(' ')[1]; });
+  };
+  assert.deepStrictEqual(late([
+    'Meteor.methods({',
+    '  a: async function(x, y) { check(x, String); check(y, Number); await load(); },',
+    '  b: async function(x) { await load(); check(x, String); },',
+    '  c: async function(x) { if (!this.userId) throw new Meteor.Error("no"); check(x, String); },',
+    '  d: async function(x, y) { check([x, y], [String]); await load(); },',
+    '  e: async function(x) { await helper(x); },',
+    '  f: function(x) { if (!this.userId) throw new Meteor.Error("no"); check(x, String); },',
+    '  g: function(x) { if (this.isSimulation) { return; } return (async () => { await load(); check(x, String); })(); },',
+    '  h: function(x) { return (async () => { check(x, String); await load(); })(); },',
+    '  async i(x) { await load(); check(x, String); },',
+    '  j: async function() { await load(); }',
+    '});',
+    'Meteor.publish("p", async function(x) { await load(); check(x, String); });',
+    'Meteor.publish("q", function(x) { check(x, String); return Games.find(x); });',
+    'Meteor.publish("r", async function(x) { setTimeout(function() { throw new Error(); }); check(x, String); await load(); });'
+  ].join('\n')), ['3 x', '4 x', '8 x', '10 x', '13 x']);
+  // client files have no audit
+  assert.deepStrictEqual(checkSources({'client/x.js': 'Meteor.methods({b: async function(x) { await load(); check(x, String); }});'})
+    .filter(function(f) { return f.kind === 'late-check'; }).length, 0);
 });

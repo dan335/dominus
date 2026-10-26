@@ -188,6 +188,9 @@ if (Meteor.isServer) {
             keys: ['username', 'rankingPro']});
           var regular = await dTest.ddp.connect();
           try {
+            // the collection is made first: on Meteor 3 one made after the
+            // documents arrived doesn't have them yet when the test reads it
+            regular.collection('overallrankingsregular');
             await regular.subscribe('overallRankingsRegular');
             var ids = _.pluck(await regular.collection('overallrankingsregular').find().fetchAsync(), '_id');
             assert(_.contains(ids, f.ranked) && _.contains(ids, f.ranked2), 'ranked users are listed');
@@ -280,6 +283,7 @@ if (Meteor.isServer) {
             dTest.ddp.resetRateLimits();
             var client = await dTest.ddp.connect(f.plain);
             try {
+              client.collection('forumtopics');
               await client.subscribe('forumTopics', sortBy, 2, 'cat1', 'all');
               var got = _.pluck(await client.collection('forumtopics').find().fetchAsync(), '_id').sort();
               var sort = {};
@@ -344,10 +348,10 @@ if (Meteor.isServer) {
         });
 
         await test('meteor_facts: the server facts go to admins only, and follow a change to admin', async function() {
-          // Nothing reports to the old facts package on 2.16 (Meteor's own
-          // packages report to facts-base), so there are none unless one is
-          // made here
-          Package.facts.Facts.incrementServerFact('dTest', 'factsTest', 1);
+          // facts-base, which Meteor's own packages report to (the old facts
+          // package's publication of the same name lost to it on Meteor 3);
+          // one is made here so there is one to see
+          Package['facts-base'].Facts.incrementServerFact('dTest', 'factsTest', 1);
           var factsFor = async function(userId) {
             dTest.ddp.resetRateLimits();
             var client = await dTest.ddp.connect(userId);

@@ -4,7 +4,6 @@
 //   node tests/async/check-await.js          # every app file; exit 1 on a finding
 //   node tests/async/check-await.js --json   # the findings as JSON
 //   node tests/async/check-await.js a.js b.js
-//   node tests/async/check-await.js --meteor3  # also the calls listed below
 //
 // It flags a call that returns a promise when nothing waits for it: the call
 // is not awaited, not returned, not handed to Promise.all and not followed by
@@ -34,11 +33,18 @@
 // `void fooAsync()` says nobody waits on purpose. A line can also be skipped
 // with a comment on it or on the line above: // check-await: ignore <reason>
 //
-// With --meteor3 it also flags the calls that are sync on 2.16 but return a
-// promise on Meteor 3, outside client files: a cursor's observe() and
-// observeChanges(), and Mongo.Collection._publishCursor(). They are not
-// findings yet, so the run of the test suite leaves them out; the list is
-// what is left to change before stage 3.
+// Outside client files it also flags the calls that were sync on Meteor 2.16
+// but return a promise on Meteor 3: a cursor's observe() and observeChanges(),
+// and _publishCursor() (Mongo.Collection's, or a cursor's).
+//
+// In server files it also flags the sync collection API, which Meteor 3's
+// server doesn't have: findOne, insert, update, remove and upsert on a
+// collection, and a find()'s fetch, forEach, map and count.
+//
+// Outside client files it flags a method or publication argument that an
+// async handler check()s only after its first await or throw: Meteor 3's
+// audit-argument-checks looks when the handler returns, which is then, and
+// fails the call with a 500 (see server/lib/asyncArgumentChecks.js).
 //
 // knox's S3 calls are not on the list: they take a callback and return a
 // request, not a promise.
@@ -546,20 +552,121 @@ function meteor3Reason(call) {
   if (callee.type !== 'MemberExpression' || callee.computed) return null;
   const last = callee.property.name;
   if (last === 'observe' || last === 'observeChanges') return last + '() returns a promise on Meteor 3 (use ' + last + 'Async)';
-  if (dottedName(callee) === 'Mongo.Collection._publishCursor') return 'Mongo.Collection._publishCursor() returns a promise on Meteor 3';
+  if (last === '_publishCursor') return '_publishCursor() returns a promise on Meteor 3';
   return null;
 }
 
+// Meteor 3's server has no sync collection API: findOne, insert, update,
+// remove, upsert and a cursor's count throw, and a cursor's fetch, forEach and
+// map return a promise. In a server file, why this call is one, or null.
+const SYNC_COLLECTION_METHODS = new Set(['findOne', 'insert', 'update', 'remove', 'upsert']);
+const SYNC_CURSOR_METHODS = new Set(['fetch', 'forEach', 'map', 'count']);
+function syncApiReason(call) {
+  const callee = call.callee;
+  if (callee.type !== 'MemberExpression' || callee.computed) return null;
+  const method = callee.property.name;
+  const object = callee.object;
+  const objectName = dottedName(object) || '';
+  if (SYNC_COLLECTION_METHODS.has(method) && (/^[A-Z]\w*$/.test(objectName) || objectName === 'Meteor.users')) {
+    return objectName + '.' + method + '() is sync, which the server doesn\'t have on Meteor 3 (use ' + method + 'Async)';
+  }
+  if (SYNC_CURSOR_METHODS.has(method) && object.type === 'CallExpression' && object.callee.type === 'MemberExpression' &&
+      !object.callee.computed && object.callee.property.name === 'find') {
+    return 'a cursor\'s ' + method + '() is sync, which the server doesn\'t have on Meteor 3 (use ' + method + 'Async)';
+  }
+  return null;
+}
+
+// Meteor 3's audit-argument-checks looks at a method's or publication's
+// arguments when its handler returns, and an async handler returns at its
+// first await: a check() after that counts as missing, and the call fails
+// with a 500 (Meteor 2.16 ran an async handler to its end in the caller's
+// fiber, so it counted). A throw before every argument is checked does the
+// same, since an async function's throw is a rejection the audit doesn't see.
+// The handlers are the functions in Meteor.methods({...}) and Meteor.publish's
+// function, and a shared method's `return (async () => {...})()`, which runs
+// at once up to its own first await. An argument handed to another call
+// before then counts as checked by it. One finding per argument.
+function lateCheckFindings(ast) {
+  const findings = [];
+  const handlers = [];
+  each(ast, function(node) {
+    if (node.type !== 'CallExpression') return;
+    const name = dottedName(node.callee);
+    if (name === 'Meteor.methods' && node.arguments[0] && node.arguments[0].type === 'ObjectExpression') {
+      for (const property of node.arguments[0].properties) {
+        if (property.type === 'Property' && isFunction(property.value)) handlers.push({fn: property.value, label: "method '" + propertyKey(property) + "'"});
+      }
+    }
+    if (name === 'Meteor.publish' && isFunction(node.arguments[1])) {
+      const label = node.arguments[0] && node.arguments[0].type === 'Literal' ? "publication '" + node.arguments[0].value + "'" : 'publication';
+      handlers.push({fn: node.arguments[1], label: label});
+    }
+  });
+  // an async function called right where it is written: (async () => {...})()
+  const isRunAtOnce = function(fn) {
+    return fn.async && fn.parent.type === 'CallExpression' && fn.parent.callee === fn;
+  };
+  for (const handler of handlers) {
+    const params = handler.fn.params.filter(function(p) { return p.type === 'Identifier'; }).map(function(p) { return p.name; });
+    if (!params.length) continue;
+    let cut = Infinity;
+    const checkedAt = {};
+    const passedAt = {};
+    const visit = function(node, inAsync) {
+      if (isFunction(node) && node !== handler.fn) {
+        if (!isRunAtOnce(node)) return;
+        inAsync = true;
+      }
+      if (node.type === 'AwaitExpression') cut = Math.min(cut, node.end);
+      if (node.type === 'ForOfStatement' && node.await) cut = Math.min(cut, node.start);
+      if (node.type === 'ThrowStatement' && inAsync) cut = Math.min(cut, node.start);
+      if (node.type === 'CallExpression') {
+        const isCheck = node.callee.type === 'Identifier' && node.callee.name === 'check';
+        const first = node.arguments[0];
+        const values = isCheck && first && first.type === 'ArrayExpression' ? first.elements : (isCheck ? [first] : node.arguments);
+        for (const value of values) {
+          if (!value || value.type !== 'Identifier' || !params.includes(value.name)) continue;
+          const seen = isCheck ? checkedAt : passedAt;
+          seen[value.name] = Math.min(seen[value.name] === undefined ? Infinity : seen[value.name], node.start);
+        }
+      }
+      for (const key of Object.keys(node)) {
+        if (key === 'parent' || key === 'loc') continue;
+        const value = node[key];
+        if (Array.isArray(value)) {
+          for (const child of value) if (child && typeof child.type === 'string') visit(child, inAsync);
+        } else if (value && typeof value.type === 'string') {
+          visit(value, inAsync);
+        }
+      }
+    };
+    visit(handler.fn, handler.fn.async);
+    if (cut === Infinity) continue;
+    for (const name of params) {
+      const at = Math.min(checkedAt[name] === undefined ? Infinity : checkedAt[name], passedAt[name] === undefined ? Infinity : passedAt[name]);
+      if (at < cut) continue;
+      findings.push({node: handler.fn, message: handler.label + ': argument ' + name + ' is not check()ed before the handler\'s first await or throw, ' +
+        'which Meteor 3\'s audit-argument-checks counts as not checked (a 500)'});
+    }
+  }
+  return findings;
+}
+
 // findings for parsed files: {file: ast}, with {file: source} for ignores;
-// options.meteor3 adds the calls meteor3Reason names
-function check(asts, sources, extraAsyncNames, options) {
-  options = options || {};
+function check(asts, sources, extraAsyncNames) {
   const asyncNames = Object.assign(asyncDefinitions(asts), extraAsyncNames || {});
   const asyncKeys = asyncPropertyKeys(asts);
   const findings = [];
   for (const [file, ast] of Object.entries(asts)) {
     const ignored = ignoredLines(sources[file] || '');
     const rawNames = rawCollectionNames(ast);
+    if (fileSide(path.join(ROOT, file)) !== 'client') {
+      for (const late of lateCheckFindings(ast)) {
+        const line = late.node.loc.start.line;
+        if (!ignored.has(line)) findings.push({file: file, line: line, column: late.node.loc.start.column + 1, kind: 'late-check', message: late.message});
+      }
+    }
     each(ast, function(node) {
       if (node.type !== 'CallExpression') return;
       const line = node.loc.start.line;
@@ -571,7 +678,9 @@ function check(asts, sources, extraAsyncNames, options) {
         findings.push({file: file, line: line, column: node.loc.start.column + 1, kind: 'not-awaited',
           message: reason + ', and nothing waits for it'});
       }
-      const laterReason = options.meteor3 && !reason && fileSide(path.join(ROOT, file)) !== 'client' && meteor3Reason(node);
+      const syncReason = fileSide(path.join(ROOT, file)) === 'server' && syncApiReason(node);
+      if (syncReason) findings.push({file: file, line: line, column: node.loc.start.column + 1, kind: 'sync-api', message: syncReason});
+      const laterReason = !reason && fileSide(path.join(ROOT, file)) !== 'client' && meteor3Reason(node);
       if (laterReason && !isWaitedFor(node)) {
         findings.push({file: file, line: line, column: node.loc.start.column + 1, kind: 'meteor3',
           message: laterReason + ', and nothing waits for it'});
@@ -582,13 +691,13 @@ function check(asts, sources, extraAsyncNames, options) {
 }
 
 // for tests: check({name: source})
-function checkSources(sources, options) {
+function checkSources(sources) {
   const asts = {};
   for (const [file, source] of Object.entries(sources)) asts[file] = link(parse(source));
-  return check(asts, sources, null, options);
+  return check(asts, sources, null);
 }
 
-function checkFiles(files, options) {
+function checkFiles(files) {
   const sources = {};
   const asts = {};
   for (const file of files) {
@@ -596,7 +705,7 @@ function checkFiles(files, options) {
     sources[name] = fs.readFileSync(file, 'utf8');
     asts[name] = link(parse(sources[name]));
   }
-  return {findings: check(asts, sources, null, options), asyncNames: asyncDefinitions(asts), files: files.length};
+  return {findings: check(asts, sources, null), asyncNames: asyncDefinitions(asts), files: files.length};
 }
 
 module.exports = {checkSources, checkFiles, asyncDefinitions};
@@ -604,11 +713,10 @@ module.exports = {checkSources, checkFiles, asyncDefinitions};
 if (require.main === module) {
   const args = process.argv.slice(2);
   const json = args.includes('--json');
-  const meteor3 = args.includes('--meteor3');
   const given = args.filter(function(a) { return !a.startsWith('--'); }).map(function(f) { return path.resolve(f); });
   // async names come from every app file, even when only some are checked
   const all = listFiles();
-  const result = checkFiles(all, {meteor3: meteor3});
+  const result = checkFiles(all);
   let findings = result.findings;
   if (given.length) {
     const wanted = new Set(given.map(function(f) { return path.relative(ROOT, f); }));

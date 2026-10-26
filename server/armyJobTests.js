@@ -416,8 +416,9 @@ if (Meteor.isServer) {
           };
           try {
             await dTest.eachAsync(players, async function(p) { await Players.insertAsync(p); });
+            // run is the battle calculator's (calculatorPanel.js), in the browser
             var sync = round();
-            sync.run();
+            await dTest.onClient(function() { sync.run(); });
             var async = round();
             var returned = async.runAsync();
             assert(returned instanceof Promise, 'runAsync returns a promise');

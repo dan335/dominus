@@ -95,7 +95,7 @@ if (Meteor.isServer) {
         if (result && typeof result._publishCursor === 'function') {
           // Meteor publishes a returned cursor and then marks the sub ready itself
           out.cursor = result;
-          result._publishCursor(sub);
+          await result._publishCursor(sub);
           out.ready++;
         }
       } finally {
@@ -587,21 +587,14 @@ if (Meteor.isServer) {
           'all games cached');
         let cached = games.map(function(g) { return snapshot(g._id); });
 
-        // read them again without the cache: from the database, as a cache
-        // miss does (and logs, which is kept out of the test output)
-        let uncached;
-        let error = console.error;
-        console.error = function() {};
-        try {
-          uncached = games.map(function(g) {
-            delete _gs._cachedGames[g._id];
-            let out = snapshot(g._id);
-            delete _gs._cachedGames[g._id];
-            return out;
-          });
-        } finally {
-          console.error = error;
-        }
+        // read them again from the database, as _gs.ensureGame does for a
+        // game this server hasn't cached yet
+        let uncached = await dTest.mapAsync(games, async function(g) {
+          delete _gs._cachedGames[g._id];
+          await _gs.ensureGame(g._id);
+          assert(_gs._cachedGames[g._id], 'game cached again by ensureGame');
+          return snapshot(g._id);
+        });
 
         games.forEach(function(g, i) {
           _.each(cached[i], function(value, key) {
@@ -613,19 +606,24 @@ if (Meteor.isServer) {
       }
     });
 
-    await run('getGame reads only the settings fields, cached or not, and unknown ids give {}', async function() {
+    await run('getGame reads only the settings fields, cached or read by ensureGame, and a miss or an unknown id gives {}', async function() {
       let game = await t.createTestGame({hasStarted: false, isSpeed: true, tree: {big: true}, minimap: {big: true}});
       let error = console.error;
       console.error = function() {};
       try {
         assert(await waitFor(function() { return !!_gs._cachedGames[game._id]; }), 'cached');
-        [true, false].forEach(function(cached) {
-          if (!cached) delete _gs._cachedGames[game._id];
+        await dTest.eachAsync([true, false], async function(cached) {
+          if (!cached) {
+            delete _gs._cachedGames[game._id];
+            await _gs.ensureGame(game._id);
+          }
           let g = _gs.getGame(game._id);
           equal(g.isSpeed, true, 'flag read (cached ' + cached + ')');
           assert(!('tree' in g), 'tree not loaded (cached ' + cached + ')');
           assert(!('minimap' in g), 'minimap not loaded (cached ' + cached + ')');
         });
+        delete _gs._cachedGames[game._id];
+        equal(JSON.stringify(_gs.getGame(game._id)), '{}', 'a game missing from the cache reads as {} (the defaults)');
         equal(JSON.stringify(_gs.getGame('bf_missing_' + Random.id())), '{}', 'unknown id');
         equal(JSON.stringify(_gs.getGame(undefined)), '{}', 'no id');
       } finally {
@@ -1009,27 +1007,37 @@ if (Meteor.isServer) {
         let positions = async function(army, ids) {
           return await (await armyState(army)).map(function(p) { return p.index + ':' + ids.indexOf(p._id); }).join();
         };
-        await dTest.eachAsync(steps, async function(step) {
+        let fromServer = await dTest.mapAsync(steps, async function(step) {
           await callAs(userId, step[0], [ps[step[1]]], false);
-          await callAs(userId, step[0], [pm[step[1]]], true);
-          equal(await positions(sim, pm), await positions(server, ps), 'same order after ' + step[0] + ' ' + step[1]);
+          return await positions(server, ps);
         });
+        // the simulation runs as in the browser, on minimongo
+        let fromSimulation = await dTest.onClient(function() {
+          return dTest.mapAsync(steps, async function(step) {
+            await callAs(userId, step[0], [pm[step[1]]], true);
+            return await positions(sim, pm);
+          });
+        });
+        steps.forEach(function(step, n) {
+          equal(fromSimulation[n], fromServer[n], 'same order after ' + step[0] + ' ' + step[1]);
+        });
+        assert(fromServer[0] !== fromServer[1], 'the steps change the order');
       } finally {
         await Armypaths.removeAsync({user_id: userId});
       }
     });
 
 
-    // Meteor 2.16 brings underscore@1.6.1, whose _.where is _.find. The
-    // spectators' left menu used it and broke; it uses _.filter now.
-    // underscore@1.6.4 (Meteor 3) fixes it, and this test then fails on purpose.
-    await run('known bug: _.where returns only the first match in underscore ' + _.VERSION, function() {
+    // Meteor 2.16 brought underscore@1.6.1, whose _.where is _.find. The
+    // spectators' left menu used it and broke; it uses _.filter now. Meteor 3's
+    // underscore@1.6.4 fixed it (this was a "known bug" test until then).
+    await run('_.where returns every match again in underscore ' + _.VERSION, function() {
       let panels = [{name: 'a', spectator: true}, {name: 'b'}, {name: 'c', spectator: true}];
       let found = _.where(panels, {spectator: true});
-      assert(!Array.isArray(found), '_.where gives no array');
-      equal(found && found.name, 'a', 'just the first match');
+      assert(Array.isArray(found), '_.where gives an array');
+      equal(_.pluck(found, 'name').join(), 'a,c', 'with both matches');
       equal(_.pluck(_.filter(panels, function(p) { return p.spectator; }), 'name').join(), 'a,c', '_.filter finds both');
-      equal(_.findWhere(panels, {spectator: true}).name, 'a', '_.findWhere is unaffected');
+      equal(_.findWhere(panels, {spectator: true}).name, 'a', '_.findWhere gives the first');
     });
   };
 }

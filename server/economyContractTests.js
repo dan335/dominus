@@ -246,7 +246,7 @@ if (Meteor.isServer) {
           await w.setResources(0, {gold: 100000, ore: 5});
           var oldPrice = await price('ore');
           var taxesBefore = await taxes();
-          var expectedCost = dMarket.total_of_buy(w.gameId, 'ore', 10);
+          var expectedCost = await dMarket.total_of_buyAsync(w.gameId, 'ore', 10);
           var cost = await clients[0].call('buy_resource', w.gameId, 'ore', 10);
           near(cost, expectedCost, 'returns the cost');
           near((await w.player(0)).gold, 100000 - expectedCost, 'gold paid');
@@ -263,7 +263,7 @@ if (Meteor.isServer) {
         await test('sell_resource: the resource sells for gold and the price goes down', async function() {
           await w.setResources(0, {gold: 0, wool: 50});
           var oldPrice = await price('wool');
-          var expected = dMarket.total_of_sell(w.gameId, 'wool', 10);
+          var expected = await dMarket.total_of_sellAsync(w.gameId, 'wool', 10);
           var total = await clients[0].call('sell_resource', w.gameId, 'wool', 10);
           near(total, expected, 'returns the gold made');
           near((await w.player(0)).gold, expected, 'gold received');
@@ -409,8 +409,13 @@ if (Meteor.isServer) {
             await w.makeArmy(0, {footmen: 2}, at);
           };
 
-          var play = async function(call) {
+          // the simulations run as in the browser, on minimongo (dTest.onClient);
+          // reset() sets up the database first
+          var play = async function(call, onClient) {
             await reset();
+            return onClient ? await dTest.onClient(function() { return calls(call); }) : await calls(call);
+          };
+          var calls = async function(call) {
             var returned = [];
             returned.push(await call(0, 'send_gold_to', [w.gameId, w.players[1]._id, '100']));
             returned.push(await call(0, 'set_unit_image', [w.castles[0]._id, 'castles', 'castle_02_keep', w.gameId]));
@@ -425,7 +430,7 @@ if (Meteor.isServer) {
 
           try {
             var fromServer = await play(real);
-            var fromSimulations = await play(simulate);
+            var fromSimulations = await play(simulate, true);
             equal(fromSimulations[0], fromServer[0], 'what each returns');
             equal(fromServer[0], JSON.stringify([100 - 100 * _s.income.sendToVassalTax, true, undefined, true]), 'which is');
             equal(fromSimulations[1], fromServer[1], 'after sending gold, setting the image, activating pro and building a village');
@@ -448,7 +453,7 @@ if (Meteor.isServer) {
               [0, 'upgradeVillage', [w.gameId, theirs._id]]
             ];
             await dTest.eachAsync(refusals, async function(r) {
-              var fromSimulation = await dTest.throws(function() { return simulate(r[0], r[1], r[2]); });
+              var fromSimulation = await dTest.onClient(function() { return dTest.throws(function() { return simulate(r[0], r[1], r[2]); }); });
               var fromReal = await dTest.throws(function() { return real(r[0], r[1], r[2]); });
               assert(fromReal, r[1] + ' ' + JSON.stringify(r[2]) + ' is refused');
               equal(fromSimulation && fromSimulation.error, fromReal && fromReal.error, r[1] + ' ' + JSON.stringify(r[2]) + ': refused the same way');

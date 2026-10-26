@@ -62,9 +62,10 @@ if (Meteor.isServer) {
 
   // A game that isn't in the cache: a new game that the observer below hasn't
   // seen yet, or a gameId that isn't a game. Every caller that can see a
-  // brand-new game should have awaited _gs.ensureGame first, so this logs
-  // where it was called from, once per game. On Meteor 2.16 the sync findOne
-  // still works; on Meteor 3 it throws, and the game reads as {}.
+  // brand-new game should have awaited _gs.ensureGame first (jobs and game
+  // methods do), so this logs where it was called from, once per game. The
+  // server can't read the game here without waiting, so it reads as {}: every
+  // setting has its default value.
   let missesLogged = {};
   _gs._missesLogged = missesLogged;
   cacheMiss = function(gameId) {
@@ -73,14 +74,7 @@ if (Meteor.isServer) {
       console.error('_gs: game ' + gameId + ' is not in the settings cache; await _gs.ensureGame(gameId) first\n' +
         new Error('settings cache miss').stack);
     }
-    let game = null;
-    try {
-      game = Games.findOne(gameId, {fields:settingsFields});
-    } catch (error) {
-      return null;
-    }
-    cacheGame(game);
-    return game;
+    return null;
   };
 
   // adds a game to the cache right away, for the code that inserts it

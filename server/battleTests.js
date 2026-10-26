@@ -42,9 +42,9 @@ if (Meteor.isServer) {
   var freeHexNear = async function(sim, x, y, opts) {
     opts = opts || {};
     var buildings = [];
-    [Castles, Villages, Capitals].forEach(function(c) {
-      c.find({gameId: sim.gameId}, {fields: {x: 1, y: 1}}).forEach(function(b) { buildings.push(b); });
-    });
+    for (const c of [Castles, Villages, Capitals]) {
+      buildings = buildings.concat(await c.find({gameId: sim.gameId}, {fields: {x: 1, y: 1}}).fetchAsync());
+    }
     var find = {gameId: sim.gameId, hasBuilding: {$ne: true}};
     if (opts.type) find.type = opts.type;
     var hexes = await Hexes.find(find, {sort: {x: 1, y: 1}}).fetchAsync();

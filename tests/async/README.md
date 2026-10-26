@@ -1,6 +1,6 @@
 # Async conversion tools
 
-Two scripts for stage 2 of the Meteor upgrade (`/mnt/project-files/reports/meteor-upgrade-plan.md`, PR 6). Stage 2 converts the server code from fibers to `async`/`await`, one domain per PR. They read the app's own files with [acorn](https://github.com/acornjs/acorn), and they need nothing from Meteor.
+Two scripts from stage 2 of the Meteor upgrade (`/mnt/project-files/reports/meteor-upgrade-plan.md`, PR 6). Stage 2 converts the server code from fibers to `async`/`await`, one domain per PR. They read the app's own files with [acorn](https://github.com/acornjs/acorn), and they need nothing from Meteor.
 
 ```bash
 npm ci --prefix tests/async                # once
@@ -28,7 +28,11 @@ The checker also flags an async callback given to `forEach`, `_.each`, `_.map`, 
 
 To skip a line, put `// check-await: ignore <reason>` on it or on the line above. The reason is required.
 
-`--meteor3` also lists the calls that are sync on 2.16 but return a promise on Meteor 3: a cursor's `observe()` and `observeChanges()`, and `Mongo.Collection._publishCursor()`, outside client files. They are not findings yet, so the test run only counts them. Each domain's PR awaits its own (`observeAsync`, `await Mongo.Collection._publishCursor(...)` in an async publication), and the list must be empty before stage 3.
+Three checks are for Meteor 3, outside client files:
+
+- a cursor's `observe()` and `observeChanges()`, and `_publishCursor()` (`Mongo.Collection`'s or a cursor's), which return a promise on Meteor 3, when nothing waits for them;
+- in server files, the sync collection API, which Meteor 3's server doesn't have: `findOne`, `insert`, `update`, `remove` and `upsert` on a collection, and a `find()`'s `fetch`, `forEach`, `map` and `count` ('sync-api'). Shared and client files keep it: minimongo and the method simulations are sync. `server/lib/syncCursorGuard.js` catches at run time what this can't see, such as a shared helper the server calls;
+- a method or publication argument that an async handler `check()`s only after its first `await` or `throw` ('late-check'). audit-argument-checks looks when the handler returns, which is then, and the call fails with a 500. `server/lib/asyncArgumentChecks.js` waits for the handler when the audit fails, so a failed `check()` before the first `await` is still Match failed [400].
 
 The checker finds the app's own async functions by name: `async function foo`, `foo = async () => ...`, `dX.foo = async function`, and `dX = {foo: async function}`. A function that isn't async but returns a promise (`function f() { return fooAsync(); }`) counts as one too. It matches calls by name, the way this codebase calls its namespaced functions. A bare name is the function declared around the call when there is one, before a function of that name in another file. It follows a local alias (`var expectError = dTest.expectError`), `fn.apply(...)` and `fn.call(...)`, and an environment variable's `withValue(value, async function() {...})`, which returns its function's promise. It does not follow a call through `this` or a computed name (`handlers[name]()`).
 

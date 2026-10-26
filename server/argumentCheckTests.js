@@ -194,10 +194,12 @@ if (Meteor.isServer) {
     // A 'game' method waits for server/methodGate.js to look up the caller's
     // player first. The audit still covers it as before: the gate's own checks
     // of the ids it looks up count, and an argument nobody checks is refused.
-    // On 2.16 an async function runs in its caller's fiber, so an argument
-    // checked only after the method's first await still counts; on Meteor 3
-    // it won't (audit-argument-checks looks when the method returns its
-    // promise), so this test changes then on purpose.
+    // On Meteor 3 audit-argument-checks looks when the method returns its
+    // promise, at its first await, so an argument checked only after that
+    // doesn't count (2.16 ran an async function to its end in the caller's
+    // fiber, and it did). server/lib/asyncArgumentChecks.js waits for the
+    // method when the audit fails, so a check that fails, or an error thrown
+    // before every argument is checked, still reaches the client as itself.
     await run('argument checks: a game method behind the method gate is audited as before, and keeps its user and write fence', async function() {
       var user = await t.createTestUser({});
       var gameId = 'argcheck_gate_' + Random.id(6);
@@ -219,6 +221,14 @@ if (Meteor.isServer) {
           await Promise.resolve();
           check(other, String);
           ran.late = (ran.late || 0) + 1;
+          return 'ran';
+        }],
+        argumentCheckTestsGateAsyncRefuses: [{gameId: 0}, async function(gameId, other, more) {
+          if (other == 'refuse') throw new Meteor.Error('not-allowed', 'refused before the checks');
+          check(other, String);
+          check(more, String);
+          await Promise.resolve();
+          ran.asyncRefuses = (ran.asyncRefuses || 0) + 1;
           return 'ran';
         }]
       };
@@ -254,8 +264,15 @@ if (Meteor.isServer) {
         equal(JSON.stringify(out.result), JSON.stringify([user._id, user._id, true, true]), 'an async method keeps its user, write fence and invocation after an await');
 
         out = await call('argumentCheckTestsGateLateCheck', gameId, 'x');
-        equal(out.result, 'ran', 'on 2.16, an argument checked only after an await still counts');
-        equal(ran.late, 1, 'and the method ran once');
+        equal(out.error && out.error.error, 500, 'an argument checked only after an await doesn\'t count: refused as a server error');
+        equal(ran.late, 1, 'once the method has run, as an unchecked one is');
+
+        equal((await call('argumentCheckTestsGateAsyncRefuses', gameId, 'x', 'y')).result, 'ran', 'an async method that checks before its first await runs');
+        out = await call('argumentCheckTestsGateAsyncRefuses', gameId, 5, 'y');
+        equal(out.error && out.error.error, 400, 'a failed check in an async method is refused as Match failed, not a server error');
+        out = await call('argumentCheckTestsGateAsyncRefuses', gameId, 'refuse', 'y');
+        equal(out.error && out.error.error, 'not-allowed', 'and an error it throws before its checks reaches the client as itself');
+        equal(ran.asyncRefuses, 1, 'neither ran on');
 
         out = await call('argumentCheckTestsGateChecksRest', gameId, {$ne: null});
         equal(out.error && out.error.error, 400, 'a bad argument is still refused by the method\'s own check');

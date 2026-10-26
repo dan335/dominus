@@ -674,7 +674,9 @@ if (Meteor.isServer) {
 
           try {
             var fromServer = await play(real);
-            var fromSimulations = await play(simulate);
+            // the simulations run as in the browser, on minimongo; the armies
+            // and paths the test makes between them go to the same copies
+            var fromSimulations = await dTest.onClient(function() { return play(simulate); });
             equal(fromSimulations.length, fromServer.length, 'as many steps');
             fromServer.forEach(function(s, n) {
               equal(fromSimulations[n], s, 'step ' + n);
@@ -704,7 +706,7 @@ if (Meteor.isServer) {
             ];
             var before = await dTest.snapshot(w.gameId);
             await dTest.eachAsync(refusals, async function(r) {
-              var fromSimulation = await dTest.throws(function() { return simulate(r[0], r[1], r[2]); });
+              var fromSimulation = await dTest.onClient(function() { return dTest.throws(function() { return simulate(r[0], r[1], r[2]); }); });
               var fromReal = await dTest.throws(function() { return real(r[0], r[1], r[2]); });
               var name = r[1] + ' ' + JSON.stringify(r[2]);
               assert(fromReal, name + ' is refused');

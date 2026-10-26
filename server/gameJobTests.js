@@ -297,11 +297,11 @@ if (Meteor.isServer) {
           var docs = await Gamestats.find({gameId: w.gameId}).fetchAsync();
           equal(docs.length, 2, 'two docs, not one for the period');
           equal(docs[1].num_users, 3, 'num_users');
-          _s.armies.types.forEach(function(type) {
+          for (var type of _s.armies.types) {
             var one = dTest.soldierCounts({});
             one[type] = 1;
-            equal(docs[1].soldierWorth[type], dArmies.worth(w.gameId, one), type + ' worth');
-          });
+            equal(docs[1].soldierWorth[type], await dArmies.worthAsync(w.gameId, one), type + ' worth');
+          }
         });
 
         await test('initDailystatsForNewUser: a zeroed Dailystats doc ranked last among the game\'s players', async function() {
