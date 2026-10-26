@@ -37,9 +37,10 @@ WebApp.addHtmlAttributeHook(function() {
 });
 
 
-WebAppInternals.registerBoilerplateDataCallback('dominusSeo', function(request, data, arch) {
+// webapp waits for a callback that returns a promise
+WebAppInternals.registerBoilerplateDataCallback('dominusSeo', async function(request, data, arch) {
   try {
-    var meta = SEO.resolve(request.path);
+    var meta = await SEO.resolveAsync(request.path);
 
     data.dynamicHead = (data.dynamicHead || '') + '\n' + SEO.renderHead(meta);
     data.dynamicBody = (data.dynamicBody || '') + SEO.renderBody(meta);

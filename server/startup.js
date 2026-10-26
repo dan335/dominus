@@ -1,5 +1,3 @@
-Future = Npm.require('fibers/future');
-
 // BrowserPolicy.content.allowOriginForAll("http://www.google-analytics.com")
 // BrowserPolicy.content.allowOriginForAll("http://netdna.bootstrapcdn.com")
 // BrowserPolicy.content.allowOriginForAll("https://*.stripe.com")
@@ -13,17 +11,17 @@ Future = Npm.require('fibers/future');
 // addArmyPath used to accept any armyId, so a path could be added to someone
 // else's army. Remove paths whose owner or game doesn't match their army.
 // Safe to run on every start; does nothing once clean.
-removeForeignArmyPaths = function() {
-  let paths = Armypaths.find({}, {fields: {armyId:1, user_id:1, gameId:1}}).fetch();
+removeForeignArmyPaths = async function() {
+  let paths = await Armypaths.find({}, {fields: {armyId:1, user_id:1, gameId:1}}).fetchAsync();
   if (!paths.length) {
     return 0;
   }
 
   let armies = {};
   let armyIds = _.uniq(_.pluck(paths, 'armyId'));
-  Armies.find({_id: {$in:armyIds}}, {fields: {user_id:1, gameId:1}}).forEach(function(army) {
+  for (let army of await Armies.find({_id: {$in:armyIds}}, {fields: {user_id:1, gameId:1}}).fetchAsync()) {
     armies[army._id] = army;
-  });
+  }
 
   let badIds = [];
   paths.forEach(function(path) {
@@ -36,16 +34,16 @@ removeForeignArmyPaths = function() {
   });
 
   if (badIds.length) {
-    Armypaths.remove({_id: {$in:badIds}});
+    await Armypaths.removeAsync({_id: {$in:badIds}});
     console.log('removeForeignArmyPaths: removed ' + badIds.length + ' army paths that did not belong to their army');
   }
 
   return badIds.length;
 };
 
-Meteor.startup(function() {
+Meteor.startup(async function() {
   if (process.env.DOMINUS_WORKER == 'true') {
-    removeForeignArmyPaths();
+    await removeForeignArmyPaths();
   }
 });
 

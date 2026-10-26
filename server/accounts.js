@@ -28,7 +28,8 @@ Accounts.validateNewUser(function(user) {
 
 // this is called before validateNewUser()
 // don't do anything here except setup user object
-Accounts.onCreateUser(function(options, user) {
+// async: accounts-base waits for it (Meteor.wrapFn on 2.16, await on Meteor 3)
+Accounts.onCreateUser(async function(options, user) {
 	if (options.profile) {
 		user.profile = options.profile;
 	} else {
@@ -68,7 +69,8 @@ Accounts.onCreateUser(function(options, user) {
 	}
 
 	// check for duplicate names
-	let dupeNameUser = Accounts.findUserByUsername(user.username);
+	// (sync on 2.16, a promise on Meteor 3: awaiting it works on both)
+	let dupeNameUser = await Accounts.findUserByUsername(user.username);
 	if (dupeNameUser) {
 		user.username = user.username + Math.floor(Math.random() * 100);
 	}
@@ -122,7 +124,7 @@ Accounts.onCreateUser(function(options, user) {
 	// add to mailing list
 	let email = AccountsEmail.extract(user);
 	if (email) {
-		Queues.add('addToMailingList', {name:user.username, email:email}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, email);
+		await Queues.addAsyncOrLog('addToMailingList', {name:user.username, email:email}, {attempts:10, backoff:{type:'fixed', delay:15000}, delay:0, timeout:1000*60*5}, email);
 	} else {
 		console.error('User does not have an email in onCreateUser');
 	}
@@ -135,16 +137,16 @@ Accounts.onCreateUser(function(options, user) {
 // check when user logs in if they have a castle
 // if not then they are a new user
 // this gets called multiple times per user, careful
-Accounts.onLogin(function(data) {
+var onLogin = async function(data) {
 	//if (data.user && data.user.isNewUser) {
 		let email = AccountsEmail.extract(data.user);
 
 		// temp
 		// did user have pro in old server
-		let pref = OldProUsers.findOne({email:email}, {fields: {purchases:1}});
+		let pref = await OldProUsers.findOneAsync({email:email}, {fields: {purchases:1}});
 		if (pref) {
-			Meteor.users.update(data.user._id, {$set: {pro:true}});
-			Players.update({userId:data.user._id}, {$set: {pro:true}}, {multi:true});
+			await Meteor.users.updateAsync(data.user._id, {$set: {pro:true}});
+			await Players.updateAsync({userId:data.user._id}, {$set: {pro:true}}, {multi:true});
 		}
 
 		// temp
@@ -153,12 +155,12 @@ Accounts.onLogin(function(data) {
 			if (pref.purchases.castles.length > 1) {
 				let castles = _.union(data.user.purchases.castles, pref.purchases.castles);
 				let purchases = {castles:castles};
-				Meteor.users.update(data.user._id, {$set: {purchases:purchases}});
+				await Meteor.users.updateAsync(data.user._id, {$set: {purchases:purchases}});
 			}
 		}
 
 		if (data.user.isNewUser) {
-			Meteor.users.update(data.user._id, {$set:{isNewUser:false}});
+			await Meteor.users.updateAsync(data.user._id, {$set:{isNewUser:false}});
 		}
 	//}
 
@@ -172,16 +174,23 @@ Accounts.onLogin(function(data) {
 	// reset this
 	// flag for has notification that your account will soon been deleted been sent to this user
 	//Meteor.users.update(data.user._id, {$set:{accountDelNotificationSent:false}});
+};
+
+// accounts-base 2.2 doesn't wait for an async onLogin hook (Meteor 3's does),
+// so the login waits here, as it waited for the sync hook; upgrade PR 18
+// passes onLogin straight in
+Accounts.onLogin(function(data) {
+	Promise.await(onLogin(data));
 });
 
 
 
-Meteor.startup(function() {
+Meteor.startup(async function() {
 	if (process.env.DOMINUS_WORKER == 'true') {
-		Accounts.loginServiceConfiguration.remove({service:'google'});
-		Accounts.loginServiceConfiguration.remove({service:'facebook'});
-		Accounts.loginServiceConfiguration.insert(Meteor.settings.googleLogin);
-		Accounts.loginServiceConfiguration.insert(Meteor.settings.facebookLogin);
+		await Accounts.loginServiceConfiguration.removeAsync({service:'google'});
+		await Accounts.loginServiceConfiguration.removeAsync({service:'facebook'});
+		await Accounts.loginServiceConfiguration.insertAsync(Meteor.settings.googleLogin);
+		await Accounts.loginServiceConfiguration.insertAsync(Meteor.settings.facebookLogin);
 	}
 });
 

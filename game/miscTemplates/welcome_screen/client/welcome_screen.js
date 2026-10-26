@@ -12,7 +12,7 @@ Template.welcome_screen.helpers({
 Template.welcome_screen.events({
     'click #close_welcome_screen_button': function(event, template) {
       event.preventDefault();
-      Meteor.call('hide_welcome_screen', Session.get('gameId'));
+      dFunc.callAndForget('hide_welcome_screen', Session.get('gameId'));
     }
 });
 

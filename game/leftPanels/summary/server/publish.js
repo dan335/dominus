@@ -1,4 +1,4 @@
-Meteor.publish('left_panel_allies', function(gameId, playerId) {
+Meteor.publish('left_panel_allies', async function(gameId, playerId) {
 	check(gameId, Match.OneOf(String, null));
 	check(playerId, Match.OneOf(String, null));
 	if(this.userId) {
@@ -13,7 +13,7 @@ Meteor.publish('left_panel_allies', function(gameId, playerId) {
 		};
 
 		var cur = Players.find({gameId:gameId, allies_above:playerId}, {fields: fields});
-		Mongo.Collection._publishCursor(cur, sub, 'left_panel_allies');
+		await Mongo.Collection._publishCursor(cur, sub, 'left_panel_allies');
 		return sub.ready();
 	} else {
 		this.ready();
@@ -21,7 +21,7 @@ Meteor.publish('left_panel_allies', function(gameId, playerId) {
 })
 
 
-Meteor.publish('left_panel_lords', function(gameId, playerId) {
+Meteor.publish('left_panel_lords', async function(gameId, playerId) {
 	check(gameId, Match.OneOf(String, null));
 	check(playerId, Match.OneOf(String, null));
 	if(this.userId) {
@@ -33,14 +33,14 @@ Meteor.publish('left_panel_lords', function(gameId, playerId) {
 				y:1,
 				playerId:1
 			}})
-		Mongo.Collection._publishCursor(cur, sub, 'left_panel_lords')
+		await Mongo.Collection._publishCursor(cur, sub, 'left_panel_lords')
 		return sub.ready();
 	} else {
 		this.ready()
 	}
 })
 
-Meteor.publish('left_panel_castle', function(gameId) {
+Meteor.publish('left_panel_castle', async function(gameId) {
 	check(gameId, Match.OneOf(String, null));
 	if(this.userId) {
 		var sub = this
@@ -51,14 +51,14 @@ Meteor.publish('left_panel_castle', function(gameId) {
 		})
 
 		var cur = Castles.find({gameId:gameId, user_id: this.userId}, {fields: fields})
-		Mongo.Collection._publishCursor(cur, sub, 'left_panel_castle')
+		await Mongo.Collection._publishCursor(cur, sub, 'left_panel_castle')
 		return sub.ready()
 	} else {
 		this.ready()
 	}
 })
 
-Meteor.publish('left_panel_villages', function(gameId) {
+Meteor.publish('left_panel_villages', async function(gameId) {
 	check(gameId, Match.OneOf(String, null));
 	if(this.userId) {
 		var sub = this;
@@ -69,7 +69,7 @@ Meteor.publish('left_panel_villages', function(gameId) {
 		});
 
 		var cur = Villages.find({gameId:gameId, user_id: this.userId}, {fields: fields});
-		Mongo.Collection._publishCursor(cur, sub, 'left_panel_villages');
+		await Mongo.Collection._publishCursor(cur, sub, 'left_panel_villages');
 		return sub.ready();
 	} else {
 		this.ready();
@@ -77,14 +77,14 @@ Meteor.publish('left_panel_villages', function(gameId) {
 });
 
 
-Meteor.publish('left_panel_capitals', function(gameId, playerId) {
+Meteor.publish('left_panel_capitals', async function(gameId, playerId) {
 	check(gameId, Match.OneOf(String, null));
 	check(playerId, Match.OneOf(String, null));
 	if(this.userId) {
 		var sub = this;
 		var fields = {playerId:1, name:1, x:1, y:1, "income.worth":1};
 		var cur = Capitals.find({gameId:gameId, playerId:playerId}, {fields: fields});
-		Mongo.Collection._publishCursor(cur, sub, 'left_panel_capitals');
+		await Mongo.Collection._publishCursor(cur, sub, 'left_panel_capitals');
 		return sub.ready();
 	} else {
 		this.ready();

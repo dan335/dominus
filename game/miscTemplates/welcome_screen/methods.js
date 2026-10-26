@@ -3,6 +3,12 @@ Meteor.methods({
       check(gameId, String);
       //this.unblock();
       let find = {gameId:gameId, userId:this.userId};
-      Players.update(find, {$set: {show_welcome_screen: false}})
+      if (this.isSimulation) {
+        Players.update(find, {$set: {show_welcome_screen: false}});
+        return;
+      }
+      return (async () => {
+        await Players.updateAsync(find, {$set: {show_welcome_screen: false}});
+      })();
     }
 })

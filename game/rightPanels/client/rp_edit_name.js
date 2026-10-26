@@ -17,7 +17,7 @@ Template.rp_edit_name.events({
 			return;
 		}
 
-		Meteor.apply('edit_name', [selected.type, selected.id, $(name).val(), Session.get('playerId')], {}, function(error, result) {
+		dFunc.callWithCallback('edit_name', [selected.type, selected.id, $(name).val(), Session.get('playerId')], function(error, result) {
 			$(button).attr('disabled', false)
 			$(button).html(button_html)
 

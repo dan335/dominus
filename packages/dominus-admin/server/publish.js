@@ -1,6 +1,6 @@
 var admin_publish = function (name, handler) {
-	Meteor.publish(name, function() {
-		if(this.userId && get_user_property("admin", this.userId)) {
+	Meteor.publish(name, async function() {
+		if(this.userId && await get_user_propertyAsync("admin", this.userId)) {
 			return handler();
 		} else {
 			this.ready();
@@ -24,9 +24,9 @@ admin_publish('admin_chatrooms', function() {
 	return Rooms.find({}, {}, {disableOplog:true});
 });
 
-Meteor.publish('adminRoomchats', function(chatroom_id) {
+Meteor.publish('adminRoomchats', async function(chatroom_id) {
 	check(chatroom_id, Match.OneOf(String, null));
-	if(this.userId && get_user_property("admin", this.userId)) {
+	if(this.userId && await get_user_propertyAsync("admin", this.userId)) {
 		return Roomchats.find({room_id: chatroom_id}, {sort: {created_at: -1}, limit: 500}, {disableOplog:true});
 	} else {
 		return this.ready();
@@ -37,7 +37,7 @@ Meteor.publish('adminChatUsers', async function(userIds) {
 	check(userIds, Match.OneOf([String], null));
 	var self = this;
 
-	if (this.userId && get_user_property("admin", this.userId)) {
+	if (this.userId && await get_user_propertyAsync("admin", this.userId)) {
 		var options = {fields:{username:1, x:1, y:1, castle_id:1}};
     var query = Meteor.users.find({_id: {$in:userIds}}, options, {disableOplog:true});
     await Mongo.Collection._publishCursor(query, self, 'adminchatusers');

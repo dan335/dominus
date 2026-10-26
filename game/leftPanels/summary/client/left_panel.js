@@ -57,27 +57,27 @@ Template.left_panel.events({
 	'click #armies_group_link': function(event, template) {
 		event.preventDefault();
 		if (Template.instance().playerData.get().lp_show_armies) {
-			Meteor.call('hide_armies', Session.get('gameId'))
+			dFunc.callAndForget('hide_armies', Session.get('gameId'))
 		} else {
-			Meteor.call('show_armies', Session.get('gameId'))
+			dFunc.callAndForget('show_armies', Session.get('gameId'))
 		}
 	},
 
 	'click #lords_group_link': function(event, template) {
 		event.preventDefault();
 		if (Template.instance().playerData.get().lp_show_lords) {
-			Meteor.call('hide_lords', Session.get('gameId'))
+			dFunc.callAndForget('hide_lords', Session.get('gameId'))
 		} else {
-			Meteor.call('show_lords', Session.get('gameId'))
+			dFunc.callAndForget('show_lords', Session.get('gameId'))
 		}
 	},
 
 	'click #allies_group_link': function(event, template) {
 		event.preventDefault();
 		if (Template.instance().playerData.get().lp_show_allies) {
-			Meteor.call('hide_allies', Session.get('gameId'))
+			dFunc.callAndForget('hide_allies', Session.get('gameId'))
 		} else {
-			Meteor.call('show_allies', Session.get('gameId'))
+			dFunc.callAndForget('show_allies', Session.get('gameId'))
 		}
 	},
 
