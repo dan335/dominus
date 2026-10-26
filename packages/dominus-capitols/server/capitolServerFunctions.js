@@ -17,7 +17,9 @@ dCapitals.createCapital = async function(gameId, countryId) {
     return false;
   }
 
+  // a capital stands on grain; the country keeps its own copy of each hex
   await Hexes.updateAsync(hex._id, {$set:{type:'grain', large:false}});
+  await Countries.updateAsync({_id:countryId, hexes:{$elemMatch:{x:hex.x, y:hex.y}}}, {$set:{'hexes.$.type':'grain', 'hexes.$.large':false}});
 
   var capital = {
     gameId:gameId,
