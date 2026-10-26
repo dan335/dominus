@@ -1,0 +1,12 @@
+{
+  "name": "dominus-bundle-check",
+  "private": true,
+  "description": "Checks a production build's client bundles for code that throws only once minified. See README.md.",
+  "scripts": {
+    "check": "node check-bundle.js",
+    "test": "node --test implicitGlobals.test.js"
+  },
+  "devDependencies": {
+    "acorn": "8.15.0"
+  }
+}

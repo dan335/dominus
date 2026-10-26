@@ -13,10 +13,20 @@
 // null, which Mongo and Meteor agree on), so only a hand-made subscription is
 // refused here. Runs at startup, after every package has registered its
 // publications.
+//
+// Meteor's own publications that their client subscribes to without an
+// argument are left alone. They check the argument themselves.
+publicationGateExempt = {
+  // the browser subscribes with no appId (autoupdate_client.js), and the
+  // handler allows that: check(appId, Match.OneOf(String, undefined, null)).
+  // Gated, every page's subscription failed ("autoupdate subscription
+  // failed"), so open pages never reloaded onto a new deploy (Oct 2026).
+  meteor_autoupdate_clientVersions: true
+};
 
 Meteor.startup(function() {
   _.each(Meteor.server.publish_handlers, function(handler, name) {
-    if (handler.length === 0 || handler.publicationGate) {
+    if (handler.length === 0 || handler.publicationGate || publicationGateExempt[name]) {
       return;
     }
 
