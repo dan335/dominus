@@ -77,9 +77,7 @@ REPORT="$OUT/server-tests.md"
 [ -d tests/async/node_modules ] || npm ci --prefix tests/async --no-audit --no-fund > /dev/null 2>&1 || true
 if node tests/async/check-await.js > "$OUT/check-await.txt" 2>&1 &&
     (cd tests/async && node --test check-await.test.js) > "$OUT/check-await-tests.txt" 2>&1; then
-    node tests/async/check-await.js --meteor3 > "$OUT/check-await-meteor3.txt" 2>&1 || true
-    printf '## Missing-await check: passed\n\n%s, and its own tests. Left for Meteor 3 (observe, observeChanges, _publishCursor; `--meteor3`): %s.\n\n' \
-        "$(tail -1 "$OUT/check-await.txt")" "$(grep -c '' "$OUT/check-await-meteor3.txt" | awk '{print $1 - 1}')" >> "$REPORT"
+    printf '## Missing-await check: passed\n\n%s, and its own tests.\n\n' "$(tail -1 "$OUT/check-await.txt")" >> "$REPORT"
 else
     STATUS=1
     printf '## Missing-await check: FAILED\n\n```\n%s\n%s\n```\n\n' "$(tail -40 "$OUT/check-await.txt")" \
@@ -89,7 +87,7 @@ fi
 i=1
 while [ $i -le $RUNS ]; do
     echo "Run $i of $RUNS..."
-    echo "JSON.stringify(Meteor.call('runAllTests', $(node -e 'console.log(JSON.stringify(process.argv[1] || ""))' "$SUITE")))" | meteor shell $SUPERUSER > "$OUT/run-$i.txt" 2>&1 || true
+    echo "JSON.stringify(await Meteor.callAsync('runAllTests', $(node -e 'console.log(JSON.stringify(process.argv[1] || ""))' "$SUITE")))" | meteor shell $SUPERUSER > "$OUT/run-$i.txt" 2>&1 || true
     python3 - "$OUT/run-$i.txt" "$i" >> "$REPORT" <<'PY' || STATUS=1
 import json, re, sys
 text = open(sys.argv[1]).read()

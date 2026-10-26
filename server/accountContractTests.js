@@ -635,7 +635,7 @@ if (Meteor.isServer) {
           };
 
           var fromServer = await play(real);
-          var fromSimulations = await play(simulate);
+          var fromSimulations = await dTest.onClient(function() { return play(simulate); });
           equal(fromSimulations[0], fromServer[0], 'after making a game, signing up and changing the account');
           equal(fromSimulations[1], fromServer[1], 'after cancelling and editing');
           equal(fromSimulations[2], fromServer[2], 'after removing the game');
@@ -650,7 +650,7 @@ if (Meteor.isServer) {
 
           // refused simulations throw, as the real calls do
           var refusal = async function(userId, name, args) {
-            var error = await dTest.throws(function() { return Meteor.server.method_handlers[name].apply(invocation(userId), args); });
+            var error = await dTest.onClient(function() { return dTest.throws(function() { return Meteor.server.method_handlers[name].apply(invocation(userId), args); }); });
             return error && error.error;
           };
           await reset();
@@ -785,7 +785,7 @@ if (Meteor.isServer) {
           };
 
           var fromServer = await play(real);
-          var fromSimulations = await play(simulate);
+          var fromSimulations = await dTest.onClient(function() { return play(simulate); });
           equal(fromSimulations[0], fromServer[0], 'after posting, pinning and locking');
           equal(fromSimulations[1], fromServer[1], 'after unpinning and unlocking');
           equal(fromSimulations[2], fromServer[2], 'after deleting');
@@ -800,7 +800,7 @@ if (Meteor.isServer) {
 
           // refused simulations throw, as the real calls do
           var refusal = async function(userId, name, args) {
-            var error = await dTest.throws(function() { return Meteor.server.method_handlers[name].apply(invocation(userId, true), args); });
+            var error = await dTest.onClient(function() { return dTest.throws(function() { return Meteor.server.method_handlers[name].apply(invocation(userId, true), args); }); });
             return error && error.error;
           };
           var tp = await topic();

@@ -105,10 +105,13 @@ dGate.enforce = function(name, invocation, args) {
 };
 
 // rejects unless the caller is a player in the game the spec names;
-// resolves with the gameId
+// resolves with the gameId, once the game's settings are cached (_gs reads
+// them without waiting; a game made on another server a moment ago may not
+// be cached here yet)
 dGate.requirePlayer = async function(invocation, spec) {
   let gameId = await dGate.resolveGame(spec);
   await dInit.requirePlayerInGame(invocation.userId, gameId);
+  await _gs.ensureGame(gameId);
   return gameId;
 };
 

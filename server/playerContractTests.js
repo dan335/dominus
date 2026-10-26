@@ -234,7 +234,7 @@ if (Meteor.isServer) {
           };
 
           var fromServer = await play(real);
-          var fromSimulations = await play(simulate);
+          var fromSimulations = await dTest.onClient(function() { return play(simulate); });
           equal(fromSimulations[0], fromServer[0], 'after hiding, showing and reading one');
           equal(fromSimulations[1], fromServer[1], 'after reading all');
           equal(fromServer[0], JSON.stringify({hidden: ['alert_battleStart'], read: [[true, false], [false], [false, false]]}), 'the middle');
@@ -247,12 +247,12 @@ if (Meteor.isServer) {
           equal(await returned, undefined, 'that returns nothing');
 
           // a refused simulation throws, as the real call does
-          var error = await dTest.throws(function() {
-            return Meteor.server.method_handlers.markAllAlertsAsRead.apply(simulation, [w.players[1]._id]);
+          var error = await dTest.onClient(function() {
+            return dTest.throws(function() { return Meteor.server.method_handlers.markAllAlertsAsRead.apply(simulation, [w.players[1]._id]); });
           });
           equal(error && error.error, 'No player found.', 'refused in the simulation too');
-          error = await dTest.throws(function() {
-            return Meteor.server.method_handlers.hideAlertMine.apply(simulation, [me, 'alert_madeUp']);
+          error = await dTest.onClient(function() {
+            return dTest.throws(function() { return Meteor.server.method_handlers.hideAlertMine.apply(simulation, [me, 'alert_madeUp']); });
           });
           equal(error && error.error, 'Alert type not found.', 'an unknown type too');
         });
@@ -422,7 +422,7 @@ if (Meteor.isServer) {
           };
 
           var fromServer = await play(real);
-          var fromSimulations = await play(simulate);
+          var fromSimulations = await dTest.onClient(function() { return play(simulate); });
           equal(fromSimulations[0], fromServer[0], 'after adding, renaming and moving');
           equal(fromSimulations[1], fromServer[1], 'after removing');
           var middle = JSON.parse(fromServer[0]);
@@ -431,8 +431,8 @@ if (Meteor.isServer) {
           equal(JSON.parse(fromServer[1]).markers.length, 0, 'every marker gone at the end');
 
           // a refused simulation throws, as the real call does
-          var error = await dTest.throws(function() {
-            return Meteor.server.method_handlers.saveMarkerGroupInfo.apply(simulation, ['x', '***']);
+          var error = await dTest.onClient(function() {
+            return dTest.throws(function() { return Meteor.server.method_handlers.saveMarkerGroupInfo.apply(simulation, ['x', '***']); });
           });
           equal(error && error.error, 'Name too short.', 'refused in the simulation too');
         });
@@ -501,7 +501,7 @@ if (Meteor.isServer) {
             var fromServer, fromSimulations;
             var jobs = await dTest.recordJobs(async function() {
               fromServer = await play(real);
-              fromSimulations = await play(simulate);
+              fromSimulations = await dTest.onClient(function() { return play(simulate); });
             });
             equal(_.pluck(jobs, 'name').join(), 'generateTree', 'the real rename adds the tree job; the simulation adds none');
             equal(fromSimulations[0], fromServer[0], 'after showing the coords and hiding the minimap');
@@ -515,7 +515,7 @@ if (Meteor.isServer) {
             // a refused simulation throws, as the real call does
             await reset();
             await dTest.eachAsync([[me, 'ab'], [me, 'Danimal'], [me, usernames[0]], [w.players[1]._id, 'Someone Else']], async function(args) {
-              var fromSimulation = await dTest.throws(function() { return simulate('change_username', args); });
+              var fromSimulation = await dTest.onClient(function() { return dTest.throws(function() { return simulate('change_username', args); }); });
               var fromReal = await dTest.throws(function() { return real('change_username', args); });
               assert(fromReal, JSON.stringify(args) + ' is refused');
               equal(fromSimulation && fromSimulation.error, fromReal && fromReal.error, JSON.stringify(args) + ': refused the same way');
@@ -523,7 +523,7 @@ if (Meteor.isServer) {
             // only the server knows every player's name
             equal((await dTest.throws(function() { return real('change_username', [me, usernames[1]]); })).error,
               'A player exists with this username, try another.', 'a taken name is refused by the server');
-            equal(await dTest.throws(function() { return simulate('change_username', [me, usernames[1]]); }), null, 'but not by the simulation');
+            equal(await dTest.onClient(function() { return dTest.throws(function() { return simulate('change_username', [me, usernames[1]]); }); }), null, 'but not by the simulation');
           } finally {
             await reset();
             await Rooms.removeAsync({_id: {$in: rooms}});

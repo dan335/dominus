@@ -59,6 +59,14 @@ if (Meteor.isServer) {
         }
       });
 
+      await run('a rejection nobody handles is logged, and doesn\'t end the server (server/lib/unhandledRejections.js)', async function() {
+        // Node 24 ends the process on one unless something listens for it
+        var ours = process.listeners('unhandledRejection').filter(function(fn) { return String(fn).indexOf('Unhandled rejection:') !== -1; });
+        equal(ours.length, 1, 'the app listens for them');
+        var logged = await captureErrors(function() { ours[0](new Error('nobody waited')); });
+        assert(logged.length == 1 && logged[0].indexOf('Unhandled rejection:') === 0 && logged[0].indexOf('nobody waited') !== -1, 'logged with its stack: ' + logged[0]);
+      });
+
       await run('settings cache: _gs.ready has filled it with every game in the database', async function() {
         equal(dTest.isPromise(_gs.ready), true, '_gs.ready is a promise');
         await _gs.ready;
@@ -97,19 +105,46 @@ if (Meteor.isServer) {
         }
       });
 
-      await run('settings cache: a miss logs where it came from, once per game, and still reads the game', async function() {
+      await run('settings cache: a game method gets its game cached before it runs (server/methodGate.js)', async function() {
+        var w = await dTest.buildGameWorld({players: 1});
+        var client = await dTest.ddp.connect(w.users[0]._id);
+        var name = 'asyncFoundationTestsReadsSettings';
+        MethodPolicy[name] = {access: 'game', game: function(args) { return {gameId: args[0]}; }};
+        Meteor.methods(_.object([[name, function(gameId) {
+          check(gameId, String);
+          return {cached: !!cache[gameId], isSpeed: _gs.getGame(gameId).isSpeed === true};
+        }]]));
+        dGate.wrapAll();
+        try {
+          await Games.updateAsync(w.gameId, {$set: {isSpeed: true}});
+          assert(await dTest.waitFor(function() { return cache[w.gameId] && cache[w.gameId].isSpeed === true; }), 'cached by the observer');
+          delete cache[w.gameId];
+          dTest.ddp.resetRateLimits();
+          equal(JSON.stringify(await client.call(name, w.gameId)), JSON.stringify({cached: true, isSpeed: true}),
+            'the method reads the game\'s settings, though the game was not cached when it was called');
+        } finally {
+          client.close();
+          delete Meteor.server.method_handlers[name];
+          delete MethodPolicy[name];
+          await w.cleanup();
+        }
+      });
+
+      await run('settings cache: a miss logs where it came from, once per game, reads as the defaults, and ensureGame caches the game', async function() {
         var g = await game({isSpeed: true});
         try {
           assert(await dTest.waitFor(function() { return !!cache[g._id]; }), 'cached');
           delete cache[g._id];
           delete _gs._missesLogged[g._id];
           var value;
-          var logged = await captureErrors(function() { value = _gs.getGame(g._id); });
-          equal(value.isSpeed, true, 'the settings, read from the database');
+          var logged = await captureErrors(function() { value = [_gs.getGame(g._id), _gs.getGame(g._id)]; });
+          equal(JSON.stringify(value), '[{},{}]', 'the game reads as {}: the server can\'t read it without waiting');
           equal(logged.length, 1, 'one line logged');
           assert(logged[0].indexOf(g._id) >= 0 && logged[0].indexOf('settings cache miss') >= 0 &&
             logged[0].indexOf('asyncFoundationTests') >= 0, 'with the gameId and a stack that names the caller: ' + logged[0]);
-          equal(cache[g._id] && cache[g._id].isSpeed, true, 'and the game is cached again');
+          await _gs.ensureGame(g._id);
+          equal(cache[g._id] && cache[g._id].isSpeed, true, 'ensureGame caches the game again');
+          equal(_gs.getGame(g._id).isSpeed, true, 'and its settings read as they are');
 
           var missing = 'noSuchGame_' + Random.id();
           var reads = [];
@@ -211,12 +246,22 @@ if (Meteor.isServer) {
         try {
           var types = _.pluck(await Market.find({gameId: w.gameId}).fetchAsync(), 'type');
           assert(types.length >= 4, 'a market (' + types.join(',') + ')');
-          for (var type of types) {
-            for (var quantity of [0, 1, 7, 250, 0.5]) {
-              equal(await dMarket.total_of_buyAsync(w.gameId, type, quantity), dMarket.total_of_buy(w.gameId, type, quantity), 'buy ' + quantity + ' ' + type);
-              equal(await dMarket.total_of_sellAsync(w.gameId, type, quantity), dMarket.total_of_sell(w.gameId, type, quantity), 'sell ' + quantity + ' ' + type);
+          var quantities = [0, 1, 7, 250, 0.5];
+          // the sync ones as the browser runs them, on minimongo
+          var browser = await dTest.onClient(function() {
+            return types.map(function(type) {
+              return quantities.map(function(quantity) {
+                return [dMarket.total_of_buy(w.gameId, type, quantity), dMarket.total_of_sell(w.gameId, type, quantity)];
+              });
+            });
+          });
+          for (var [i, type] of types.entries()) {
+            for (var [j, quantity] of quantities.entries()) {
+              equal(await dMarket.total_of_buyAsync(w.gameId, type, quantity), browser[i][j][0], 'buy ' + quantity + ' ' + type);
+              equal(await dMarket.total_of_sellAsync(w.gameId, type, quantity), browser[i][j][1], 'sell ' + quantity + ' ' + type);
             }
           }
+          assert(browser[0][1][0] > 0, 'a resource costs something');
           equal(await dMarket.total_of_buyAsync(w.gameId, 'noSuchResource', 5), false, 'buy: no such resource');
           equal(await dMarket.total_of_sellAsync('noSuchGame', 'ore', 5), false, 'sell: no such game');
         } finally {
@@ -231,21 +276,29 @@ if (Meteor.isServer) {
           var cases = [{}, {gold: 12.5}, {grain: 1}, {grain: 3, lumber: 0.25, ore: 7, wool: 1, clay: 2, glass: 9, gold: 4},
             {grain: 1e6, gold: 0}, {wool: 0, clay: 0}, {grain: 5, notAResource: 99}];
           _s.market.types.forEach(function(type) { var r = {}; r[type] = 3.3; cases.push(r); });
-          for (var resources of cases) {
-            equal(await dMarket.resourcesToGoldAsync(w.gameId, resources), dMarket.resourcesToGold(w.gameId, resources), JSON.stringify(resources));
+          var bads = [[w.gameId, {grain: -1}], [w.gameId, {ore: 'x'}], [w.gameId, {wool: NaN}], [1, {grain: 1}]];
+          // the sync one as the browser runs it, on minimongo
+          var browser = await dTest.onClient(function() {
+            return {
+              cases: cases.map(function(resources) { return dMarket.resourcesToGold(w.gameId, resources); }),
+              bads: bads.map(function(bad) { return dTest.outcome(function() { return dMarket.resourcesToGold.apply(null, bad); }); })
+            };
+          });
+          for (var [i, resources] of cases.entries()) {
+            equal(await dMarket.resourcesToGoldAsync(w.gameId, resources), browser.cases[i], JSON.stringify(resources));
           }
+          assert(browser.cases[2] > 0, 'grain is worth some gold');
           equal(await dMarket.resourcesToGoldAsync('noSuchGame', {grain: 5, gold: 2}), 2, 'no such game: only the gold');
           var refused = 0;
-          for (var bad of [[w.gameId, {grain: -1}], [w.gameId, {ore: 'x'}], [w.gameId, {wool: NaN}], [1, {grain: 1}]]) {
-            var syncError = null, asyncError = null;
-            try { dMarket.resourcesToGold.apply(null, bad); } catch (e) { syncError = e; }
+          for (var [k, bad] of bads.entries()) {
+            var syncError = browser.bads[k].error || null, asyncError = null;
             try { await dMarket.resourcesToGoldAsync.apply(null, bad); } catch (e) { asyncError = e; }
             equal(!!asyncError, !!syncError, JSON.stringify(bad) + ' refused by both or neither');
             if (syncError) {
               refused++;
               equal(asyncError.message, syncError.message, JSON.stringify(bad) + ' with the same error');
             } else {
-              equal(await dMarket.resourcesToGoldAsync.apply(null, bad), dMarket.resourcesToGold.apply(null, bad), JSON.stringify(bad) + ' gives the same');
+              equal(await dMarket.resourcesToGoldAsync.apply(null, bad), browser.bads[k].value, JSON.stringify(bad) + ' gives the same');
             }
           }
           assert(refused >= 1, 'some are refused (' + refused + ')');
@@ -260,14 +313,21 @@ if (Meteor.isServer) {
         try {
           var cases = [{}, {footmen: 1}, {footmen: 3, archers: 2, pikemen: 1, cavalry: 4, catapults: 1}];
           _s.armies.types.forEach(function(type) { var s = {}; s[type] = 1; cases.push(s); });
-          for (var soldiers of cases) {
-            equal(await dArmies.worthAsync(w.gameId, _.clone(soldiers)), dArmies.worth(w.gameId, _.clone(soldiers)), JSON.stringify(soldiers));
+          var bads = [[w.gameId, {footmen: 1.5}], [w.gameId, {archers: 'x'}], [1, {footmen: 1}]];
+          // the sync one as the browser runs it, on minimongo
+          var browser = await dTest.onClient(function() {
+            return {
+              cases: cases.map(function(soldiers) { return dArmies.worth(w.gameId, _.clone(soldiers)); }),
+              bads: bads.map(function(bad) { return dTest.outcome(function() { return dArmies.worth.apply(null, _.clone(bad)); }); })
+            };
+          });
+          for (var [i, soldiers] of cases.entries()) {
+            equal(await dArmies.worthAsync(w.gameId, _.clone(soldiers)), browser.cases[i], JSON.stringify(soldiers));
           }
-          assert(dArmies.worth(w.gameId, {footmen: 1}) > 0, 'a soldier is worth something');
+          assert(browser.cases[1] > 0, 'a soldier is worth something');
           var refused = 0;
-          for (var bad of [[w.gameId, {footmen: 1.5}], [w.gameId, {archers: 'x'}], [1, {footmen: 1}]]) {
-            var syncError = null, asyncError = null;
-            try { dArmies.worth.apply(null, _.clone(bad)); } catch (e) { syncError = e; }
+          for (var [k, bad] of bads.entries()) {
+            var syncError = browser.bads[k].error || null, asyncError = null;
             try { await dArmies.worthAsync.apply(null, _.clone(bad)); } catch (e) { asyncError = e; }
             equal(!!asyncError, !!syncError, JSON.stringify(bad) + ' refused by both or neither');
             if (syncError) {
@@ -286,12 +346,18 @@ if (Meteor.isServer) {
         try {
           var cases = [[w.gameId, 'ore', -1], [w.gameId, 'ore', 'x'], [w.gameId, 1, 5], [1, 'ore', 5],
             [w.gameId, 'ore', NaN], [w.gameId, 'ore', Infinity], [w.gameId, 'ore', null], [w.gameId, 'ore']];
+          var names = ['total_of_buy', 'total_of_sell'];
+          // the sync ones as the browser runs them, on minimongo
+          var browser = await dTest.onClient(function() {
+            return cases.map(function(args) {
+              return names.map(function(name) { return dTest.outcome(function() { return dMarket[name].apply(null, args); }); });
+            });
+          });
           var refused = 0;
-          for (var args of cases) {
-            for (var name of ['total_of_buy', 'total_of_sell']) {
+          for (var [i, args] of cases.entries()) {
+            for (var [j, name] of names.entries()) {
               var label = name + JSON.stringify(args);
-              var syncValue, syncError = null, asyncValue, asyncError = null;
-              try { syncValue = dMarket[name].apply(null, args); } catch (e) { syncError = e; }
+              var syncValue = browser[i][j].value, syncError = browser[i][j].error || null, asyncValue, asyncError = null;
               try { asyncValue = await dMarket[name + 'Async'].apply(null, args); } catch (e) { asyncError = e; }
               equal(!!asyncError, !!syncError, label + ' refused by both or neither');
               if (syncError) {

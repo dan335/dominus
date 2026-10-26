@@ -99,7 +99,7 @@ if (Meteor.isServer) {
 
     if (userId) {
       var stamped = Accounts._generateStampedLoginToken();
-      Accounts._insertLoginToken(userId, stamped);
+      await Accounts._insertLoginToken(userId, stamped);
       var login = await client.call('login', {resume: stamped.token});
       if (!login || login.id !== userId) {
         client.close();

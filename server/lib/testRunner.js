@@ -131,11 +131,18 @@ if (Meteor.isServer) {
     }
   }
 
+  // and the sync cursor calls server/lib/syncCursorGuard.js sees
+  var syncCursorListener = function(method, where) {
+    record('sync cursor ' + method + '()', {stack: 'sync cursor ' + method + '()\n' + where});
+  };
+
   var removeListeners = null;
   function addListeners() {
     _.each(listeners, function(fn, name) { process.on(name, fn); });
+    dSyncCursor.listeners.push(syncCursorListener);
     return function() {
       _.each(listeners, function(fn, name) { process.removeListener(name, fn); });
+      dSyncCursor.listeners = _.without(dSyncCursor.listeners, syncCursorListener);
     };
   }
 
@@ -188,7 +195,7 @@ if (Meteor.isServer) {
       resume();
     }
 
-    await runner.run('no unhandled rejections or uncaught exceptions during the run', function() {
+    await runner.run('no unhandled rejections, uncaught exceptions or sync cursor calls during the run', function() {
       if (watcher.events.length) {
         throw new Error('FAIL: ' + watcher.events.map(function(e) {
           return e.kind + (e.test ? ' during "' + e.test + '"' : '') + ': ' + e.error.split('\n').slice(0, 3).join(' ');

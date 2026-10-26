@@ -86,7 +86,7 @@ if (Meteor.isServer) {
         });
       });
       equal(find(out, 'leaks a rejection').status, 'PASS', 'the leaking test itself returned normally');
-      var check = find(out, 'no unhandled rejections or uncaught exceptions during the run');
+      var check = find(out, 'no unhandled rejections, uncaught exceptions or sync cursor calls during the run');
       equal(check.status, 'FAIL', 'the run fails');
       assert(check.error.indexOf('leaked rejection') !== -1, 'error is reported');
       assert(check.error.indexOf('during "leaks a rejection"') !== -1, 'test is named: ' + check.error);
@@ -99,9 +99,39 @@ if (Meteor.isServer) {
           setTimeout(function() { throw new Error('timer threw'); }, 0);
         });
       });
-      var check = find(out, 'no unhandled rejections or uncaught exceptions during the run');
+      var check = find(out, 'no unhandled rejections, uncaught exceptions or sync cursor calls during the run');
       equal(check.status, 'FAIL', 'the run fails');
       assert(check.error.indexOf('uncaught exception') !== -1 && check.error.indexOf('timer threw') !== -1, 'reported: ' + check.error);
+    });
+
+    await run('runner: a sync cursor call on the server fails the run and names the test, and still returns its promise', async function() {
+      var error = console.error;
+      var logged = [];
+      console.error = function() { logged.push(_.toArray(arguments).join(' ')); };
+      var got = {};
+      try {
+        var out = await runInner(async function(run) {
+          await run('fetches sync', async function() {
+            var cursor = Meteor.users.find({_id: 'runnerTestsNobody'});
+            var returned = cursor.fetch();
+            got.isPromise = dTest.isPromise(returned);
+            got.docs = await returned;
+          });
+          await run('fetches async', async function() {
+            got.async = await Meteor.users.find({_id: 'runnerTestsNobody'}).fetchAsync();
+            got.count = await Meteor.users.find({_id: 'runnerTestsNobody'}).countAsync();
+          });
+        });
+      } finally {
+        console.error = error;
+      }
+      equal(got.isPromise, true, 'fetch() returns a promise on Meteor 3');
+      equal(JSON.stringify([got.docs, got.async, got.count]), '[[],[],0]', 'which resolves with the documents');
+      var check = find(out, 'no unhandled rejections, uncaught exceptions or sync cursor calls during the run');
+      equal(check.status, 'FAIL', 'the run fails');
+      assert(check.error.indexOf('sync cursor fetch() during "fetches sync"') !== -1, 'the test is named: ' + check.error);
+      assert(check.error.indexOf('fetches async') === -1, 'fetchAsync and countAsync are not reported');
+      assert(logged.length <= 1 && (!logged.length || logged[0].indexOf('testRunnerTests') !== -1), 'logged once, with where: ' + logged.join(' | '));
     });
 
     await run('runner: a clean run passes its process check', async function() {

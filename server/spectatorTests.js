@@ -59,11 +59,11 @@ if (Meteor.isServer) {
       try {
         var result = await Meteor.server.publish_handlers[name].apply(sub, args || []);
         var cursors = _.isArray(result) ? result : [result];
-        cursors.forEach(function(cursor) {
+        for (const cursor of cursors) {
           if (cursor && typeof cursor._publishCursor === 'function') {
-            cursor._publishCursor(sub);
+            await cursor._publishCursor(sub);
           }
-        });
+        }
         if (cursors.length && cursors[0] && typeof cursors[0]._publishCursor === 'function') {
           // Meteor marks a sub ready itself after publishing returned cursors
           out.ready++;

@@ -57,7 +57,7 @@ if (Meteor.isServer) {
       refuseInProduction();
       opts = opts || {};
       var username = 'e2e_' + name;
-      var userId = Accounts.createUser({username: username, email: username + '@example.com', password: dTest.e2e.password});
+      var userId = await Accounts.createUser({username: username, email: username + '@example.com', password: dTest.e2e.password});
       var set = {verifiedEmail: true, 'emails.0.verified': true, isNewUser: false};
       if (opts.admin) set.admin = true;
       await Meteor.users.updateAsync(userId, {$set: set});

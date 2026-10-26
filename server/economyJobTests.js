@@ -135,7 +135,7 @@ if (Meteor.isServer) {
           _s.market.types_plus_gold.forEach(function(type) {
             total[type] = castle[type] + ({gold: 10, grain: 2 + 3, ore: 4}[type] || 0);
           });
-          near(p.income, dMarket.resourcesToGold(w.gameId, total), 'income: every source, in gold');
+          near(p.income, await dMarket.resourcesToGoldAsync(w.gameId, total), 'income: every source, in gold');
           assert(recent(p.lastIncomeUpdate), 'lastIncomeUpdate is now');
           equal(JSON.stringify(await w.player(1)), other, 'a player paid recently is not paid again');
         });
@@ -205,7 +205,7 @@ if (Meteor.isServer) {
             near(owner[type], expected[type], 'owner ' + type);
             near(owner.incomeFromCapitals[type], expected[type], 'owner incomeFromCapitals.' + type);
           });
-          near(after.income.worth, dMarket.resourcesToGold(w.gameId, expected), 'income.worth');
+          near(after.income.worth, await dMarket.resourcesToGoldAsync(w.gameId, expected), 'income.worth');
           assert(recent(after.lastIncomeUpdate), 'lastIncomeUpdate is now');
           equal((await w.player(1)).gold, 0, 'the village owner gets nothing from the capital');
 
@@ -394,11 +394,11 @@ if (Meteor.isServer) {
 
           var stats = await dailystats(w.players[0]._id);
           var total = 0;
-          ['castleIncome', 'villageIncome', 'capitalIncome', 'vassalIncome'].forEach(function(field) {
-            var gold = dMarket.resourcesToGold(w.gameId, incomes[field]);
+          for (var field of ['castleIncome', 'villageIncome', 'capitalIncome', 'vassalIncome']) {
+            var gold = await dMarket.resourcesToGoldAsync(w.gameId, incomes[field]);
             near(stats[field], gold, field);
             total += gold;
-          });
+          }
           near(stats.totalIncome, total, 'totalIncome');
           assert(total > 0, 'some income to record');
 

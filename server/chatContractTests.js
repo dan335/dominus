@@ -110,31 +110,42 @@ if (Meteor.isServer) {
               unblock: function() {}, setUserId: function() {}};
           };
           var roomId = await insertRoom(0, [0, 1]);
-          var returned = handler.apply(invocation(1, true), [w.gameId, roomId, '  from the simulation  ']);
-          assert(!dTest.isPromise(returned), 'the simulation is sync');
-          equal(returned, undefined, 'and returns nothing');
+          // the simulation runs as in the browser, on minimongo (dTest.onClient)
+          var simulated = await dTest.onClient(async function() {
+            var returned = handler.apply(invocation(1, true), [w.gameId, roomId, '  from the simulation  ']);
+            assert(!dTest.isPromise(returned), 'the simulation is sync');
+            equal(returned, undefined, 'and returns nothing');
+            return {
+              chats: await Roomchats.find({room_id: roomId}).fetchAsync(),
+              recent: await Recentchats.find({room_id: roomId}).countAsync()
+            };
+          });
           await clients[1].call('addChatToRoom', w.gameId, roomId, '  from the server  ');
 
-          var chats = await Roomchats.find({room_id: roomId}, {sort: {text: 1}}).fetchAsync();
-          equal(_.pluck(chats, 'text').join('|'), 'from the server|from the simulation', 'both saved, trimmed');
+          var chats = await Roomchats.find({room_id: roomId}).fetchAsync();
+          equal(_.pluck(simulated.chats, 'text').join('|') + '|' + _.pluck(chats, 'text').join('|'), 'from the simulation|from the server',
+            'each saved one chat, trimmed');
           var rest = function(chat) { return JSON.stringify(_.omit(chat, '_id', 'created_at', 'text')); };
-          equal(rest(chats[1]), rest(chats[0]), 'the same chat apart from its text and time');
-          equal(await Recentchats.find({room_id: roomId}).countAsync(), 1, 'one recent chats entry');
+          equal(rest(simulated.chats[0]), rest(chats[0]), 'the same chat apart from its text and time');
+          equal(simulated.recent, 1, 'one recent chats entry from the simulation');
+          equal(await Recentchats.find({room_id: roomId}).countAsync(), 1, 'and one from the server');
 
           // refused the same way, and changing nothing
-          var before = await dTest.snapshot(w.gameId, chatCollections);
-          var refusal = async function(i, text) {
-            var error = await dTest.throws(function() { return handler.apply(invocation(i, true), [w.gameId, roomId, text]); });
-            return error && error.error;
-          };
-          equal(await refusal(2, 'let me in'), 'not-authorized', 'not a member');
-          equal(await refusal(1, '   '), 'validation', 'empty');
-          equal(await refusal(1, 'x'.repeat(401)), 'validation', 'too long');
-          equal(handler.apply(invocation(null, true), [w.gameId, roomId, 'hi']), false, 'logged out: false');
-          equal(handler.apply(invocation(3, true), ['noSuchGame', roomId, 'hi']), false, 'not in the game: false');
-          await Reports.insertAsync({gameId: w.gameId, playerId: pid(1), active: true, reason: 'test', createdAt: new Date()});
-          equal(await refusal(1, 'am I muted'), 'reported', 'reported');
-          await dTest.assertUnchanged(w.gameId, before, 'a refused simulation changed the game', chatCollections);
+          await dTest.onClient(async function() {
+            var before = await dTest.snapshot(w.gameId, chatCollections);
+            var refusal = async function(i, text) {
+              var error = await dTest.throws(function() { return handler.apply(invocation(i, true), [w.gameId, roomId, text]); });
+              return error && error.error;
+            };
+            equal(await refusal(2, 'let me in'), 'not-authorized', 'not a member');
+            equal(await refusal(1, '   '), 'validation', 'empty');
+            equal(await refusal(1, 'x'.repeat(401)), 'validation', 'too long');
+            equal(handler.apply(invocation(null, true), [w.gameId, roomId, 'hi']), false, 'logged out: false');
+            equal(handler.apply(invocation(3, true), ['noSuchGame', roomId, 'hi']), false, 'not in the game: false');
+            await Reports.insertAsync({gameId: w.gameId, playerId: pid(1), active: true, reason: 'test', createdAt: new Date()});
+            equal(await refusal(1, 'am I muted'), 'reported', 'reported');
+            await dTest.assertUnchanged(w.gameId, before, 'a refused simulation changed the game', chatCollections);
+          });
 
           // the server's part is a promise, and a refusal rejects it
           var serverPart = handler.apply(invocation(2, false), [w.gameId, roomId, 'let me in']);

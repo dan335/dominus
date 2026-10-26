@@ -12,10 +12,12 @@ Package.onUse(function(api) {
     'blaze-html-templates',
     'less',
     'dominus-init',
-    'facts',
+    'facts-base',
     'mongo',
     'reactive-var'
   ]);
+  // the server facts page ({{> serverFacts}}); facts-ui has no server part
+  api.use('facts-ui', 'client');
   api.addFiles([
     'client/admin.html',
     'client/admin.js',

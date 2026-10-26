@@ -327,8 +327,14 @@ if (Meteor.isServer) {
         await dTest.eachAsync(Queues.queueNames, async function(name) { await Queues[name].resume(true); });
       });
 
+      var oldGameIds = _.pluck(await Games.find({}, {fields: {_id: 1}}).fetchAsync(), '_id');
       await dTest.eachAsync(dTest.simulationCollections(), async function(collection) { await collection.removeAsync({}); });
       await Meteor.users.removeAsync({username: /^sim_/});
+      // The game gets the id the last simulation's game had (the ids are
+      // seeded, below). The settings cache drops a removed game when its
+      // observer hears of it, which on Meteor 3 can be after this game is
+      // made and cached; wait for that first.
+      await dTest.waitFor(function() { return !_.some(oldGameIds, function(id) { return _.has(_gs._cachedGames, id); }); });
 
       dClock.set(sim.startAt);
       dRandom.seed(sim.seed);

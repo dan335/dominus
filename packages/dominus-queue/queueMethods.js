@@ -30,6 +30,9 @@ Meteor.methods({
 
 
   clearUniqueIdsForJob: async function(jobName) {
+    // before the first await, or audit-argument-checks doesn't count it
+    check(jobName, String);
+
     // allow trusted server-side calls; block non-admin client calls (see pauseJobQueue).
     if (this.connection) {
       var user = await Meteor.users.findOneAsync(this.userId, {fields:{admin:1}});
@@ -37,8 +40,6 @@ Meteor.methods({
         throw new Meteor.Error('not-authorized', 'Must be admin.');
       }
     }
-
-    check(jobName, String);
 
     const queue = Queues[jobName];
 

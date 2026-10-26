@@ -1,12 +1,12 @@
-stubTestGame = function() {
-  Games.remove({});
+stubTestGame = async function() {
+  await Games.removeAsync({});
   let game = {
     _id: 'testgame',
     isSpeed: false,
     hasEnded: false,
     maxPlayers: 200
   }
-  game._id = Games.insert(game);
+  game._id = await Games.insertAsync(game);
   return game._id;
 }
 

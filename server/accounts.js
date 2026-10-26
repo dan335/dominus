@@ -176,13 +176,9 @@ var onLogin = async function(data) {
 	//Meteor.users.update(data.user._id, {$set:{accountDelNotificationSent:false}});
 };
 
-// accounts-base 2.2 doesn't wait for an async onLogin hook (accounts-base 3
-// does: _successfulLogin awaits each one), so the login waits here, as it
-// waited for the sync hook. This is the one Promise.await left on Meteor
-// 2.16; upgrade PR 19, the switch to Meteor 3, passes onLogin straight in.
-Accounts.onLogin(function(data) {
-	Promise.await(onLogin(data));
-});
+// accounts-base 3 awaits each onLogin hook (_successfulLogin), so the login
+// waits for this one before the client hears it succeeded.
+Accounts.onLogin(onLogin);
 
 
 
@@ -198,7 +194,12 @@ Meteor.startup(async function() {
 
 Accounts.config({
 	sendVerificationEmail:true,
-	loginExpirationInDays:1000
+	loginExpirationInDays:1000,
+	// accounts 3 answers every failed login and signup with "Something went
+	// wrong. Please check your credentials." unless this is false; false
+	// keeps the messages players have always seen (Incorrect password,
+	// Username already exists.), as accounts 2 did by default
+	ambiguousErrorMessages:false
 });
 
 Accounts.emailTemplates.siteName = 'Dominus';

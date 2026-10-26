@@ -44,6 +44,7 @@ if (Meteor.isServer) {
     };
     if (overrides) _.extend(game, overrides);
     game._id = await Games.insertAsync(game);
+    _gs.cacheGame(game);
     return game;
   }
 

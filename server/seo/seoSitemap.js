@@ -59,13 +59,13 @@ var builders = {
     return urlset(urls);
   },
 
-  'sitemap-games.xml': function() {
+  'sitemap-games.xml': async function() {
     // sort by endDate desc so the cap drops the oldest, least valuable games
-    var urls = Games.find({ hasEnded: true }, {
+    var urls = await Games.find({ hasEnded: true }, {
       fields: { endDate: 1 },
       sort: { endDate: -1 },
       limit: MAX_GAMES
-    }).map(function(game) {
+    }).mapAsync(function(game) {
       return {
         loc: '/result/' + game._id,
         lastmod: isoDate(game.endDate),

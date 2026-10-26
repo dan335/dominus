@@ -75,6 +75,7 @@ METHOD_POLICY_CORE = [
   'logout',
   'getNewToken',
   'removeOtherTokens',
+  'logoutAllClients',
   'createUser',
   'forgotPassword',
   'resetPassword',

@@ -1,19 +1,16 @@
-FROM node:14
+# Meteor 3.5.3 runs on Node 24.15.0 (meteor node --version)
+FROM node:24.15.0-bookworm
 LABEL maintainer="Daniel Phillips (http://danp.us)"
 
 # timezone
 RUN echo "Etc/UTC" > /etc/timezone && \
-    dpkg-reconfigure -f noninteractive tzdata
+    ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime
 
 # install packages
 # libfontconfig1 is for phantomjs
 # imagemagick for image resizing
 # bzip2 is for phantomjs
-RUN sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' /etc/apt/sources.list && \
-    sed -i 's|http://deb.debian.org/debian-security|http://archive.debian.org/debian-security|g' /etc/apt/sources.list && \
-    sed -i '/buster-updates/d' /etc/apt/sources.list && \
-    apt-get -y update && apt-get install -y --fix-missing \
-    apt-utils \
+RUN apt-get -y update && apt-get install -y \
     curl \
     git \
     nano \
@@ -30,7 +27,7 @@ ENV DOMINUS_TEST=false HTTP_FORWARDED_COUNT=1 PORT=80 TERM=xterm OPENSSL_CONF=/e
 ADD .build/dominus.tar.gz /opt/app/
 
 WORKDIR /opt/app/bundle/programs/server
-RUN npm install --unsafe-perm
+RUN npm install
 
 WORKDIR /opt/app/bundle/programs/server/npm
 RUN npm rebuild
