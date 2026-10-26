@@ -143,7 +143,12 @@ var onLogin = async function(data) {
 
 		// temp
 		// did user have pro in old server
-		let pref = await OldProUsers.findOneAsync({email:email}, {fields: {purchases:1}});
+		// (only with an address to look up: {email: undefined} matches any
+		// document, which made every account without an email pro)
+		let pref = null;
+		if (typeof email === 'string' && email.length) {
+			pref = await OldProUsers.findOneAsync({email:email}, {fields: {purchases:1}});
+		}
 		if (pref) {
 			await Meteor.users.updateAsync(data.user._id, {$set: {pro:true}});
 			await Players.updateAsync({userId:data.user._id}, {$set: {pro:true}}, {multi:true});
