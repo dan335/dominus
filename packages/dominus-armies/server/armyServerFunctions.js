@@ -208,7 +208,7 @@ dArmies.enterNewHexCheck = async function(gameId, army_id, checkForMerge) {
     }
 
     // send alert
-    dAlerts.alert_armyFinishedAllMoves(
+    await dAlerts.alert_armyFinishedAllMoves(
       gameId,
       army.playerId,
       army._id,

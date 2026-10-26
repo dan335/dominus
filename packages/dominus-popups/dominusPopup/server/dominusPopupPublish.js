@@ -1,4 +1,4 @@
-Meteor.publish('dominusPopupGameId', function(gameId) {
+Meteor.publish('dominusPopupGameId', async function(gameId) {
     check(gameId, Match.OneOf(String, null));
     var sub = this
     var cur = Players.find({gameId:gameId, is_dominus:true}, {fields: {
@@ -9,7 +9,7 @@ Meteor.publish('dominusPopupGameId', function(gameId) {
         is_dominus:1,
         userId:1
     }});
-    Mongo.Collection._publishCursor(cur, sub, 'dominusplayer')
+    await Mongo.Collection._publishCursor(cur, sub, 'dominusplayer')
     return sub.ready();
 });
 
@@ -23,7 +23,7 @@ DDPRateLimiter.addRule(dominusPopupGameIdSubRule, 5, 5000);
 
 
 
-Meteor.publish('dominusPopupPlayer', function(playerId) {
+Meteor.publish('dominusPopupPlayer', async function(playerId) {
     check(playerId, Match.OneOf(String, null));
     var sub = this
     var cur = Players.find(playerId, {fields: {
@@ -34,7 +34,7 @@ Meteor.publish('dominusPopupPlayer', function(playerId) {
         is_dominus:1,
         userId:1
     }})
-    Mongo.Collection._publishCursor(cur, sub, 'dominusplayer')
+    await Mongo.Collection._publishCursor(cur, sub, 'dominusplayer')
     return sub.ready();
 });
 

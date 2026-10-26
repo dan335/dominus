@@ -70,7 +70,7 @@ var checkForGameEnd = async function() {
 
       await Games.updateAsync(game._id, {$set: {winningPlayer:winnerData, closeDate:closeDate}});
 
-      dAlerts.gAlert_gameOver(game._id, winningPlayer._id);
+      await dAlerts.gAlert_gameOver(game._id, winningPlayer._id);
       await dGraphs.updateIncomeRank(game._id);
       await dGraphs.updateVassalRank(game._id);
       await updatePlayersWithRank(game._id);

@@ -1,6 +1,6 @@
 // Cron tests: what each SyncedCron entry queues, and when (Oct 2026).
 //
-// Each cron's job function is called directly with Queues.add recorded
+// Each cron's job function is called directly with Queues.addAsync recorded
 // (dTest.recordJobs), so nothing it queues runs. The schedules are read by
 // handing each entry a parser that records what it asks for. The tests
 // describe what the crons do today.
@@ -32,7 +32,7 @@ if (Meteor.isServer) {
       function runCron(name) {
         var entry = SyncedCron._entries[name];
         if (!entry) throw new Error('FAIL: no cron called ' + name);
-        return dTest.recordJobs(function() { entry.job(); });
+        return dTest.recordJobs(function() { return entry.job(); });
       }
 
       function names(jobs) {
@@ -174,7 +174,7 @@ if (Meteor.isServer) {
             Queues[name].clean = function(grace, state) { cleaned.push(name + ' ' + state + ' ' + grace); return Promise.resolve([]); };
           });
           try {
-            SyncedCron._entries['clean up old jobs'].job();
+            dTest.settle(SyncedCron._entries['clean up old jobs'].job());
           } finally {
             Queues.queueNames.forEach(function(name) { Queues[name].clean = originals[name]; });
           }
@@ -187,9 +187,9 @@ if (Meteor.isServer) {
         test('resume stuck job queue: calls Queues.resumeIfStuck', function() {
           var calls = 0;
           var resume = Queues.resumeIfStuck;
-          Queues.resumeIfStuck = function() { calls++; return false; };
+          Queues.resumeIfStuck = async function() { calls++; return false; };
           try {
-            SyncedCron._entries['resume stuck job queue'].job();
+            dTest.settle(SyncedCron._entries['resume stuck job queue'].job());
           } finally {
             Queues.resumeIfStuck = resume;
           }

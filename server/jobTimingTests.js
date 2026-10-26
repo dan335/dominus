@@ -152,19 +152,19 @@ if (Meteor.isServer) {
     run('job timing: a job\'s uniqueId is released when its work ends, not before', function() {
       var name = 'jobTimingIdQueue';
       if (!Queues[name]) Queues.create(name);
-      Queues.clearUniqueIdsForJob(name);
+      dTest.settle(Queues.clearUniqueIdsForJob(name));
       try {
-        assert(Queues.addUniqueId(name, 'x'), 'id taken');
+        assert(dTest.settle(Queues.addUniqueId(name, 'x')), 'id taken');
         var wrapped = Queues.runJob(name, Meteor.bindEnvironment(function(job) {
           Meteor._sleepForMs(300);
         }));
         var state = settled(wrapped({id: 'f', data: {jobName: name, uniqueId: 'x'}}));
         Meteor._sleepForMs(100);
-        equal(Queues.addUniqueId(name, 'x'), false, 'held while the work runs');
+        equal(dTest.settle(Queues.addUniqueId(name, 'x')), false, 'held while the work runs');
         assert(waitFor(function() { return state.done; }, 5000), 'work done');
-        equal(Queues.addUniqueId(name, 'x'), true, 'free once it ended');
+        equal(dTest.settle(Queues.addUniqueId(name, 'x')), true, 'free once it ended');
       } finally {
-        Queues.clearUniqueIdsForJob(name);
+        dTest.settle(Queues.clearUniqueIdsForJob(name));
         delete Queues.workTimes[name];
       }
     });
@@ -196,7 +196,7 @@ if (Meteor.isServer) {
         Queues.workDay = function() { return '2026-01-01'; };
         Queues.recordWork(name, 100);
         Queues.recordWork(name, 300);
-        Queues.flushWorkTimes();
+        dTest.settle(Queues.flushWorkTimes());
         assert(!Queues.workTimes[name], 'cleared from memory');
         var stats = JobWorkStats.findOne({type: name, day: '2026-01-01'});
         assert(stats, 'a doc for the job and day');
@@ -207,7 +207,7 @@ if (Meteor.isServer) {
 
         // a second flush on the same day adds to it, keeping the highest max
         Queues.recordWork(name, 50);
-        Queues.flushWorkTimes();
+        dTest.settle(Queues.flushWorkTimes());
         stats = JobWorkStats.findOne({type: name, day: '2026-01-01'});
         equal(stats.count, 3, 'count adds up');
         equal(stats.total, 450, 'total adds up');
@@ -217,7 +217,7 @@ if (Meteor.isServer) {
         // the next day gets its own doc
         Queues.workDay = function() { return '2026-01-02'; };
         Queues.recordWork(name, 70);
-        Queues.flushWorkTimes();
+        dTest.settle(Queues.flushWorkTimes());
         equal(JobWorkStats.find({type: name}).count(), 2, 'one doc per day');
         equal(JobWorkStats.findOne({type: name, day: '2026-01-02'}).max, 70, 'with that day\'s numbers');
 

@@ -78,15 +78,15 @@ if (Meteor.isServer) {
       return _.reduce(out.docs, function(sum, docs) { return sum + _.keys(docs).length; }, 0);
     }
 
-    // replace Queues.add with a recorder so jobs are seen but never run
+    // replace Queues.addAsync with a recorder so jobs are seen but never run
     function recordJobs() {
       var jobs = [];
-      var original = Queues.add;
-      Queues.add = function(jobName, data) {
+      var original = Queues.addAsync;
+      Queues.addAsync = async function(jobName, data) {
         jobs.push({name: jobName, data: data});
-        return Promise.resolve();
+        return true;
       };
-      return {jobs: jobs, restore: function() { Queues.add = original; }};
+      return {jobs: jobs, restore: function() { Queues.addAsync = original; }};
     }
 
     // collections that hold game state, every doc has a gameId

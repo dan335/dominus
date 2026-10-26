@@ -342,21 +342,21 @@ if (Meteor.isServer) {
         replace(collection, '_makeNewID', function() { return generator.id(); });
       });
 
-      replace(Queues, 'add', function(name, data, options, uniqueId) {
+      replace(Queues, 'addAsync', async function(name, data, options, uniqueId) {
         check(name, String);
         check(data, Object);
         check(options, Object);
         check(uniqueId, Match.OneOf(Boolean, String));
         if (_.contains(JOBS_NOT_RUN, name)) {
           sim.jobCounts.notRun[name] = (sim.jobCounts.notRun[name] || 0) + 1;
-          return;
+          return false;
         }
         if (!Queues[name]) {
           throw new Error('FAIL: no queue for job ' + name);
         }
         if (uniqueId) {
           var key = name + '/' + uniqueId;
-          if (sim.unique[key]) return;
+          if (sim.unique[key]) return false;
           sim.unique[key] = true;
           data.uniqueId = uniqueId;
         }
@@ -364,6 +364,7 @@ if (Meteor.isServer) {
         // Bull stores the data as JSON, so a job gets dates back as strings
         sim.queue.push({name: name, data: JSON.parse(JSON.stringify(data)), uniqueId: uniqueId, seq: sim.jobSeq++,
           readyAt: dClock.nowMs() + ((options && options.delay) || 0)});
+        return true;
       });
 
       replace(Email, 'send', function(options) { sim.emails.push(_.pick(options, 'to', 'subject')); });
@@ -373,8 +374,6 @@ if (Meteor.isServer) {
       // The nightly relationship rebuild (updateAllKingsAllies) pauses the
       // queues and waits 5 seconds for running jobs to finish. Here no other job
       // runs at the same time, so it doesn't need to, and it mustn't pause Bull.
-      replace(Queues, 'pauseAll', function() {});
-      replace(Queues, 'resumeAll', function() {});
       replace(Queues, 'pauseAllAsync', async function() {});
       replace(Queues, 'resumeAllAsync', async function() {});
       replace(dInit, 'updateAllKingsAlliesWaitMs', 0);
@@ -403,7 +402,7 @@ if (Meteor.isServer) {
     };
 
     sim.runCron = function(name) {
-      SyncedCron._entries[name].job();
+      dTest.settle(SyncedCron._entries[name].job());
       sim.runJobs();
     };
 

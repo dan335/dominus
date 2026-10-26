@@ -176,9 +176,10 @@ var onLogin = async function(data) {
 	//Meteor.users.update(data.user._id, {$set:{accountDelNotificationSent:false}});
 };
 
-// accounts-base 2.2 doesn't wait for an async onLogin hook (Meteor 3's does),
-// so the login waits here, as it waited for the sync hook; upgrade PR 18
-// passes onLogin straight in
+// accounts-base 2.2 doesn't wait for an async onLogin hook (accounts-base 3
+// does: _successfulLogin awaits each one), so the login waits here, as it
+// waited for the sync hook. This is the one Promise.await left on Meteor
+// 2.16; upgrade PR 19, the switch to Meteor 3, passes onLogin straight in.
 Accounts.onLogin(function(data) {
 	Promise.await(onLogin(data));
 });

@@ -15,8 +15,8 @@ if (Meteor.isServer) {
   // Waits until no Bull job is waiting or running, so jobs a test started
   // (enterNewHexCheck after an army is created, and so on) don't land in the
   // middle of the next check. Delayed jobs (retries) don't count.
-  // Queues.add doesn't wait for Redis, so a job added a moment ago may not be
-  // counted yet: a test that needs a job's result should waitFor the result.
+  // A job still running when this looks may add another after it: a test
+  // that needs a job's result should waitFor the result.
   dTest.waitForJobs = function(ms) {
     dTest.sleep(50);
     var busy = function() {

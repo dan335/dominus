@@ -79,7 +79,7 @@ Meteor.methods({
     await Reports.insertAsync(report);
 
     // global alert
-    dAlerts.gAlert_playerReported(gameId, player._id, player.username, reason, rPlayer._id, rPlayer.username);
+    await dAlerts.gAlert_playerReported(gameId, player._id, player.username, reason, rPlayer._id, rPlayer.username);
 
     // record date
     // users can only report once every ...

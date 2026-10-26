@@ -24,7 +24,7 @@ Meteor.methods({
 				var name = player.username+' and '+other_player.username;
 				var id = await dChat.createChatroom(gameId, name, 'normal', player._id, [player._id, other_player._id], [player, other_player]);
 
-				dAlerts.alert_addedToChatroom(gameId, other_player._id, player._id, id);
+				await dAlerts.alert_addedToChatroom(gameId, other_player._id, player._id, id);
 
 				return id;
 
@@ -117,7 +117,7 @@ Meteor.methods({
 						throw new Meteor.Error(name+" is already in this chatroom.")
 					}
 
-					dAlerts.alert_addedToChatroom(gameId, member._id, player._id, room._id)
+					await dAlerts.alert_addedToChatroom(gameId, member._id, player._id, room._id)
 
 					await Rooms.updateAsync(room_id, {$addToSet: {members:member._id, memberData:member}})
 
@@ -169,7 +169,7 @@ Meteor.methods({
 				$pull: {admins:member_id}
 			})
 
-			dAlerts.alert_chatroomNowOwner(gameId, member_id, room_id)
+			await dAlerts.alert_chatroomNowOwner(gameId, member_id, room_id)
 		}
 	},
 
@@ -199,7 +199,7 @@ Meteor.methods({
 				if (room.owner != member_id) {
 					if (!_.contains(room.admins, member_id)) {
 						await Rooms.updateAsync(room_id, {$addToSet: {admins:member_id}})
-						dAlerts.alert_chatroomMadeAdmin(gameId, member_id, room_id)
+						await dAlerts.alert_chatroomMadeAdmin(gameId, member_id, room_id)
 					}
 				}
 			}
@@ -238,7 +238,7 @@ Meteor.methods({
 			}
 
 			await Rooms.updateAsync(room_id, {$pull: {admins:member_id}})
-			dAlerts.alert_chatroomRemovedFromAdmin(gameId, member_id, room_id)
+			await dAlerts.alert_chatroomRemovedFromAdmin(gameId, member_id, room_id)
 		}
 	},
 
@@ -281,7 +281,7 @@ Meteor.methods({
 				}
 			}
 
-			dAlerts.alert_kickedFromChatroom(gameId, member_id, room_id)
+			await dAlerts.alert_kickedFromChatroom(gameId, member_id, room_id)
 		}
 	},
 })

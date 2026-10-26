@@ -5,7 +5,6 @@
 // add timestamp to redis
 // when adding check timestamp, check if too old
 
-Future = Npm.require('fibers/future');
 Queue = Npm.require('bull');
 
 Queues = {
@@ -54,9 +53,9 @@ Queues.redisOptions = function() {
 // });
 
 
-Queues.trackJob = function(type, duration) {
+Queues.trackJob = async function(type, duration) {
   if (type && duration) {
-    KueStats.upsert({type:type}, {
+    await KueStats.upsertAsync({type:type}, {
       $setOnInsert: {type:type},
       $set: {lastDuration:duration, lastDate:new Date()},
       $inc: {timesRun:1, totalDuration:duration}
@@ -66,25 +65,23 @@ Queues.trackJob = function(type, duration) {
 
 
 // Every job handler runs through Queues.runJob, so Bull counts a job as done
-// when its work is done. Our handlers are wrapped in Meteor.bindEnvironment.
-// Before Bull 4, Bull called them outside a fiber, so the wrapper started a
-// fiber and returned to Bull as soon as the handler first waited on the
-// database: Bull marked the job completed while its work was still running,
-// and a job's timeout, lock and concurrency never applied.
+// when its work is done. Before Bull 4, handlers were wrapped in
+// Meteor.bindEnvironment and Bull called them outside a fiber, so the wrapper
+// started a fiber and returned to Bull as soon as the handler first waited on
+// the database: Bull marked the job completed while its work was still
+// running, and a job's timeout, lock and concurrency never applied.
 //
-// runJob runs the handler in a fiber of its own and resolves once the handler
-// returns, or once the promise it returns settles. It never rejects: a handler
-// that throws is logged and its job still completes, as before (bindEnvironment
-// logs a throw as "Exception in callback of async function"; a rejected
-// promise is logged here as "Exception in job <name>"). So Bull never retries a
-// job, and Queues.add sets attempts to 1 to keep it that way: most jobs are not
-// safe to run twice once they have done part of their work.
+// runJob runs the handler in Meteor's environment and resolves once the
+// promise it returns settles. It never rejects: a handler that throws is
+// logged as "Exception in job <name>" and its job still completes. So Bull
+// never retries a job, and Queues.jobOptions sets attempts to 1 to keep it that
+// way: most jobs are not safe to run twice once they have done part of their
+// work.
 //
 // runJob also times the work (JobWorkStats, below) and releases the job's
 // uniqueId when the work ends, which may be after Bull gave up on the job: a
 // job that hits its timeout fails in Bull, but its work goes on, and until it
 // stops no duplicate may be queued.
-const Fiber = Npm.require('fibers');
 
 // the jobs whose work is running in this process, by Queues.runningKey
 Queues.running = {};
@@ -104,45 +101,54 @@ Queues.runJob = function(jobName, handler) {
       const uniqueId = job.data && job.data.uniqueId;
       const start = Date.now();
 
-      const finish = function() {
+      const finish = async function() {
         try {
           delete Queues.running[key];
           Queues.recordWork(jobName, Date.now() - start);
           if (uniqueId) {
-            Queues.removeUniqueId(jobName, uniqueId);
+            await Queues.removeUniqueId(jobName, uniqueId);
           }
         } catch (error) {
           console.error('could not finish job', jobName, error);
         }
-        // settle Bull's promise outside the fiber (see below)
+        // settle Bull's promise from a timer callback (see below)
         setImmediate(resolve);
       };
 
-      // Bull calls this from a promise callback. The fiber is started from a
-      // timer callback instead, and Bull's promise is settled from one: Node
-      // 14 aborts (AsyncHooks::push_async_context) when a fiber started from a
-      // promise callback switches while Bull waits on that promise.
-      setImmediate(function() { Fiber(function() {
+      const work = async function() {
         Queues.running[key] = {jobName:jobName, jobId:job.id, uniqueId:uniqueId, startedAt:new Date(start)};
         // a job for a game that was just made, on another server, may come
         // before that server's insert reaches this one's settings cache
         if (job.data && typeof job.data.gameId === 'string') {
           try {
-            Queues._waitForResult(_gs.ensureGame(job.data.gameId));
+            await _gs.ensureGame(job.data.gameId);
           } catch (error) {
             console.error('job ' + jobName + ': could not read game ' + job.data.gameId + ' into the settings cache', error);
           }
         }
         try {
-          const result = handler(job);
-          if (result && typeof result.then === 'function') {
-            Queues._waitForResult(result);
-          }
+          await handler(job);
         } catch (error) {
           Meteor._debug('Exception in job ' + jobName, error && error.stack || error);
         }
-        finish();
-      }).run(); });
+        await finish();
+      };
+
+      // Bull calls this from a promise callback. The work is started from a
+      // timer callback instead (Meteor.defer), and Bull's promise is settled
+      // from one: on Meteor 2.16, Node 14 aborts (AsyncHooks::
+      // push_async_context) when a fiber started from a promise callback
+      // switches while Bull waits on that promise. Meteor.defer also gives
+      // the work Meteor's environment (on 2.16, a fiber of its own). On 2.16
+      // Meteor.defer must itself be called in a fiber, and this may be called
+      // outside one, so it is called from a promise callback, which 2.16 runs
+      // in a fiber (it returns at once, so that fiber never switches).
+      Promise.resolve().then(function() {
+        Meteor.defer(work);
+      }).catch(function(error) {
+        console.error('could not start job', jobName, error);
+        return finish();
+      });
     });
   };
 };
@@ -183,18 +189,19 @@ Queues.workDay = function() {
   return new Date().toISOString().slice(0, 10);
 };
 
-Queues.flushWorkTimes = function() {
+Queues.flushWorkTimes = async function() {
   let times = Queues.workTimes;
   let day = Queues.workDay();
   Queues.workTimes = {};
-  _.each(times, function(t, type) {
-    JobWorkStats.upsert({type:type, day:day}, {
+  for (const type of _.keys(times)) {
+    const t = times[type];
+    await JobWorkStats.upsertAsync({type:type, day:day}, {
       $setOnInsert: {type:type, day:day},
       $set: {last:t.last, updatedAt:new Date()},
       $inc: {count:t.count, total:t.total},
       $max: {max:t.max}
     });
-  });
+  }
 };
 
 
@@ -205,7 +212,7 @@ Queues.flushWorkTimes = function() {
 // - a job that will be retried keeps its id until it finally fails (attempts
 //   are always 1 now, but the rule stays right if retries are turned on);
 // - any other failure (a job left behind by a worker that died) releases it.
-Queues.onJobFailed = function(job, error) {
+Queues.onJobFailed = async function(job, error) {
   if (!job || !job.data || !job.data.uniqueId) {
     return;
   }
@@ -214,16 +221,16 @@ Queues.onJobFailed = function(job, error) {
     return;
   }
 
-  let future = new Future();
-  job.isFailed().then(function(isFailed) {
-    future.return(isFailed);
-  }).catch(function(error) {
+  let isFailed;
+  try {
+    isFailed = await job.isFailed();
+  } catch (error) {
     console.error('could not read state of failed job', job.data.jobName, error);
-    future.return(true);
-  });
+    isFailed = true;
+  }
 
-  if (future.wait()) {
-    Queues.removeUniqueId(job.data.jobName, job.data.uniqueId);
+  if (isFailed) {
+    await Queues.removeUniqueId(job.data.jobName, job.data.uniqueId);
   }
 };
 
@@ -333,7 +340,9 @@ Queues.create = function(jobName) {
 
 
     Queues[jobName].on('failed', Meteor.bindEnvironment(function(job, error) {
-      Queues.onJobFailed(job, error);
+      Queues.onJobFailed(job, error).catch(function(error) {
+        console.error('could not release the uniqueId of failed job', jobName, error);
+      });
     }));
 
 
@@ -347,7 +356,9 @@ Queues.create = function(jobName) {
       if (job.data.jobName != 'runBattle') {
         if (job.data.activeDate) {
           const duration = new Date().getTime() - new Date(job.data.activeDate).getTime();
-          Queues.trackJob(job.data.jobName, duration);
+          Queues.trackJob(job.data.jobName, duration).catch(function(error) {
+            console.error('could not track job', job.data.jobName, error);
+          });
         }
       }
 
@@ -418,7 +429,11 @@ Queues.create('resetQueueStats');
 // clean jobs
 Meteor.startup(function() {
   if (process.env.DOMINUS_WORKER == 'true') {
-    Meteor.setInterval(Queues.flushWorkTimes, 1000*60);
+    Meteor.setInterval(function() {
+      Queues.flushWorkTimes().catch(function(error) {
+        console.error('could not save job work times', error);
+      });
+    }, 1000*60);
 
 
     SyncedCron.add({
@@ -442,44 +457,6 @@ Meteor.startup(function() {
 
 
 
-// add a job to the job queue
-Queues.add = function(jobName, data, options, uniqueId) {
-  check(jobName, String);
-  check(data, Object);
-  check(options, Object);
-  check(uniqueId, Match.OneOf(Boolean, String));
-
-  // unique jobs
-  if (uniqueId) {
-    let added = Queues.addUniqueId(jobName, uniqueId);
-
-    // uniqueId is already in db
-    // skip job
-    if (!added) {
-      return;
-    }
-
-    // add uniqueId to data so we can remove it later
-    data.uniqueId = uniqueId;
-  }
-
-  // used when removing uniqueId
-  data.jobName = jobName;
-
-  // check that job exists
-  // if (!_.contains(Queues.queueNames, jobName)) {
-  //   console.error('Job', jobName, 'not found.', Queues.queueNames, data, options, uniqueId);
-  // }
-
-  Queues[jobName].add(data, Queues.jobOptions(options)).catch(Meteor.bindEnvironment(function(error) {
-    console.error('could not add job', jobName, error);
-    if (uniqueId) {
-      Queues.removeUniqueId(jobName, uniqueId);
-    }
-  }));
-};
-
-
 // Bull's options for a job. Retries stay off (see Queues.runJob): many calls
 // still pass attempts and backoff from when they seemed to work, and those
 // are dropped. A job's timeout is kept: a job that runs past it fails in Bull
@@ -492,8 +469,10 @@ Queues.jobOptions = function(options) {
 };
 
 
-// Queues.add for async code: resolves once Redis has the job (or the job was
-// skipped as a duplicate), with true if it was added. Stage 2 code moves to it.
+// Add a job: resolves once Redis has the job (or the job was skipped as a
+// duplicate), with true if it was added; rejects if Redis refuses it. A
+// uniqueId (a string; false for none) skips the job while another job with
+// that id waits or runs.
 Queues.addAsync = async function(jobName, data, options, uniqueId) {
   check(jobName, String);
   check(data, Object);
@@ -503,27 +482,21 @@ Queues.addAsync = async function(jobName, data, options, uniqueId) {
   const queue = Queues[jobName];
 
   if (uniqueId) {
-    let added;
-    try {
-      added = await queue.client.set(Queues.getKeyString(jobName, uniqueId), '1', 'PX', Queues.uniqueIdTtlMs, 'NX');
-    } catch (error) {
-      // as in addUniqueId: a duplicate is safer than a lost job
-      console.error('could not check uniqueId', jobName, uniqueId, error);
-      added = 'OK';
-    }
-    if (added !== 'OK') {
+    if (!await Queues.addUniqueId(jobName, uniqueId)) {
       return false;
     }
+    // so runJob can release it when the work ends
     data.uniqueId = uniqueId;
   }
 
+  // used when releasing the uniqueId
   data.jobName = jobName;
 
   try {
     await queue.add(data, Queues.jobOptions(options));
   } catch (error) {
     if (uniqueId) {
-      await queue.client.del(Queues.getKeyString(jobName, uniqueId)).catch(function() {});
+      await Queues.removeUniqueId(jobName, uniqueId);
     }
     throw error;
   }
@@ -531,8 +504,8 @@ Queues.addAsync = async function(jobName, data, options, uniqueId) {
 };
 
 
-// Queues.addAsync for callers that carry on when a job can't be added, as
-// every Queues.add caller did: it logs the error and resolves with false.
+// Queues.addAsync for callers that carry on when a job can't be added: it
+// logs the error and resolves with false.
 Queues.addAsyncOrLog = function(jobName, data, options, uniqueId) {
   return Queues.addAsync(jobName, data, options, uniqueId).catch(function(error) {
     console.error('could not add job', jobName, error);
@@ -543,17 +516,17 @@ Queues.addAsyncOrLog = function(jobName, data, options, uniqueId) {
 
 
 Meteor.startup(function() {
-  Queues.resetQueueStats.process(Meteor.bindEnvironment(function(job) {
-		KueStats.remove({});
-    return Promise.resolve();
-	}));
+  Queues.resetQueueStats.process(async function(job) {
+    await KueStats.removeAsync({});
+  });
 });
 
 
 
 
 // called from admin ui
-Queues.clearUniqueIdsForJob = function(jobName) {
+// a failed delete is ignored, as before
+Queues.clearUniqueIdsForJob = async function(jobName) {
   const queue = Queues[jobName];
 
   if (!queue) {
@@ -561,38 +534,9 @@ Queues.clearUniqueIdsForJob = function(jobName) {
   }
 
   // the per-id keys, plus the list key the old code used
-  let keys = Queues._uniqueKeysForJob(jobName).concat([Queues.getKeyString(jobName)]);
-  Queues._waitFor(queue.client.del.apply(queue.client, keys));
+  let keys = (await Queues._uniqueKeysForJob(jobName)).concat([Queues.getKeyString(jobName)]);
+  await queue.client.del(keys).catch(function() {});
 }
-
-
-
-// wait for a Redis/Bull promise inside a fiber; returns its result, throws its error
-Queues._waitForResult = function(promise) {
-  let future = new Future();
-  promise.then(function(result) {
-    future.return({result:result});
-  }).catch(function(error) {
-    future.return({error:error || new Error('unknown error')});
-  });
-  let out = future.wait();
-  if (out.error) {
-    throw out.error;
-  }
-  return out.result;
-};
-
-
-// wait for a Bull promise inside a fiber; returns the error, or null on success
-Queues._waitFor = function(promise) {
-  let future = new Future();
-  promise.then(function() {
-    future.return(null);
-  }).catch(function(error) {
-    future.return(error || new Error('unknown error'));
-  });
-  return future.wait();
-};
 
 
 // Pause every queue on every worker (Bull global pause, stored in Redis).
@@ -645,23 +589,12 @@ Queues.resumeAllAsync = async function() {
 };
 
 
-// sync twins for code that hasn't converted yet (the admin methods and the
-// safety net below); the final sweep (upgrade PR 18) removes them
-Queues.pauseAll = function(isManual) {
-  return Promise.await(Queues.pauseAllAsync(isManual));
-};
-
-Queues.resumeAll = function() {
-  return Promise.await(Queues.resumeAllAsync());
-};
-
-
 // Safety net: a pause made by server code (not from the admin panel) that is
 // still in place after maxMs is treated as stuck and resumed.
 Queues.stuckPauseMaxMs = 1000*60*15;
 
-Queues.resumeIfStuck = function(now) {
-  let settings = Settings.findOne({}, {fields: {isPaused:1, pausedAt:1, manualPause:1}});
+Queues.resumeIfStuck = async function(now) {
+  let settings = await Settings.findOneAsync({}, {fields: {isPaused:1, pausedAt:1, manualPause:1}});
   if (!settings || !settings.isPaused || settings.manualPause) {
     return false;
   }
@@ -673,7 +606,7 @@ Queues.resumeIfStuck = function(now) {
   }
 
   console.error('--- job queue paused since ' + settings.pausedAt + ', resuming ---');
-  Queues.resumeAll();
+  await Queues.resumeAllAsync();
   return true;
 };
 
@@ -682,8 +615,8 @@ Meteor.startup(function() {
     SyncedCron.add({
       name: 'resume stuck job queue',
       schedule: function(parser) {return parser.cron('* * * * *');},
-      job: function() {
-        Queues.resumeIfStuck();
+      job: async function() {
+        await Queues.resumeIfStuck();
       }
     });
   }
@@ -734,38 +667,35 @@ Meteor.startup(function() {
 Queues.uniqueIdTtlMs = 1000*60*20;
 
 // returns true if the id was free and is now taken, false if it is already taken
-Queues.addUniqueId = function(jobName, uniqueId) {
-  let future = new Future();
-  Queues[jobName].client.set(Queues.getKeyString(jobName, uniqueId), '1', 'PX', Queues.uniqueIdTtlMs, 'NX', function(error, result) {
-    if (error) {
-      // if Redis can't answer, queue the job: a duplicate is safer than a lost job
-      console.error('could not check uniqueId', jobName, uniqueId, error);
-      future.return(true);
-    } else {
-      future.return(result === 'OK');
-    }
-  });
-  return future.wait();
+// resolves with true if the id was free and is now taken, false if it is
+// already taken
+Queues.addUniqueId = async function(jobName, uniqueId) {
+  let result;
+  try {
+    result = await Queues[jobName].client.set(Queues.getKeyString(jobName, uniqueId), '1', 'PX', Queues.uniqueIdTtlMs, 'NX');
+  } catch (error) {
+    // if Redis can't answer, queue the job: a duplicate is safer than a lost job
+    console.error('could not check uniqueId', jobName, uniqueId, error);
+    return true;
+  }
+  return result === 'OK';
 }
 
 
-Queues.removeUniqueId = function(jobName, uniqueId) {
-  let future = new Future();
-  Queues[jobName].client.del(Queues.getKeyString(jobName, uniqueId), function(error, result) {
-    future.return(result);
-  });
-  future.wait();
+// a failed delete is ignored, as before: the id expires on its own
+Queues.removeUniqueId = async function(jobName, uniqueId) {
+  await Queues[jobName].client.del(Queues.getKeyString(jobName, uniqueId)).catch(function() {});
 }
 
 
 // keys of the stored ids of a job type
-Queues._uniqueKeysForJob = function(jobName) {
+Queues._uniqueKeysForJob = async function(jobName) {
   const client = Queues[jobName].client;
   const pattern = Queues.getKeyString(jobName) + ':*';
   let keys = [];
   let cursor = '0';
   do {
-    let reply = Queues._waitForResult(client.scan(cursor, 'MATCH', pattern, 'COUNT', 1000));
+    let reply = await client.scan(cursor, 'MATCH', pattern, 'COUNT', 1000);
     cursor = reply[0];
     keys = keys.concat(reply[1]);
   } while (cursor !== '0');
@@ -774,9 +704,9 @@ Queues._uniqueKeysForJob = function(jobName) {
 
 
 // the ids currently stored for a job type
-Queues.getUniqueIds = function(jobName) {
+Queues.getUniqueIds = async function(jobName) {
   const prefix = Queues.getKeyString(jobName) + ':';
-  return Queues._uniqueKeysForJob(jobName).map(function(key) {
+  return (await Queues._uniqueKeysForJob(jobName)).map(function(key) {
     return key.substring(prefix.length);
   });
 }

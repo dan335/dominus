@@ -403,7 +403,7 @@ if (Meteor.isServer) {
         }
       });
 
-      run('queue: Queues.addAsyncOrLog logs a job it can\'t add and resolves with false, as Queues.add only logged it', function() {
+      run('queue: Queues.addAsyncOrLog logs a job it can\'t add and resolves with false', function() {
         var addAsync = Queues.addAsync;
         var result;
         Queues.addAsync = async function() { throw new Error('test: redis is down'); };
@@ -419,21 +419,23 @@ if (Meteor.isServer) {
         }
       });
 
-      run('test runner: while the suites run, Queues.addAsync goes through a replaced Queues.add, so recordJobs sees it', function() {
+      run('test runner: recordJobs records the jobs added with Queues.addAsync and addAsyncOrLog, and waits for fn\'s promise', function() {
         var results = [];
         var jobs = dTest.recordJobs(function() {
           results.push(dTest.settle(Queues.addAsync('destroyKingChatroom', {king_id: 'a'}, {delay: 0}, 'a')));
           results.push(dTest.settle(Queues.addAsyncOrLog('destroyKingChatroom', {king_id: 'b'}, {}, false)));
+          return (async function() {
+            await new Promise(function(resolve) { setTimeout(resolve, 20); });
+            results.push(await Queues.addAsyncOrLog('destroyKingChatroom', {king_id: 'c'}, {}, false));
+          })();
         });
         equal(JSON.stringify(jobs.map(function(j) { return [j.name, j.data.king_id, j.uniqueId]; })),
-          '[["destroyKingChatroom","a","a"],["destroyKingChatroom","b",false]]', 'both recorded, none added to Bull');
-        equal(results.join(), 'true,true', 'each resolves with true');
-
-        var during = Queues.addAsync;
-        var unfollow = dTest.followQueuesAdd();
-        assert(Queues.addAsync !== during, 'a second follower wraps it again');
-        unfollow();
-        assert(Queues.addAsync === during, 'and puts it back');
+          '[["destroyKingChatroom","a","a"],["destroyKingChatroom","b",false],["destroyKingChatroom","c",false]]',
+          'all recorded, the one added after fn\'s first await too, none added to Bull');
+        equal(results.join(), 'true,true,true', 'each resolves with true');
+        var original = Queues.addAsync;
+        dTest.recordJobs(function() {});
+        assert(Queues.addAsync === original, 'Queues.addAsync is put back');
       });
     });
   });

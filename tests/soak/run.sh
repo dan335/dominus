@@ -19,7 +19,9 @@
 # Other settings: BOTS (12), SPECTATORS (2), SEED (1), SAMPLE (seconds between
 # samples, 60), KEEP=1 to leave the containers running afterwards, SOAK_NAME
 # (dominus-soak) to name the containers and network differently, OUT for
-# another results folder, and
+# another results folder, APP_ENV for more environment variables for the web
+# and worker, one NAME=value per line (APP_ENV=WARN_WHEN_USING_OLD_API=true logs
+# each call of Meteor's old sync API), and
 # MONGO_IMAGE, REDIS_IMAGE, NODE_IMAGE to use other images.
 #
 # Needs docker, and meteor when it builds the image. Results go to
@@ -139,6 +141,7 @@ S3SECRETACCESSKEY=soak
 DOMINUS_SOAK_MONITOR=$SAMPLE
 METEOR_SETTINGS=$SETTINGS
 EOF
+[ -z "$APP_ENV" ] || printf '%s\n' "$APP_ENV" >> "$OUT/soak.env"
 
 log "Starting the web and worker containers from $IMAGE..."
 docker run -d --name $P-web --network $P --network-alias web --restart unless-stopped \

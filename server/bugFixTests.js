@@ -207,7 +207,7 @@ if (Meteor.isServer) {
 
     run('updateVassalAllyCountMultiple matches a tree built by set_lord_and_vassal', function() {
       let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
-      let restores = [stub(Queues, 'add', function() { return true; })];
+      let restores = [stub(Queues, 'addAsync', async function() { return true; })];
       try {
         let mk = function() {
           return Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), username: 'p_' + Random.id(3),
@@ -247,7 +247,7 @@ if (Meteor.isServer) {
     // conquests left. Both became async in upgrade PR 12.
     run('random conquests: the nightly rebuild finds the tree the conquests left', function() {
       let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
-      let restores = [stub(Queues, 'add', function() { return true; })];
+      let restores = [stub(Queues, 'addAsync', async function() { return true; })];
       let first = null;
       let sorted = function(list) { return JSON.stringify(_.sortBy(list || [], _.identity)); };
       try {
@@ -296,7 +296,7 @@ if (Meteor.isServer) {
     run('random conquests keep the relationship lists and their counts in step', function() {
       let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
       let queued = [];
-      let restores = [stub(Queues, 'add', function(name, data) {
+      let restores = [stub(Queues, 'addAsync', async function(name, data) {
         if (name == 'updateVassalAllyCountMultiple') queued.push(data.playerIds);
         return true;
       })];
@@ -655,7 +655,7 @@ if (Meteor.isServer) {
         }),
         stub(Mapbaker, 'createJpgImage', function(inFile, outFile) { calls.jpg.push(outFile); return opts.jpgOk ? outFile : false; }),
         stub(Mapbaker, 'uploadToS3', function(file) { calls.s3.push(file); return opts.s3Ok ? 'https://bf/' + file : false; }),
-        stub(Queues, 'add', function(name, data) { calls.queued.push({name: name, data: data}); return true; }),
+        stub(Queues, 'addAsync', async function(name, data) { calls.queued.push({name: name, data: data}); return true; }),
         stub(Meteor.settings.public.s3, 'serveBakesFromS3', !!opts.s3),
         stubEnv('DOMINUS_TEST', 'false')
       ];
@@ -891,7 +891,7 @@ if (Meteor.isServer) {
       Armypaths.remove({});
       let userId = 'bf_u_' + Random.id(), gameId = 'bf_g_' + Random.id();
       let armyA = 'bf_a_' + Random.id(), armyB = 'bf_b_' + Random.id();
-      let restores = [stub(Queues, 'add', function() { return true; })];
+      let restores = [stub(Queues, 'addAsync', async function() { return true; })];
       try {
         // A is idle (no hexes) with an old move time, B moved a minute ago
         insertPaths(gameId, userId, armyA, [HOURS_3], {hexes: null});
