@@ -30,52 +30,52 @@ if (Meteor.isServer) {
     password: 'e2e-password-1',
 
     // removes the users and games the browser tests made
-    reset: function() {
+    reset: async function() {
       refuseInProduction();
-      var gameIds = Games.find({name: /^E2E /}, {fields: {_id: 1}}).map(function(g) { return g._id; });
-      dTest.gameCollections().concat([Rounds]).forEach(function(collection) {
-        collection.remove({gameId: {$in: gameIds}});
+      var gameIds = await Games.find({name: /^E2E /}, {fields: {_id: 1}}).mapAsync(function(g) { return g._id; });
+      await dTest.eachAsync(dTest.gameCollections().concat([Rounds]), async function(collection) {
+        await collection.removeAsync({gameId: {$in: gameIds}});
       });
-      Games.remove({_id: {$in: gameIds}});
-      var userIds = Meteor.users.find({username: /^e2e_/}, {fields: {_id: 1}}).map(function(u) { return u._id; });
+      await Games.removeAsync({_id: {$in: gameIds}});
+      var userIds = await Meteor.users.find({username: /^e2e_/}, {fields: {_id: 1}}).mapAsync(function(u) { return u._id; });
       // the forum topics the tests start (all titled "E2E ..."), with every
       // reply in them, and any other post by an e2e user
-      var topicIds = Forumtopics.find({title: /^E2E /}, {fields: {_id: 1}}).map(function(t) { return t._id; });
-      Forumposts.remove({$or: [{topicId: {$in: topicIds}}, {userId: {$in: userIds}}]});
-      Forumtopics.remove({_id: {$in: topicIds}});
-      Markers.remove({user_id: {$in: userIds}});
-      MarkerGroups.remove({user_id: {$in: userIds}});
-      Players.remove({userId: {$in: userIds}});
-      Gamesignups.remove({userId: {$in: userIds}});
-      Meteor.users.remove({_id: {$in: userIds}});
+      var topicIds = await Forumtopics.find({title: /^E2E /}, {fields: {_id: 1}}).mapAsync(function(t) { return t._id; });
+      await Forumposts.removeAsync({$or: [{topicId: {$in: topicIds}}, {userId: {$in: userIds}}]});
+      await Forumtopics.removeAsync({_id: {$in: topicIds}});
+      await Markers.removeAsync({user_id: {$in: userIds}});
+      await MarkerGroups.removeAsync({user_id: {$in: userIds}});
+      await Players.removeAsync({userId: {$in: userIds}});
+      await Gamesignups.removeAsync({userId: {$in: userIds}});
+      await Meteor.users.removeAsync({_id: {$in: userIds}});
       return {games: gameIds.length, users: userIds.length, forumTopics: topicIds.length};
     },
 
     // A user that signs in with a password, made the way the sign up form
     // makes one. opts.admin makes them an admin.
-    user: function(name, opts) {
+    user: async function(name, opts) {
       refuseInProduction();
       opts = opts || {};
       var username = 'e2e_' + name;
       var userId = Accounts.createUser({username: username, email: username + '@example.com', password: dTest.e2e.password});
       var set = {verifiedEmail: true, 'emails.0.verified': true, isNewUser: false};
       if (opts.admin) set.admin = true;
-      Meteor.users.update(userId, {$set: set});
+      await Meteor.users.updateAsync(userId, {$set: set});
       return {_id: userId, username: username, email: username + '@example.com'};
     },
 
     // A started game with a player for each name (dTest.buildGameWorld).
     // Returns its id and, for each name, the user, player and castle.
-    world: function(names, opts) {
+    world: async function(names, opts) {
       refuseInProduction();
       opts = opts || {};
-      var users = names.map(function(name) { return dTest.e2e.user(name, opts.admins && _.contains(opts.admins, name) ? {admin: true} : {}); });
-      var w = dTest.buildGameWorld({users: users, game: _.extend({name: 'E2E ' + names.join(' ')}, opts.game || {})});
+      var users = await dTest.mapAsync(names, function(name) { return dTest.e2e.user(name, opts.admins && _.contains(opts.admins, name) ? {admin: true} : {}); });
+      var w = await dTest.buildGameWorld({users: users, game: _.extend({name: 'E2E ' + names.join(' ')}, opts.game || {})});
       // the start job does this, but not for a test start (gameStartJob.js)
-      dTest.settle(dChat.setupEveryoneChatroom(w.gameId));
+      await dChat.setupEveryoneChatroom(w.gameId);
       var out = {gameId: w.gameId, players: {}};
-      names.forEach(function(name, i) {
-        var castle = w.castle(i);
+      await dTest.eachAsync(names, async function(name, i) {
+        var castle = await w.castle(i);
         out.players[name] = {userId: users[i]._id, username: users[i].username, playerId: w.players[i]._id,
           castle: {_id: castle._id, x: castle.x, y: castle.y, name: castle.name}};
       });
@@ -84,56 +84,56 @@ if (Meteor.isServer) {
 
     // A game that starts a week from now, open for signups. The name gets
     // "E2E " in front. opts are the game's fields, e.g. {isProOnly: true}.
-    futureGame: function(name, opts) {
+    futureGame: async function(name, opts) {
       refuseInProduction();
       var game = _.extend({name: 'E2E ' + name, desc: 'An e2e game.', maxPlayers: 10,
         startAt: moment().add(7, 'days').toDate(), createdAt: new Date(), hasStarted: false, isStarting: false,
         hasEnded: false, hasClosed: false, numPlayers: 0, isRelaxed: false, isSpeed: false, isCrazyFast: false,
         isProOnly: false, isKingOfHill: false, isNoLargeResources: false}, opts || {});
-      game._id = Games.insert(game);
+      game._id = await Games.insertAsync(game);
       _gs.cacheGame(game);
       return game._id;
     },
 
     // sets fields on a user, e.g. {proTokens: 1}
-    setUser: function(userId, fields) {
+    setUser: async function(userId, fields) {
       refuseInProduction();
-      return Meteor.users.update(userId, {$set: fields});
+      return await Meteor.users.updateAsync(userId, {$set: fields});
     },
 
     // a document, for checking what a click did
-    findOne: function(collectionName, selector) {
+    findOne: async function(collectionName, selector) {
       refuseInProduction();
-      return collectionNamed(collectionName).findOne(selector);
+      return await collectionNamed(collectionName).findOneAsync(selector);
     },
 
     // how many documents match, e.g. to check a chat was saved once
-    count: function(collectionName, selector) {
+    count: async function(collectionName, selector) {
       refuseInProduction();
-      return collectionNamed(collectionName).find(selector).count();
+      return await collectionNamed(collectionName).find(selector).countAsync();
     },
 
     // what a user has bought in the store, e.g. {castles: ['castle_03_skull']}
-    setPurchases: function(userId, purchases) {
+    setPurchases: async function(userId, purchases) {
       refuseInProduction();
-      return Meteor.users.update(userId, {$set: {purchases: purchases}});
+      return await Meteor.users.updateAsync(userId, {$set: {purchases: purchases}});
     },
 
     // sets a player's resources and gold (the ones given)
-    setResources: function(playerId, values) {
+    setResources: async function(playerId, values) {
       refuseInProduction();
-      return Players.update(playerId, {$set: _.pick(values, _s.market.types_plus_gold)});
+      return await Players.updateAsync(playerId, {$set: _.pick(values, _s.market.types_plus_gold)});
     },
 
     // the free hex nearest to x,y that an army can stand on, at least
     // minDistance away, and of the type given (grain, ...) if one is
-    freeHexNear: function(gameId, x, y, minDistance, type) {
+    freeHexNear: async function(gameId, x, y, minDistance, type) {
       refuseInProduction();
       var taken = {};
-      Castles.find({gameId: gameId}).forEach(function(c) { taken[c.x + '_' + c.y] = true; });
-      Villages.find({gameId: gameId}).forEach(function(v) { taken[v.x + '_' + v.y] = true; });
+      await Castles.find({gameId: gameId}).forEachAsync(function(c) { taken[c.x + '_' + c.y] = true; });
+      await Villages.find({gameId: gameId}).forEachAsync(function(v) { taken[v.x + '_' + v.y] = true; });
       var best = null;
-      Hexes.find(_.extend({gameId: gameId, hasBuilding: {$ne: true}}, type ? {type: type} : {}), {fields: {x: 1, y: 1}}).forEach(function(h) {
+      await Hexes.find(_.extend({gameId: gameId, hasBuilding: {$ne: true}}, type ? {type: type} : {}), {fields: {x: 1, y: 1}}).forEachAsync(function(h) {
         var d = Hx.hexDistance(x, y, h.x, h.y);
         if (taken[h.x + '_' + h.y] || d < (minDistance || 1)) return;
         if (!best || d < best.distance) best = {x: h.x, y: h.y, distance: d};
@@ -143,79 +143,79 @@ if (Meteor.isServer) {
     },
 
     // an army for a player at x,y, made the way the game makes one
-    makeArmy: function(playerId, soldiers, x, y) {
+    makeArmy: async function(playerId, soldiers, x, y) {
       refuseInProduction();
-      var army = dTest.settle(dArmies.create(playerId, dTest.soldierCounts(soldiers), x, y));
+      var army = await dArmies.create(playerId, dTest.soldierCounts(soldiers), x, y);
       if (!army) throw new Error('could not make the army');
       return army._id;
     },
 
     // a finished level 1 village for a player at x,y, with no soldiers
-    makeVillage: function(playerId, x, y) {
+    makeVillage: async function(playerId, x, y) {
       refuseInProduction();
-      var player = Players.findOne(playerId);
-      var id = Villages.insert(_.extend({gameId: player.gameId, x: x, y: y, playerId: player._id, user_id: player.userId,
+      var player = await Players.findOneAsync(playerId);
+      var id = await Villages.insertAsync(_.extend({gameId: player.gameId, x: x, y: y, playerId: player._id, user_id: player.userId,
         username: player.username, name: 'E2E village', level: 1, under_construction: false, created_at: new Date(),
-        income: dTest.settle(dVillages.resourcesFromSurroundingHexes(player.gameId, x, y, _s.villages.num_rings_village))},
+        income: await dVillages.resourcesFromSurroundingHexes(player.gameId, x, y, _s.villages.num_rings_village)},
         dTest.soldierCounts({})));
-      dTest.settle(Mapmaker.buildingAdded(player.gameId, x, y));
+      await Mapmaker.buildingAdded(player.gameId, x, y);
       return id;
     },
 
     // makes vassalId the vassal of lordId, as winning a battle does
-    makeVassal: function(lordId, vassalId) {
+    makeVassal: async function(lordId, vassalId) {
       refuseInProduction();
-      dTest.settle(dInit.set_lord_and_vassal(lordId, vassalId));
-      return Players.findOne(lordId, {fields: {allies_below: 1}}).allies_below;
+      await dInit.set_lord_and_vassal(lordId, vassalId);
+      return (await Players.findOneAsync(lordId, {fields: {allies_below: 1}})).allies_below;
     },
 
     // sends an army to x,y, through addArmyPath as its owner
-    sendArmy: function(armyId, x, y) {
+    sendArmy: async function(armyId, x, y) {
       refuseInProduction();
-      var army = Armies.findOne(armyId);
-      return dTest.settle(Meteor.server.method_handlers.addArmyPath.call({userId: army.user_id, isSimulation: false}, army.gameId, x, y, armyId));
+      var army = await Armies.findOneAsync(armyId);
+      return await Meteor.server.method_handlers.addArmyPath.call({userId: army.user_id, isSimulation: false}, army.gameId, x, y, armyId);
     },
 
     // an army's paths, in order
-    paths: function(armyId) {
+    paths: async function(armyId) {
       refuseInProduction();
-      return Armypaths.find({armyId: armyId}, {sort: {index: 1}}).fetch();
+      return await Armypaths.find({armyId: armyId}, {sort: {index: 1}}).fetchAsync();
     },
 
     // Makes the game's armies due to move on, so the worker moves them within
     // a few seconds instead of minutes.
-    hurryArmies: function(gameId) {
+    hurryArmies: async function(gameId) {
       refuseInProduction();
       var past = moment().subtract(1, 'hour').toDate();
-      return Armypaths.update({gameId: gameId}, {$set: {last_move_at: past}}, {multi: true});
+      return await Armypaths.updateAsync({gameId: gameId}, {$set: {last_move_at: past}}, {multi: true});
     },
 
     // sets fields on an E2E game, e.g. {endDate: ...}
-    setGame: function(gameId, fields) {
+    setGame: async function(gameId, fields) {
       refuseInProduction();
-      if (!/^E2E /.test((Games.findOne(gameId, {fields: {name: 1}}) || {}).name)) throw new Error('not an E2E game: ' + gameId);
-      return Games.update(gameId, {$set: fields});
+      if (!/^E2E /.test((await Games.findOneAsync(gameId, {fields: {name: 1}}) || {}).name)) throw new Error('not an E2E game: ' + gameId);
+      return await Games.updateAsync(gameId, {$set: fields});
     },
 
     // queues the jobs that draw an E2E game's minimap, as a new country does:
     // each country's border mask, which queues the game's minimap. The
     // worker runs them.
-    queueMinimap: function(gameId) {
+    queueMinimap: async function(gameId) {
       refuseInProduction();
-      if (!/^E2E /.test((Games.findOne(gameId, {fields: {name: 1}}) || {}).name)) throw new Error('not an E2E game: ' + gameId);
-      Countries.find({gameId: gameId}, {fields: {_id: 1}}).forEach(function(country) {
-        dTest.settle(Queues.addAsync('createCountryMask', {countryId: country._id}, {delay: 0, timeout: 1000 * 60}, country._id));
+      if (!/^E2E /.test((await Games.findOneAsync(gameId, {fields: {name: 1}}) || {}).name)) throw new Error('not an E2E game: ' + gameId);
+      await Countries.find({gameId: gameId}, {fields: {_id: 1}}).forEachAsync(async function(country) {
+        await Queues.addAsync('createCountryMask', {countryId: country._id}, {delay: 0, timeout: 1000 * 60}, country._id);
       });
-      return Countries.find({gameId: gameId}).count();
+      return await Countries.find({gameId: gameId}).countAsync();
     },
 
     // runs a cron's body now, e.g. '1 min job', so the worker takes the jobs
     // it adds within a few seconds instead of at the next tick
-    runCron: function(name) {
+    runCron: async function(name) {
       refuseInProduction();
       var entry = SyncedCron._entries[name];
       if (!entry) throw new Error('no cron named ' + name);
-      dTest.settle(entry.job());
+      await entry.job();
       return true;
     }
   };

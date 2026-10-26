@@ -29,23 +29,51 @@ if (Meteor.isServer) {
     return !!value && typeof value.then === 'function';
   };
 
-  // waits for a promise inside the current fiber, passes anything else through
-  dTest.settle = function(value) {
-    return dTest.isPromise(value) ? Promise.await(value) : value;
+  // fn(value, key) for each value of a list or object, one at a time, as
+  // _.each does, waiting for each call's promise
+  dTest.eachAsync = async function(list, fn) {
+    if (Array.isArray(list) || (list && typeof list.length === 'number' && typeof list !== 'function')) {
+      for (let i = 0; i < list.length; i++) await fn(list[i], i, list);
+    } else {
+      for (const key of _.keys(list || {})) await fn(list[key], key, list);
+    }
+  };
+
+  // _.map with an async fn, one call at a time; resolves with the results
+  dTest.mapAsync = async function(list, fn) {
+    const out = [];
+    await dTest.eachAsync(list, async function(value, key, all) { out.push(await fn(value, key, all)); });
+    return out;
+  };
+
+  // _.filter with an async fn, one call at a time
+  dTest.filterAsync = async function(list, fn) {
+    const out = [];
+    await dTest.eachAsync(list, async function(value, key, all) { if (await fn(value, key, all)) out.push(value); });
+    return out;
+  };
+
+  // _.find with an async fn: the first value it resolves truthy for, or undefined
+  dTest.findAsync = async function(list, fn) {
+    const values = _.isArray(list) ? list : _.values(list || {});
+    for (let i = 0; i < values.length; i++) {
+      if (await fn(values[i], i, list)) return values[i];
+    }
+    return undefined;
   };
 
   // returns the error thrown or the promise rejection, or null
-  dTest.throws = function(fn) {
+  dTest.throws = async function(fn) {
     try {
-      dTest.settle(fn());
+      await fn();
       return null;
     } catch (e) {
       return e || new Error('threw ' + e);
     }
   };
 
-  dTest.sleep = function(ms) {
-    Promise.await(new Promise(function(resolve) { setTimeout(resolve, ms); }));
+  dTest.sleep = async function(ms) {
+    await new Promise(function(resolve) { setTimeout(resolve, ms); });
   };
 
   // A run(name, fn) and its results. A test can return 'skip' when it doesn't
@@ -53,14 +81,14 @@ if (Meteor.isServer) {
   dTest.createRunner = function() {
     var runner = {results: [], passed: 0, failed: 0, skipped: 0, current: null};
 
-    runner.run = function(name, fn) {
+    runner.run = async function(name, fn) {
       runner.current = name;
       dTest.current = name;  // readable from a second meteor shell when a run hangs
       // DOMINUS_TEST_TRACE=true logs each test as it starts, to find the one
       // running when the process crashed
       if (process.env.DOMINUS_TEST_TRACE == 'true') console.log('TEST_START ' + name);
       try {
-        if (dTest.settle(fn()) === 'skip') {
+        if (await fn() === 'skip') {
           runner.results.push({name: name, status: 'SKIP'});
           runner.skipped++;
           return;
@@ -70,6 +98,8 @@ if (Meteor.isServer) {
       } catch (e) {
         runner.results.push({name: name, status: 'FAIL', error: (e && e.message) || String(e)});
         runner.failed++;
+        // an exception rather than a failed assertion: where it was thrown
+        if (e && e.stack && !/^FAIL/.test(e.message || '')) console.log('  [X] ' + name + ' threw: ' + e.stack);
       } finally {
         // a test that fixed the game clock or seeded the random source must not
         // leave it that way for the next one
@@ -77,7 +107,7 @@ if (Meteor.isServer) {
         dRandom.reset();
         // Node reports an unhandled rejection after the current tick, so wait
         // one turn of the event loop to blame it on the test that caused it
-        dTest.sleep(0);
+        await dTest.sleep(0);
         runner.current = null;
       }
     };
@@ -137,28 +167,28 @@ if (Meteor.isServer) {
     };
   };
 
-  dTest.runSuites = function(list, t) {
+  dTest.runSuites = async function(list, t) {
     var runner = dTest.createRunner();
     dTest.lastRunner = runner;
     var watcher = dTest.watchProcess(runner);
     var resume = dTest.pauseBackground();
     try {
-      list.forEach(function(suite) {
+      await dTest.eachAsync(list, async function(suite) {
         try {
-          dTest.settle(suite.fn(runner.run, t));
+          await suite.fn(runner.run, t);
         } catch (e) {
           // a suite that throws outside run() would otherwise hide its remaining tests
-          runner.run('suite ' + suite.name + ' finished', function() { throw e; });
+          await runner.run('suite ' + suite.name + ' finished', function() { throw e; });
         }
       });
       // let rejections from the last test surface; Node reports them a tick later
-      dTest.sleep(100);
+      await dTest.sleep(100);
     } finally {
       watcher.stop();
       resume();
     }
 
-    runner.run('no unhandled rejections or uncaught exceptions during the run', function() {
+    await runner.run('no unhandled rejections or uncaught exceptions during the run', function() {
       if (watcher.events.length) {
         throw new Error('FAIL: ' + watcher.events.map(function(e) {
           return e.kind + (e.test ? ' during "' + e.test + '"' : '') + ': ' + e.error.split('\n').slice(0, 3).join(' ');
@@ -190,15 +220,16 @@ if (Meteor.isServer) {
   // stays entered for the whole event loop while the call waits. Node refuses
   // uncaughtException listeners there (meteor shell then hangs), and the REPL
   // ends the shell call on the first uncaught exception from a timer the code
-  // started. So the run leaves the domain until it is done.
-  dTest.outsideDomain = function(fn) {
+  // started. So the run leaves the domain until fn's promise settles: promises
+  // and timers made meanwhile belong to no domain.
+  dTest.outsideDomain = async function(fn) {
     var domains = [];
     while (process.domain && domains.length < 10) {
       domains.push(process.domain);
       process.domain.exit();
     }
     try {
-      return fn();
+      return await fn();
     } finally {
       domains.reverse().forEach(function(domain) { domain.enter(); });
     }
@@ -224,7 +255,7 @@ if (Meteor.isServer) {
   var inProgress = false;
 
   // filter: only run suites whose name contains it, e.g. 'method contracts'
-  function runAllTests(filter) {
+  async function runAllTests(filter) {
     dTest.guard(this);
     check(filter, Match.Optional(String));
     // the runner's own tests call this method; never let it start a second run
@@ -233,7 +264,7 @@ if (Meteor.isServer) {
     try {
       dTest.takeCoverage('before-runs');
       var list = filter ? _.filter(suites, function(suite) { return suite.name.indexOf(filter) !== -1; }) : suites;
-      var out = dTest.outsideDomain(function() {
+      var out = await dTest.outsideDomain(function() {
         return dTest.runSuites(list, dTest.helpers);
       });
       dTest.takeCoverage('test-runs');

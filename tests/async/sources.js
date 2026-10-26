@@ -6,17 +6,21 @@ const acorn = require('acorn');
 
 const ROOT = path.resolve(__dirname, '../..');
 
-// what Meteor loads: everything but these (tests/ and public/ are ignored by
-// Meteor itself; .npm and node_modules hold the packages' npm dependencies)
+// what Meteor loads: everything but these (the app's tests/ and public/ are
+// ignored by Meteor itself; .npm and node_modules hold the packages' npm
+// dependencies). A package's tests/ folder is kept: package.js names its files.
 const DIRS = ['packages', 'server', 'lib', 'game', 'client', 'alert'];
 const SKIP = new Set(['.npm', 'node_modules', '.build', 'public', 'tests', '.git']);
 
 function listFiles(root) {
   root = root || ROOT;
   const out = [];
+  const packages = path.join(root, 'packages');
   const walk = function(dir) {
+    const inPackage = dir.startsWith(packages + path.sep);
     for (const entry of fs.readdirSync(dir, {withFileTypes: true})) {
-      if (SKIP.has(entry.name) || entry.name.startsWith('.build')) continue;
+      if (SKIP.has(entry.name) && !(inPackage && entry.name === 'tests')) continue;
+      if (entry.name.startsWith('.build')) continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
       else if (entry.isFile() && entry.name.endsWith('.js')) out.push(full);

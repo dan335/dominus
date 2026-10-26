@@ -1,30 +1,30 @@
-stubTestGame = function() {
-  Games.remove({});
+stubTestGame = async function() {
+  await Games.removeAsync({});
   let game = {
     _id: 'testgame',
     isSpeed: false,
     hasEnded: false,
     maxPlayers: 200
   }
-  game._id = Games.insert(game);
+  game._id = await Games.insertAsync(game);
   return game._id;
 }
 
 
 
-Tinytest.add('villages.buildAndDestroy', function(test) {
-  let gameId = stubTestGame();
-  Villages.remove({});
-  Castles.remove({});
-  Armies.remove({});
-  Players.remove({});
+Tinytest.addAsync('villages.buildAndDestroy', async function(test) {
+  let gameId = await stubTestGame();
+  await Villages.removeAsync({});
+  await Castles.removeAsync({});
+  await Armies.removeAsync({});
+  await Players.removeAsync({});
 
-  Promise.await(Mapmaker.eraseMap(gameId));
+  await Mapmaker.eraseMap(gameId);
   _s.mapmaker.minHexesInCountry = 100;
   _s.mapmaker.maxHexesInCountry = 100;
-  Promise.await(Mapmaker.addCountry(gameId, true));
+  await Mapmaker.addCountry(gameId, true);
 
-  var hex = Hexes.findOne({type:'grain', hasBuilding:false});
+  var hex = await Hexes.findOneAsync({type:'grain', hasBuilding:false});
 
   // user
   var player = {
@@ -43,7 +43,7 @@ Tinytest.add('villages.buildAndDestroy', function(test) {
   _s.market.types.forEach(function(type) {
     player[type] = 100000;
   })
-  player._id = Players.insert(player);
+  player._id = await Players.insertAsync(player);
   // Meteor.userId = function() {
   //   return user._id;
   // }
@@ -55,32 +55,32 @@ Tinytest.add('villages.buildAndDestroy', function(test) {
   });
   soldiers.footmen = 1;
 
-  Promise.await(dArmies.create(player._id, soldiers, hex.x, hex.y));
-  test.equal(Armies.find({gameId:gameId, x:hex.x, y:hex.y}).count(), 1, 'army at hex');
+  await dArmies.create(player._id, soldiers, hex.x, hex.y);
+  test.equal(await Armies.find({gameId:gameId, x:hex.x, y:hex.y}).countAsync(), 1, 'army at hex');
 
-  Meteor.call('buildVillage', gameId, hex.x, hex.y);
-  test.equal(Villages.find({gameId:gameId, x:hex.x, y:hex.y, user_id:user._id}).count(), 1, 'village built');
-  test.equal(Villages.findOne({gameId:gameId}).footmen, 1, 'footmen inside village');
-  test.equal(Armies.find({gameId:gameId, x:hex.x, y:hex.y}).count(), 0, 'army gone');
-  test.isNotNull(Villages.findOne({gameId:gameId}).countryId);
+  await Meteor.callAsync('buildVillage', gameId, hex.x, hex.y);
+  test.equal(await Villages.find({gameId:gameId, x:hex.x, y:hex.y, user_id:user._id}).countAsync(), 1, 'village built');
+  test.equal((await Villages.findOneAsync({gameId:gameId})).footmen, 1, 'footmen inside village');
+  test.equal(await Armies.find({gameId:gameId, x:hex.x, y:hex.y}).countAsync(), 0, 'army gone');
+  test.isNotNull((await Villages.findOneAsync({gameId:gameId})).countryId);
 
-  var village = Villages.findOne({gameId:gameId});
+  var village = await Villages.findOneAsync({gameId:gameId});
   test.equal(village.footmen, soldiers.footmen);
 
   // destroy
-  Promise.await(dVillages.destroyVillage(village._id));
-  test.equal(Villages.find({gameId:gameId, x:hex.x, y:hex.y}).count(), 0, 'village destroyed');
-  test.equal(Armies.find({gameId:gameId, x:hex.x, y:hex.y}).count(), 1, 'army created after village destroyed');
+  await dVillages.destroyVillage(village._id);
+  test.equal(await Villages.find({gameId:gameId, x:hex.x, y:hex.y}).countAsync(), 0, 'village destroyed');
+  test.equal(await Armies.find({gameId:gameId, x:hex.x, y:hex.y}).countAsync(), 1, 'army created after village destroyed');
 
   // destroy with no army in it
-  Meteor.call('buildVillage', gameId, hex.x, hex.y);
-  var village = Villages.findOne({gameId:gameId});
+  await Meteor.callAsync('buildVillage', gameId, hex.x, hex.y);
+  var village = await Villages.findOneAsync({gameId:gameId});
   test.isNotUndefined(village);
-  test.equal(Villages.find({gameId:gameId, x:hex.x, y:hex.y, user_id:user._id}).count(), 1, 'village created');
-  test.equal(Armies.find({gameId:gameId, x:hex.x, y:hex.y}).count(), 0, 'army gone');
-  Meteor.call('createArmyFromBuilding', gameId, 'village', village._id, soldiers);
-  test.equal(Villages.findOne({gameId:gameId}).footmen, 0, 'army removed from village');
-  test.equal(Armies.find({gameId:gameId, x:hex.x, y:hex.y}).count(), 1, 'army created from village');
-  Promise.await(dVillages.destroyVillage(village._id));
-  test.equal(Villages.find({gameId:gameId, x:hex.x, y:hex.y}).count(), 0, 'village destroyed');
+  test.equal(await Villages.find({gameId:gameId, x:hex.x, y:hex.y, user_id:user._id}).countAsync(), 1, 'village created');
+  test.equal(await Armies.find({gameId:gameId, x:hex.x, y:hex.y}).countAsync(), 0, 'army gone');
+  await Meteor.callAsync('createArmyFromBuilding', gameId, 'village', village._id, soldiers);
+  test.equal((await Villages.findOneAsync({gameId:gameId})).footmen, 0, 'army removed from village');
+  test.equal(await Armies.find({gameId:gameId, x:hex.x, y:hex.y}).countAsync(), 1, 'army created from village');
+  await dVillages.destroyVillage(village._id);
+  test.equal(await Villages.find({gameId:gameId, x:hex.x, y:hex.y}).countAsync(), 0, 'village destroyed');
 });

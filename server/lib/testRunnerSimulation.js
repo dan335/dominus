@@ -130,20 +130,20 @@ if (Meteor.isServer) {
   // What must always be true of a game, whatever happened in it. Returns a
   // list of problems, each naming the rule and the documents that break it;
   // none for a sound game.
-  dTest.gameInvariants = function(gameId) {
+  dTest.gameInvariants = async function(gameId) {
     var problems = [];
     var problem = function(rule, detail) { problems.push(rule + ': ' + detail); };
 
-    var game = Games.findOne(gameId);
-    var players = Players.find({gameId: gameId}, {sort: {_id: 1}}).fetch();
+    var game = await Games.findOneAsync(gameId);
+    var players = await Players.find({gameId: gameId}, {sort: {_id: 1}}).fetchAsync();
     var byId = _.indexBy(players, '_id');
     var name = function(id) { return byId[id] ? byId[id].username : String(id); };
-    var castles = Castles.find({gameId: gameId}, {sort: {_id: 1}}).fetch();
-    var villages = Villages.find({gameId: gameId}, {sort: {_id: 1}}).fetch();
-    var armies = Armies.find({gameId: gameId}, {sort: {_id: 1}}).fetch();
-    var capitals = Capitals.find({gameId: gameId}, {sort: {_id: 1}}).fetch();
+    var castles = await Castles.find({gameId: gameId}, {sort: {_id: 1}}).fetchAsync();
+    var villages = await Villages.find({gameId: gameId}, {sort: {_id: 1}}).fetchAsync();
+    var armies = await Armies.find({gameId: gameId}, {sort: {_id: 1}}).fetchAsync();
+    var capitals = await Capitals.find({gameId: gameId}, {sort: {_id: 1}}).fetchAsync();
     var hexes = {};
-    Hexes.find({gameId: gameId}, {fields: {x: 1, y: 1, hasBuilding: 1}}).forEach(function(h) { hexes[h.x + '_' + h.y] = h; });
+    await Hexes.find({gameId: gameId}, {fields: {x: 1, y: 1, hasBuilding: 1}}).forEachAsync(function(h) { hexes[h.x + '_' + h.y] = h; });
     var at = function(doc) { return doc.x + '_' + doc.y; };
 
     // castles: one each, where the player is
@@ -247,17 +247,17 @@ if (Meteor.isServer) {
     });
 
     // moves
-    Armypaths.find({gameId: gameId}, {sort: {_id: 1}}).forEach(function(path) {
+    await Armypaths.find({gameId: gameId}, {sort: {_id: 1}}).forEachAsync(function(path) {
       var army = _.findWhere(armies, {_id: path.armyId});
       if (!army) problem('a move\'s army exists', path._id);
       else if (army.user_id != path.user_id) problem('a move belongs to its army\'s player', path._id);
     });
 
     // markets and battles
-    Market.find({gameId: gameId}, {sort: {_id: 1}}).forEach(function(m) {
+    await Market.find({gameId: gameId}, {sort: {_id: 1}}).forEachAsync(function(m) {
       if (!(m.price > 0) || !isFinite(m.price)) problem('a market price is above 0', m.type + ' ' + m.price);
     });
-    _.each(_.countBy(Battles2.find({gameId: gameId, isOver: false}).fetch(), at), function(n, hex) {
+    _.each(_.countBy(await Battles2.find({gameId: gameId, isOver: false}).fetchAsync(), at), function(n, hex) {
       if (n > 1) problem('one battle a hex', n + ' at ' + hex);
     });
 
@@ -267,7 +267,7 @@ if (Meteor.isServer) {
   // opts.seed: what the random numbers are seeded with
   // opts.startAt: the game clock's first time, a Date
   // opts.dumpDir: a folder to write each step's documents to
-  dTest.simulation = function(opts) {
+  dTest.simulation = async function(opts) {
     if (opts.dumpDir) emptyDumpDir(opts.dumpDir);
     var sim = {
       dumpDir: opts.dumpDir,
@@ -304,31 +304,31 @@ if (Meteor.isServer) {
     }
 
     try {
-      setUp();
+      await setUp();
     } catch (e) {
-      restore.reverse().forEach(function(fn) { fn(); });
+      for (const fn of restore.reverse()) await fn();
       dClock.reset();
       dRandom.reset();
       throw e;
     }
 
-    function setUp() {
+    async function setUp() {
       // no crons on the real clock (runAllTests has paused them already; this is
       // for a simulation played from meteor shell), no jobs left over from
       // another test, and a fresh database for the game (below)
       restore.push(dTest.pauseBackground());
-      dTest.waitForJobs();
+      await dTest.waitForJobs();
 
       // This process takes no more jobs from Bull until the end, so a delayed
       // job another test left behind (a retry, enemies_together_check) can't
       // land in the middle of the game.
       Queues.pauseLocal();
-      restore.push(function() {
-        Queues.queueNames.forEach(function(name) { dTest.settle(Queues[name].resume(true)); });
+      restore.push(async function() {
+        await dTest.eachAsync(Queues.queueNames, async function(name) { await Queues[name].resume(true); });
       });
 
-      dTest.simulationCollections().forEach(function(collection) { collection.remove({}); });
-      Meteor.users.remove({username: /^sim_/});
+      await dTest.eachAsync(dTest.simulationCollections(), async function(collection) { await collection.removeAsync({}); });
+      await Meteor.users.removeAsync({username: /^sim_/});
 
       dClock.set(sim.startAt);
       dRandom.seed(sim.seed);
@@ -384,14 +384,14 @@ if (Meteor.isServer) {
     // Runs the jobs that are due, oldest first, and the jobs they add, until
     // none are due. A job that throws is noted in jobCounts.failed (Bull
     // would retry it; here it isn't).
-    sim.runJobs = function() {
+    sim.runJobs = async function() {
       for (var n = 0; n < 20000; n++) {
         var now = dClock.nowMs();
         var due = _.filter(sim.queue, function(j) { return j.readyAt <= now; });
         if (!due.length) return;
         var job = _.min(due, function(j) { return j.readyAt * 1e6 + j.seq; });
         sim.queue = _.without(sim.queue, job);
-        var result = dTest.runJob(job.name, job.data, {allowError: true});
+        var result = await dTest.runJob(job.name, job.data, {allowError: true});
         if (job.uniqueId) delete sim.unique[job.name + '/' + job.uniqueId];
         sim.jobCounts.ran[job.name] = (sim.jobCounts.ran[job.name] || 0) + 1;
         if (result.error) {
@@ -401,9 +401,9 @@ if (Meteor.isServer) {
       throw new Error('FAIL: the jobs never stopped adding jobs: ' + _.pluck(sim.queue, 'name').slice(0, 20).join(', '));
     };
 
-    sim.runCron = function(name) {
-      dTest.settle(SyncedCron._entries[name].job());
-      sim.runJobs();
+    sim.runCron = async function(name) {
+      await SyncedCron._entries[name].job();
+      await sim.runJobs();
     };
 
     // Moves the game clock ms forward in steps of opts.step (default 20
@@ -411,7 +411,7 @@ if (Meteor.isServer) {
     // each followed by the jobs it added. opts.until(), when given, is asked
     // after each step and stops the clock once it is true; advance throws if
     // it never is.
-    sim.advance = function(ms, opts) {
+    sim.advance = async function(ms, opts) {
       opts = opts || {};
       var step = opts.step || 20 * 1000;
       var end = dClock.nowMs() + ms;
@@ -419,13 +419,13 @@ if (Meteor.isServer) {
         var before = dClock.nowMs();
         var now = Math.min(before + step, end);
         dClock.set(now);
-        sim.runJobs();
-        CRONS.forEach(function(cron) {
+        await sim.runJobs();
+        await dTest.eachAsync(CRONS, async function(cron) {
           if (Math.floor(now / cron.every) > Math.floor(before / cron.every)) {
-            sim.runCron(cron.name);
+            await sim.runCron(cron.name);
           }
         });
-        if (opts.until && opts.until()) return now - (end - ms);
+        if (opts.until && await opts.until()) return now - (end - ms);
       }
       if (opts.until) {
         throw new Error('FAIL: ' + (opts.waitingFor || 'the condition') + ' did not happen in ' + Math.round(ms / 60000) + ' game minutes');
@@ -435,48 +435,48 @@ if (Meteor.isServer) {
 
     // --- players ---
 
-    sim.addUser = function(name, fields) {
-      var user = dTest.helpers.createTestUser(_.extend({username: 'sim_' + name}, fields || {}));
+    sim.addUser = async function(name, fields) {
+      var user = await dTest.helpers.createTestUser(_.extend({username: 'sim_' + name}, fields || {}));
       sim.users[name] = user;
       return user;
     };
 
-    sim.player = function(name) {
-      return Players.findOne({gameId: sim.gameId, userId: sim.users[name]._id});
+    sim.player = async function(name) {
+      return await Players.findOneAsync({gameId: sim.gameId, userId: sim.users[name]._id});
     };
 
-    sim.castle = function(name) {
-      return Castles.findOne({gameId: sim.gameId, user_id: sim.users[name]._id});
+    sim.castle = async function(name) {
+      return await Castles.findOneAsync({gameId: sim.gameId, user_id: sim.users[name]._id});
     };
 
-    sim.nameOf = function(playerId) {
-      var player = playerId && Players.findOne(playerId, {fields: {username: 1}});
+    sim.nameOf = async function(playerId) {
+      var player = playerId && await Players.findOneAsync(playerId, {fields: {username: 1}});
       return player ? player.username : (playerId ? 'missing ' + playerId : null);
     };
 
     // a method call as the player, the way their browser makes it; the jobs
     // it adds run before it returns
-    sim.call = function(name /* , method, args */) {
+    sim.call = async function(name /* , method, args */) {
       if (!sim.clients[name]) {
-        sim.clients[name] = dTest.ddp.connect(sim.users[name]._id);
+        sim.clients[name] = await dTest.ddp.connect(sim.users[name]._id);
       }
       dTest.ddp.resetRateLimits();
       var client = sim.clients[name];
       var result = client.call.apply(client, _.toArray(arguments).slice(1));
-      sim.runJobs();
+      await sim.runJobs();
       return result;
     };
 
     // --- what the game looks like ---
 
     // every document the game wrote, made canonical, by collection
-    sim.snapshot = function() {
+    sim.snapshot = async function() {
       var out = {};
-      dTest.simulationCollections().concat([Meteor.users]).forEach(function(collection) {
+      await dTest.eachAsync(dTest.simulationCollections().concat([Meteor.users]), async function(collection) {
         var name = collection._name;
         var selector = collection === Meteor.users ? {username: /^sim_/} : {};
         var omit = FIELDS_NOT_COMPARED[name] || [];
-        out[name] = collection.find(selector, {sort: {_id: 1}}).map(function(doc) {
+        out[name] = await collection.find(selector, {sort: {_id: 1}}).mapAsync(function(doc) {
           return dTest.canonical(_.omit(doc, omit));
         });
       });
@@ -486,18 +486,18 @@ if (Meteor.isServer) {
     // Ends a step of the scenario: lets the worker's debounced counters and
     // observers catch up, checks the invariants and notes the step's facts,
     // a hash of each collection and the jobs that ran.
-    sim.endStep = function(name, facts) {
-      sim.runJobs();
-      dTest.sleep(1200);
-      var snapshot = sim.snapshot();
+    sim.endStep = async function(name, facts) {
+      await sim.runJobs();
+      await dTest.sleep(1200);
+      var snapshot = await sim.snapshot();
       var problems = [];
-      Games.find({hasClosed: false}, {sort: {_id: 1}}).forEach(function(game) {
-        problems = problems.concat(dTest.gameInvariants(game._id));
+      await Games.find({hasClosed: false}, {sort: {_id: 1}}).forEachAsync(async function(game) {
+        problems = problems.concat(await dTest.gameInvariants(game._id));
       });
       var step = {
         step: name,
         time: dClock.now().toISOString(),
-        facts: dTest.canonical(facts ? facts(sim) : {}),
+        facts: dTest.canonical(facts ? await facts(sim) : {}),
         invariantProblems: problems,
         jobs: dTest.canonical(sim.jobCounts),
         emails: sim.emails.length,
@@ -517,18 +517,18 @@ if (Meteor.isServer) {
     };
 
     // closes the connections, puts back what was replaced and removes the game
-    sim.finish = function(keepDocuments) {
+    sim.finish = async function(keepDocuments) {
       _.each(sim.clients, function(client) { client.close(); });
       sim.clients = {};
-      restore.reverse().forEach(function(fn) { fn(); });
+      for (const fn of restore.reverse()) await fn();
       restore = [];
       dClock.reset();
       dRandom.reset();
       if (!keepDocuments) {
-        dTest.simulationCollections().forEach(function(collection) { collection.remove({}); });
-        Markers.remove({});
-        MarkerGroups.remove({});
-        Meteor.users.remove({username: /^sim_/});
+        await dTest.eachAsync(dTest.simulationCollections(), async function(collection) { await collection.removeAsync({}); });
+        await Markers.removeAsync({});
+        await MarkerGroups.removeAsync({});
+        await Meteor.users.removeAsync({username: /^sim_/});
       }
     };
 

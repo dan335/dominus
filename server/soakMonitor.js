@@ -111,8 +111,8 @@ if (Meteor.isServer && process.env.DOMINUS_SOAK_MONITOR) {
             battles: await Battles2.find({gameId: game._id, isOver: false}).countAsync(),
             battlesOver: await Battles2.find({gameId: game._id, isOver: true}).countAsync(),
             kings: await Players.find({gameId: game._id, is_king: true}).countAsync(),
-            // the test runner's own check, still sync until the final sweep
-            problems: dTest.gameInvariants(game._id)
+            // the test runner's own check
+            problems: await dTest.gameInvariants(game._id)
           });
         }
       }

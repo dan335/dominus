@@ -10,7 +10,7 @@ const ACTION_BUTTONS = ['#hire_army_from_castle_button', '#createArmycastleButto
 // what a spectator's calls could have changed
 const gameState = (w) => {
   const p = w.players.watched;
-  return server(`[dTest.e2e.findOne('Castles', ${JSON.stringify(p.castle._id)}), dTest.e2e.findOne('Players', ${JSON.stringify(p.playerId)}), dTest.e2e.findOne('Armies', {gameId: ${JSON.stringify(w.gameId)}})]`);
+  return server(`Promise.all([dTest.e2e.findOne('Castles', ${JSON.stringify(p.castle._id)}), dTest.e2e.findOne('Players', ${JSON.stringify(p.playerId)}), dTest.e2e.findOne('Armies', {gameId: ${JSON.stringify(w.gameId)}})])`);
 };
 
 // opens the castle's panel by clicking it on the map, after centring the map

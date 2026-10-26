@@ -32,40 +32,40 @@ if (Meteor.isServer) {
   };
 
   Meteor.startup(function() {
-    dTest.addSuite('army march (server/marchTests.js)', function(run, t) {
+    dTest.addSuite('army march (server/marchTests.js)', async function(run, t) {
       var assert = t.assert;
       var equal = t.equal;
 
       if (process.env.DOMINUS_WORKER != 'true') {
-        run('army march: needs the worker', function() { return 'skip'; });
+        await run('army march: needs the worker', function() { return 'skip'; });
         return;
       }
 
-      run('army march: one hex at a time, to each destination in order, on time, and home', function() {
-        var sim = dTest.simulation({seed: SEED, startAt: START_AT});
+      await run('army march: one hex at a time, to each destination in order, on time, and home', async function() {
+        var sim = await dTest.simulation({seed: SEED, startAt: START_AT});
         try {
-          ['marcher', 'neighbour'].forEach(function(name) {
-            sim.addUser(name, {emails: [{address: 'sim_' + name + '@example.com', verified: true}]});
+          await dTest.eachAsync(['marcher', 'neighbour'], async function(name) {
+            await sim.addUser(name, {emails: [{address: 'sim_' + name + '@example.com', verified: true}]});
           });
-          var game = dTest.helpers.createTestGame({name: 'March', startAt: dClock.now(), createdAt: dClock.now()});
+          var game = await dTest.helpers.createTestGame({name: 'March', startAt: dClock.now(), createdAt: dClock.now()});
           sim.gameId = game._id;
-          _.each(sim.users, function(user) {
-            Gamesignups.insert({gameId: game._id, userId: user._id, username: user.username, createdAt: dClock.now(), usedToken: false});
+          await dTest.eachAsync(sim.users, async function(user) {
+            await Gamesignups.insertAsync({gameId: game._id, userId: user._id, username: user.username, createdAt: dClock.now(), usedToken: false});
           });
-          sim.advance(2 * 60 * 1000);
+          await sim.advance(2 * 60 * 1000);
 
-          var castle = sim.castle('marcher');
-          Players.update(sim.player('marcher')._id, {$inc: {gold: 2000, grain: 2000, lumber: 2000, ore: 2000, wool: 2000, clay: 2000, glass: 500}});
+          var castle = await sim.castle('marcher');
+          await Players.updateAsync((await sim.player('marcher'))._id, {$inc: {gold: 2000, grain: 2000, lumber: 2000, ore: 2000, wool: 2000, clay: 2000, glass: 500}});
           var hired = dTest.soldierCounts({footmen: 6, cavalry: 4});
-          sim.call('marcher', 'hireArmy', sim.gameId, hired, castle._id, 'castle');
-          var soldiersBefore = _.pick(sim.castle('marcher'), _s.armies.types);
-          sim.call('marcher', 'createArmyFromBuilding', sim.gameId, 'castle', castle._id, hired);
-          var army = Armies.findOne({gameId: sim.gameId, user_id: sim.users.marcher._id});
+          await sim.call('marcher', 'hireArmy', sim.gameId, hired, castle._id, 'castle');
+          var soldiersBefore = _.pick(await sim.castle('marcher'), _s.armies.types);
+          await sim.call('marcher', 'createArmyFromBuilding', sim.gameId, 'castle', castle._id, hired);
+          var army = await Armies.findOneAsync({gameId: sim.gameId, user_id: sim.users.marcher._id});
           assert(army, 'the army was made');
 
           // three destinations, chosen the same way every time
-          var hexes = Hexes.find({gameId: sim.gameId, hasBuilding: {$ne: true}}, {sort: {x: 1, y: 1}}).fetch();
-          hexes = _.filter(hexes, function(h) { return dTest.settle(Mapmaker.coordsToCountryId(sim.gameId, h.x, h.y)); });
+          var hexes = await Hexes.find({gameId: sim.gameId, hasBuilding: {$ne: true}}, {sort: {x: 1, y: 1}}).fetchAsync();
+          hexes = await dTest.filterAsync(hexes, async function(h) { return await Mapmaker.coordsToCountryId(sim.gameId, h.x, h.y); });
           var near = function(from, d, not) {
             var hex = _.find(hexes, function(h) {
               return hexDistance(from.x, from.y, h.x, h.y) == d && hexDistance(castle.x, castle.y, h.x, h.y) >= 2 &&
@@ -81,8 +81,8 @@ if (Meteor.isServer) {
           // the moves, as the army made them, in seconds from now
           var marchStart = dClock.nowMs();
           var log = [{at: 0, x: army.x, y: army.y}];
-          var record = function() {
-            var now = Armies.findOne(army._id);
+          var record = async function() {
+            var now = await Armies.findOneAsync(army._id);
             var last = _.last(log);
             if (!now) {
               if (!last.gone) log.push({at: (dClock.nowMs() - marchStart) / 1000, gone: true});
@@ -91,32 +91,32 @@ if (Meteor.isServer) {
             }
           };
           var moves = function() { return _.filter(log, function(l) { return !l.gone; }).length - 1; };
-          var paths = function() { return Armypaths.find({armyId: army._id}).count(); };
+          var paths = async function() { return await Armypaths.find({armyId: army._id}).countAsync(); };
 
           // to a, b and c, then c moved before b
-          [a, b, c].forEach(function(h) { sim.call('marcher', 'addArmyPath', sim.gameId, h.x, h.y, army._id); });
-          var cPath = Armypaths.findOne({armyId: army._id, x: c.x, y: c.y});
-          sim.call('marcher', 'decreasePathIndex', cPath._id);
-          equal(JSON.stringify(Armypaths.find({armyId: army._id}, {sort: {index: 1}}).map(function(p) { return [p.x, p.y]; })),
+          await dTest.eachAsync([a, b, c], async function(h) { await sim.call('marcher', 'addArmyPath', sim.gameId, h.x, h.y, army._id); });
+          var cPath = await Armypaths.findOneAsync({armyId: army._id, x: c.x, y: c.y});
+          await sim.call('marcher', 'decreasePathIndex', cPath._id);
+          equal(JSON.stringify(await Armypaths.find({armyId: army._id}, {sort: {index: 1}}).mapAsync(function(p) { return [p.x, p.y]; })),
             JSON.stringify([[a.x, a.y], [c.x, c.y], [b.x, b.y]]), 'the order is a, c, b');
 
-          sim.advance(4 * 60 * 60 * 1000, {waitingFor: 'two moves', until: function() { record(); return moves() >= 2; }});
+          await sim.advance(4 * 60 * 60 * 1000, {waitingFor: 'two moves', until: async function() { await record(); return moves() >= 2; }});
 
           // delayed for ten minutes: no move
-          sim.call('marcher', 'pauseMovement', army._id);
+          await sim.call('marcher', 'pauseMovement', army._id);
           var pausedAt = log.length;
-          var pausedArmy = Armies.findOne(army._id);
-          sim.advance(10 * 60 * 1000);
-          record();
+          var pausedArmy = await Armies.findOneAsync(army._id);
+          await sim.advance(10 * 60 * 1000);
+          await record();
           equal(log.length, pausedAt, 'no move while paused');
-          equal(Armies.findOne(army._id).last_move_at.getTime(), pausedArmy.last_move_at.getTime(), 'and no move in between');
-          sim.call('marcher', 'resumeMovement', army._id);
+          equal((await Armies.findOneAsync(army._id)).last_move_at.getTime(), pausedArmy.last_move_at.getTime(), 'and no move in between');
+          await sim.call('marcher', 'resumeMovement', army._id);
 
-          sim.advance(8 * 60 * 60 * 1000, {waitingFor: 'the last destination', until: function() { record(); return !paths(); }});
+          await sim.advance(8 * 60 * 60 * 1000, {waitingFor: 'the last destination', until: async function() { await record(); return !await paths(); }});
 
           // home: it joins the castle when it gets there
-          sim.call('marcher', 'addArmyPath', sim.gameId, castle.x, castle.y, army._id);
-          sim.advance(8 * 60 * 60 * 1000, {waitingFor: 'the army getting home', until: function() { record(); return !Armies.findOne(army._id); }});
+          await sim.call('marcher', 'addArmyPath', sim.gameId, castle.x, castle.y, army._id);
+          await sim.advance(8 * 60 * 60 * 1000, {waitingFor: 'the army getting home', until: async function() { await record(); return !await Armies.findOneAsync(army._id); }});
 
           var minutesPerHex = dArmies.speed(sim.gameId, hired);
           var actual = {destinations: {a: a, c: c, b: b, castle: _.pick(castle, 'x', 'y')}, minutesPerHex: minutesPerHex, log: log};
@@ -141,7 +141,7 @@ if (Meteor.isServer) {
           });
           var order = _.filter(visited, function(i, n) { return visited.indexOf(i) == n; });
           equal(JSON.stringify(order), JSON.stringify([0, 1, 2, 3]), 'a, then c, then b, then home');
-          equal(JSON.stringify(_.pick(sim.castle('marcher'), _s.armies.types)), JSON.stringify(soldiersBefore), 'with every soldier');
+          equal(JSON.stringify(_.pick(await sim.castle('marcher'), _s.armies.types)), JSON.stringify(soldiersBefore), 'with every soldier');
 
           // never before its time: the slowest soldier sets the pace
           for (var m = 2; m < steps.length; m++) {
@@ -161,7 +161,7 @@ if (Meteor.isServer) {
             equal(JSON.stringify(log[n]), JSON.stringify(g), 'move ' + n);
           });
         } finally {
-          sim.finish();
+          await sim.finish();
         }
       });
     });

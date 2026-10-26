@@ -10,7 +10,7 @@
 
 if (Meteor.isServer) {
 
-  _argumentCheckTests = function(run, t) {
+  _argumentCheckTests = async function(run, t) {
     var assert = t.assert;
     var equal = t.equal;
 
@@ -62,14 +62,14 @@ if (Meteor.isServer) {
     // runs a method's handler the way a call from the server would (so the
     // method gate is skipped and only the method's own checks can refuse it);
     // returns the error it threw (or its promise rejected with), or null
-    function callMethod(name, args, userId) {
+    async function callMethod(name, args, userId) {
       var invocation = {
         isSimulation: false, userId: userId, connection: null, randomSeed: null,
         setUserId: function() {}, unblock: function() {}
       };
       try {
-        DDP._CurrentMethodInvocation.withValue(invocation, function() {
-          dTest.settle(Meteor.server.method_handlers[name].apply(invocation, args));
+        await DDP._CurrentMethodInvocation.withValue(invocation, async function() {
+          await Meteor.server.method_handlers[name].apply(invocation, args);
         });
         return null;
       } catch (e) {
@@ -88,10 +88,10 @@ if (Meteor.isServer) {
     }
 
     // runs a publication's handler, returns {result} or {error}
-    function publish(name, args, userId) {
+    async function publish(name, args, userId) {
       var sub = fakeSub(userId);
       try {
-        return {result: dTest.settle(Meteor.server.publish_handlers[name].apply(sub, args))};
+        return {result: await Meteor.server.publish_handlers[name].apply(sub, args)};
       } catch (e) {
         return {error: e};
       } finally {
@@ -101,32 +101,49 @@ if (Meteor.isServer) {
 
     // a write made the way a method makes it, inside a write fence; true when
     // every observer has seen it within ms
-    function fencedWriteCommits(fn, ms) {
+    async function fencedWriteCommits(fn, ms) {
       var fence = new DDPServer._WriteFence();
       var committed = false;
-      DDPServer._CurrentWriteFence.withValue(fence, fn);
+      await DDPServer._CurrentWriteFence.withValue(fence, fn);
       fence.onAllCommitted(function() { committed = true; });
       fence.arm();
       var end = Date.now() + ms;
       while (!committed && Date.now() < end) {
-        Meteor._sleepForMs(50);
+        await dTest.sleep(50);
       }
       return committed;
     }
 
+    // a method call over a DDP connection: a promise of its result
+    function callOver(connection, name /* , args */) {
+      var args = _.toArray(arguments).slice(2);
+      return new Promise(function(resolve, reject) {
+        connection.apply(name, args, {noRetry: true}, function(error, result) {
+          if (error) reject(error);
+          else resolve(result);
+        });
+      });
+    }
+
     // a DDP connection to this server, logged in as userId when given
-    function connect(userId) {
+    async function connect(userId) {
       var connection = DDP.connect(Meteor.absoluteUrl());
+      // a call made with noRetry before the connection is up never gets its
+      // result, so wait for it first
+      if (!await dTest.waitFor(function() { return connection.status().connected; }, 10000)) {
+        connection.disconnect();
+        throw new Error('FAIL: could not open a DDP connection to ' + Meteor.absoluteUrl());
+      }
       if (userId) {
         var stamped = Accounts._generateStampedLoginToken();
         Accounts._insertLoginToken(userId, stamped);
-        connection.call('login', {resume: stamped.token});
+        await callOver(connection, 'login', {resume: stamped.token});
       }
       return connection;
     }
 
     // a real subscription; returns {ready, stopped, error}
-    function subscribe(connection, name, args) {
+    async function subscribe(connection, name, args) {
       var state = {ready: false, stopped: false, error: null};
       var handle = connection.subscribe.apply(connection, [name].concat(args).concat([{
         onReady: function() { state.ready = true; },
@@ -134,7 +151,7 @@ if (Meteor.isServer) {
       }]));
       var end = Date.now() + 5000;
       while (!state.ready && !state.stopped && Date.now() < end) {
-        Meteor._sleepForMs(50);
+        await dTest.sleep(50);
       }
       state.handle = handle;
       return state;
@@ -150,18 +167,18 @@ if (Meteor.isServer) {
     }
 
 
-    run('argument checks: audit-argument-checks is on', function() {
+    await run('argument checks: audit-argument-checks is on', async function() {
       assert(Package['audit-argument-checks'], 'the package is loaded');
 
       // a method that doesn't check its argument is refused, called the way a
       // browser calls it
       var ran = 0;
       Meteor.methods({argumentCheckTestsUnchecked: function(arg) { ran++; return arg; }});
-      var connection = connect(null);
+      var connection = await connect(null);
       try {
         var error = null;
         try {
-          connection.call('argumentCheckTestsUnchecked', 'x');
+          await callOver(connection, 'argumentCheckTestsUnchecked', 'x');
         } catch (e) {
           error = e;
         }
@@ -181,11 +198,11 @@ if (Meteor.isServer) {
     // checked only after the method's first await still counts; on Meteor 3
     // it won't (audit-argument-checks looks when the method returns its
     // promise), so this test changes then on purpose.
-    run('argument checks: a game method behind the method gate is audited as before, and keeps its user and write fence', function() {
-      var user = t.createTestUser({});
+    await run('argument checks: a game method behind the method gate is audited as before, and keeps its user and write fence', async function() {
+      var user = await t.createTestUser({});
       var gameId = 'argcheck_gate_' + Random.id(6);
-      var playerId = Players.insert({gameId: gameId, userId: user._id, username: 'argcheck gate'});
-      var castleId = Castles.insert({gameId: gameId, user_id: user._id, name: 'argcheck gate castle'});
+      var playerId = await Players.insertAsync({gameId: gameId, userId: user._id, username: 'argcheck gate'});
+      var castleId = await Castles.insertAsync({gameId: gameId, user_id: user._id, name: 'argcheck gate castle'});
       var otherGame = 'argcheck_gate_' + Random.id(6);
       var ran = {};
       var methods = {
@@ -213,37 +230,36 @@ if (Meteor.isServer) {
         Meteor.methods(_.object([[name, m[1]]]));
       });
       dGate.wrapAll();
-      var connection = connect(user._id);
-      var call = function() {
-        var args = _.toArray(arguments);
+      var connection = await connect(user._id);
+      var call = async function() {
         try {
-          return {result: connection.apply(args[0], args.slice(1), {noRetry: true})};
+          return {result: await callOver.apply(null, [connection].concat(_.toArray(arguments)))};
         } catch (e) {
           return {error: e};
         }
       };
       try {
-        var out = call('argumentCheckTestsGateUnchecked', gameId, 'x');
+        var out = await call('argumentCheckTestsGateUnchecked', gameId, 'x');
         equal(out.error && out.error.error, 500, 'an argument nobody checked: refused as a server error');
         equal(ran.unchecked, 1, 'after the method ran');
 
-        equal(call('argumentCheckTestsGateChecksRest', gameId, 'x').result, 'ran', 'the gate\'s check of the gameId counts');
-        equal(call('argumentCheckTestsGateTarget', castleId).result, 'ran', 'the gate\'s check of a target\'s id counts');
+        equal((await call('argumentCheckTestsGateChecksRest', gameId, 'x')).result, 'ran', 'the gate\'s check of the gameId counts');
+        equal((await call('argumentCheckTestsGateTarget', castleId)).result, 'ran', 'the gate\'s check of a target\'s id counts');
 
-        out = call('argumentCheckTestsGateNotPlayer', otherGame);
+        out = await call('argumentCheckTestsGateNotPlayer', otherGame);
         equal(out.error && out.error.error, 'not-authorized', 'not a player in the game: refused');
         equal(ran.notPlayer, undefined, 'before the method ran');
 
-        out = call('argumentCheckTestsGateAsync', gameId, 'x');
+        out = await call('argumentCheckTestsGateAsync', gameId, 'x');
         equal(JSON.stringify(out.result), JSON.stringify([user._id, user._id, true, true]), 'an async method keeps its user, write fence and invocation after an await');
 
-        out = call('argumentCheckTestsGateLateCheck', gameId, 'x');
+        out = await call('argumentCheckTestsGateLateCheck', gameId, 'x');
         equal(out.result, 'ran', 'on 2.16, an argument checked only after an await still counts');
         equal(ran.late, 1, 'and the method ran once');
 
-        out = call('argumentCheckTestsGateChecksRest', gameId, {$ne: null});
+        out = await call('argumentCheckTestsGateChecksRest', gameId, {$ne: null});
         equal(out.error && out.error.error, 400, 'a bad argument is still refused by the method\'s own check');
-        out = call('argumentCheckTestsGateChecksRest', {$ne: null}, 'x');
+        out = await call('argumentCheckTestsGateChecksRest', {$ne: null}, 'x');
         equal(out.error && out.error.error, 400, 'and a bad gameId by the gate\'s');
       } finally {
         connection.disconnect();
@@ -251,13 +267,13 @@ if (Meteor.isServer) {
           delete Meteor.server.method_handlers[name];
           delete MethodPolicy[name];
         });
-        Players.remove(playerId);
-        Castles.remove(castleId);
-        t.cleanupUser(user._id);
+        await Players.removeAsync(playerId);
+        await Castles.removeAsync(castleId);
+        await t.cleanupUser(user._id);
       }
     });
 
-    run('argument checks: every method is listed with its argument count', function() {
+    await run('argument checks: every method is listed with its argument count', function() {
       var names = clientMethods();
       assert(names.length > 90, 'methods are registered (' + names.length + ')');
       var missing = _.difference(names, _.keys(METHOD_PARAMS));
@@ -266,134 +282,134 @@ if (Meteor.isServer) {
       equal(gone.join(', '), '', 'methods in METHOD_PARAMS that no longer exist');
     });
 
-    run('argument checks: a method called with none of its arguments is refused before it does anything', function() {
-      var user = t.createTestUser({});
+    await run('argument checks: a method called with none of its arguments is refused before it does anything', async function() {
+      var user = await t.createTestUser({});
       try {
-        _.each(METHOD_PARAMS, function(count, name) {
+        await dTest.eachAsync(METHOD_PARAMS, async function(count, name) {
           if (count === 0 || _.contains(EXTERNAL, name)) return;
           // its one argument, a suite filter, is optional: called with none it
           // would start a second run, which it refuses
           if (name == 'runAllTests') return;
-          var error = callMethod(name, [], user._id);
+          var error = await callMethod(name, [], user._id);
           assert(error, name + ' with no arguments is refused');
           assert(isMatchFailed(error), name + ': refused by check(), got ' + describe(error));
         });
       } finally {
-        t.cleanupUser(user._id);
+        await t.cleanupUser(user._id);
       }
     });
 
-    run('argument checks: a method called with Mongo operators for arguments is refused', function() {
-      var user = t.createTestUser({});
+    await run('argument checks: a method called with Mongo operators for arguments is refused', async function() {
+      var user = await t.createTestUser({});
       try {
-        _.each(METHOD_PARAMS, function(count, name) {
+        await dTest.eachAsync(METHOD_PARAMS, async function(count, name) {
           if (count === 0 || _.contains(EXTERNAL, name)) return;
           var args = _.times(count, operator);
-          var error = callMethod(name, args, user._id);
+          var error = await callMethod(name, args, user._id);
           assert(error, name + ' with {$ne: null} arguments is refused');
           assert(isMatchFailed(error), name + ': refused by check(), got ' + describe(error));
         });
       } finally {
-        t.cleanupUser(user._id);
+        await t.cleanupUser(user._id);
       }
     });
 
-    run('argument checks: a publication given Mongo operators for arguments is refused', function() {
-      var user = t.createTestUser({});
+    await run('argument checks: a publication given Mongo operators for arguments is refused', async function() {
+      var user = await t.createTestUser({});
       try {
         var gated = 0;
-        _.each(Meteor.server.publish_handlers, function(handler, name) {
+        await dTest.eachAsync(Meteor.server.publish_handlers, async function(handler, name) {
           if (!handler.publicationGate) return;
           gated++;
           // as many as it takes: the gate refuses fewer than it declares
           var args = _.times(8, operator);
-          var res = publish(name, args, user._id);
+          var res = await publish(name, args, user._id);
           assert(isMatchFailed(res.error), name + ' with {$ne: null} arguments is refused, got ' +
             describe(res.error));
         });
         assert(gated > 70, 'publications with arguments were tried (' + gated + ')');
       } finally {
-        t.cleanupUser(user._id);
+        await t.cleanupUser(user._id);
       }
     });
 
-    run('argument checks: null still works where the browser sends it', function() {
-      var user = t.createTestUser({});
+    await run('argument checks: null still works where the browser sends it', async function() {
+      var user = await t.createTestUser({});
       try {
         // spectators have no playerId, the browser sends null
-        var res = publish('myAlerts', [null, 10, null], user._id);
+        var res = await publish('myAlerts', [null, 10, null], user._id);
         assert(!res.error, 'myAlerts with a null playerId runs');
-        res = publish('gameSignups', [null], user._id);
+        res = await publish('gameSignups', [null], user._id);
         assert(!res.error, 'gameSignups with a null gameId runs');
-        res = publish('recentchats', [null], user._id);
+        res = await publish('recentchats', [null], user._id);
         assert(!res.error, 'recentchats with no rooms runs');
         // the method keeps its own "not found" handling
-        var error = callMethod('daysSincePlayerActive', [null], user._id);
+        var error = await callMethod('daysSincePlayerActive', [null], user._id);
         assert(!error, 'daysSincePlayerActive(null) runs');
       } finally {
-        t.cleanupUser(user._id);
+        await t.cleanupUser(user._id);
       }
     });
 
-    run('argument checks: {$ne: null} can no longer read every private chat', function() {
-      var game = t.createTestGame({name: 'Arg Check Test'});
-      var user = t.createTestUser({});
+    await run('argument checks: {$ne: null} can no longer read every private chat', async function() {
+      var game = await t.createTestGame({name: 'Arg Check Test'});
+      var user = await t.createTestUser({});
       var roomA = Random.id(), roomB = Random.id();
       try {
-        Roomchats.insert({room_id: roomA, gameId: game._id, text: 'a', created_at: new Date()});
-        Roomchats.insert({room_id: roomB, gameId: game._id, text: 'b', created_at: new Date()});
+        await Roomchats.insertAsync({room_id: roomA, gameId: game._id, text: 'a', created_at: new Date()});
+        await Roomchats.insertAsync({room_id: roomB, gameId: game._id, text: 'b', created_at: new Date()});
 
         // what the publication's query matches when handed {$ne: null}
-        var leaked = Roomchats.find({room_id: {$ne: null}}).map(function(c) { return c.room_id; });
+        var leaked = await Roomchats.find({room_id: {$ne: null}}).mapAsync(function(c) { return c.room_id; });
         assert(_.contains(leaked, roomA) && _.contains(leaked, roomB), 'the bare query matches chats from every room');
 
-        var res = publish('roomchats', [{$ne: null}], user._id);
+        var res = await publish('roomchats', [{$ne: null}], user._id);
         assert(isMatchFailed(res.error), 'roomchats refuses it');
-        res = publish('myNormalChatrooms', [game._id, {$ne: null}], user._id);
+        res = await publish('myNormalChatrooms', [game._id, {$ne: null}], user._id);
         assert(isMatchFailed(res.error), 'myNormalChatrooms refuses it');
 
-        var cursor = publish('roomchats', [roomA], user._id).result;
+        var cursor = (await publish('roomchats', [roomA], user._id)).result;
         assert(cursor, 'a room id still works');
-        equal(cursor.fetch().length, 1, 'and gets that room\'s chat');
+        equal((await cursor.fetchAsync()).length, 1, 'and gets that room\'s chat');
       } finally {
-        Roomchats.remove({room_id: {$in: [roomA, roomB]}});
-        t.cleanup(game._id);
-        t.cleanupUser(user._id);
+        await Roomchats.removeAsync({room_id: {$in: [roomA, roomB]}});
+        await t.cleanup(game._id);
+        await t.cleanupUser(user._id);
       }
     });
 
-    run('argument checks: refused subscriptions and calls over DDP leave writes working', function() {
-      var game = t.createTestGame({name: 'Arg Check DDP Test'});
-      var user = t.createTestUser({});
-      var connection = connect(user._id);
+    await run('argument checks: refused subscriptions and calls over DDP leave writes working', async function() {
+      var game = await t.createTestGame({name: 'Arg Check DDP Test'});
+      var user = await t.createTestUser({});
+      var connection = await connect(user._id);
       try {
-        var player = Players.insert({gameId: game._id, userId: Random.id(), username: 'argcheck', income: 1});
+        var player = await Players.insertAsync({gameId: game._id, userId: Random.id(), username: 'argcheck', income: 1});
 
-        var refused = subscribe(connection, 'userProfile', []);
+        var refused = await subscribe(connection, 'userProfile', []);
         assert(refused.stopped, 'userProfile with no argument is refused');
         equal(refused.error && refused.error.error, 400, 'with a 400');
 
-        refused = subscribe(connection, 'income_rankings', [{$ne: null}, 1]);
+        refused = await subscribe(connection, 'income_rankings', [{$ne: null}, 1]);
         assert(refused.stopped, 'income_rankings with an operator is refused');
         equal(refused.error && refused.error.error, 400, 'with a 400');
 
         var error = null;
         try {
-          connection.call('hide_welcome_screen', {$ne: null});
+          await callOver(connection, 'hide_welcome_screen', {$ne: null});
         } catch (e) {
           error = e;
         }
         assert(error, 'a method call with an operator is refused');
 
-        var ok = subscribe(connection, 'income_rankings', [game._id, 1]);
+        var ok = await subscribe(connection, 'income_rankings', [game._id, 1]);
         assert(ok.ready, 'income_rankings with a game id is ready');
 
-        assert(fencedWriteCommits(function() { Players.update(player, {$set: {income: 2}}); }, 5000),
+        assert(await fencedWriteCommits(async function() { await Players.updateAsync(player, {$set: {income: 2}}); }, 5000),
           'a method-style write to Players still commits');
       } finally {
         connection.disconnect();
-        t.cleanup(game._id);
-        t.cleanupUser(user._id);
+        await t.cleanup(game._id);
+        await t.cleanupUser(user._id);
       }
     });
   };

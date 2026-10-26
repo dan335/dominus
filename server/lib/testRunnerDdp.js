@@ -3,20 +3,19 @@
 // Loaded after server/lib/testRunner.js (same folder, sorts after it).
 //
 // A call goes through everything a client call goes through: DDP, the rate
-// limiter, server/methodGate.js and the method itself. Calls return a
-// promise underneath and are waited on with dTest.settle, so they keep
-// working when the client side moves to Meteor.callAsync.
+// limiter, server/methodGate.js and the method itself. Calls, subscribes and
+// docs return promises.
 
 if (Meteor.isServer) {
 
-  // polls fn until it returns something truthy or ms pass
-  dTest.waitFor = function(fn, ms) {
+  // polls fn until it returns (or resolves with) something truthy or ms pass
+  dTest.waitFor = async function(fn, ms) {
     var end = Date.now() + (ms || 10000);
     while (Date.now() < end) {
-      if (fn()) return true;
-      dTest.sleep(50);
+      if (await fn()) return true;
+      await dTest.sleep(50);
     }
-    return !!fn();
+    return !!(await fn());
   };
 
   dTest.ddp = {};
@@ -31,9 +30,9 @@ if (Meteor.isServer) {
 
   // A DDP client connected to this server, logged in as userId (or logged
   // out without one). Close it when done.
-  dTest.ddp.connect = function(userId) {
+  dTest.ddp.connect = async function(userId) {
     var connection = DDP.connect(Meteor.absoluteUrl());
-    if (!dTest.waitFor(function() { return connection.status().connected; }, 10000)) {
+    if (!await dTest.waitFor(function() { return connection.status().connected; }, 10000)) {
       connection.disconnect();
       throw new Error('FAIL: could not open a DDP connection to ' + Meteor.absoluteUrl());
     }
@@ -56,8 +55,8 @@ if (Meteor.isServer) {
       },
 
       // the method's result; throws what the method threw, as the client sees it
-      call: function(name /* , args */) {
-        return dTest.settle(client.applyAsync(name, _.toArray(arguments).slice(1)));
+      call: async function(name /* , args */) {
+        return await client.applyAsync(name, _.toArray(arguments).slice(1));
       },
 
       close: function() {
@@ -77,20 +76,20 @@ if (Meteor.isServer) {
     };
 
     // docs of a collection, sorted by _id
-    client.docs = function(name) {
-      return client.collection(name).find({}, {sort: {_id: 1}}).fetch();
+    client.docs = async function(name) {
+      return await client.collection(name).find({}, {sort: {_id: 1}}).fetchAsync();
     };
 
     // Subscribes and waits until the subscription is ready or stopped.
     // Returns {ready, error, stop()}; error is what the publication threw.
-    client.subscribe = function(name /* , args */) {
+    client.subscribe = async function(name /* , args */) {
       var args = _.toArray(arguments).slice(1);
       var state = {ready: false, error: null, stopped: false};
       var handle = connection.subscribe.apply(connection, [name].concat(args).concat([{
         onReady: function() { state.ready = true; },
         onStop: function(error) { state.stopped = true; state.error = error || null; }
       }]));
-      if (!dTest.waitFor(function() { return state.ready || state.stopped; }, 10000)) {
+      if (!await dTest.waitFor(function() { return state.ready || state.stopped; }, 10000)) {
         handle.stop();
         throw new Error('FAIL: subscription ' + name + ' was neither ready nor stopped after 10 seconds');
       }
@@ -101,7 +100,7 @@ if (Meteor.isServer) {
     if (userId) {
       var stamped = Accounts._generateStampedLoginToken();
       Accounts._insertLoginToken(userId, stamped);
-      var login = client.call('login', {resume: stamped.token});
+      var login = await client.call('login', {resume: stamped.token});
       if (!login || login.id !== userId) {
         client.close();
         throw new Error('FAIL: DDP login as ' + userId + ' failed');
@@ -132,19 +131,19 @@ if (Meteor.isServer) {
   //     nested  {field: [paths]} for a dotted projection like income.worth
   //     skip    _ids left out on both sides, such as the caller's own user,
   //             which the null publication also sends
-  dTest.checkPublication = function(spec) {
+  dTest.checkPublication = async function(spec) {
     var assert = function(ok, message) { if (!ok) throw new Error('FAIL: ' + message); };
     var equal = function(got, expected, message) {
       if (got !== expected) throw new Error('FAIL: ' + message + ' (expected ' + expected + ', got ' + got + ')');
     };
     var who = spec.who === undefined ? spec.as : spec.who;
-    var client = dTest.ddp.connect(spec.as || null);
+    var client = await dTest.ddp.connect(spec.as || null);
     try {
       var parts = spec.parts || [_.pick(spec, 'coll', 'source', 'query', 'ids', 'keys', 'nested', 'skip')];
       parts.forEach(function(p) { client.collection(p.coll); });
       var sub = null;
       if (spec.pub) {
-        sub = client.subscribe.apply(null, [spec.pub].concat(spec.args || []));
+        sub = await client.subscribe.apply(null, [spec.pub].concat(spec.args || []));
         if (spec.error) {
           assert(sub.error, spec.pub + ': expected the subscription to fail');
           equal(sub.error.error, spec.error, spec.pub + ': error');
@@ -152,23 +151,23 @@ if (Meteor.isServer) {
         }
         assert(sub.ready, spec.pub + ': ready (error: ' + (sub.error && sub.error.reason) + ')');
       }
-      parts.forEach(function(p) {
+      await dTest.eachAsync(parts, async function(p) {
         var label = (spec.pub || 'null publications') + ' -> ' + p.coll;
         var skip = p.skip || [];
-        var fetchWant = function() {
+        var fetchWant = async function() {
           if (p.query === null) return [];
           var selector = p.ids ? {_id: {$in: p.ids}} : p.query;
-          return _.reject(p.source.find(selector, {sort: {_id: 1}}).fetch(), function(d) { return _.contains(skip, d._id); });
+          return _.reject(await p.source.find(selector, {sort: {_id: 1}}).fetchAsync(), function(d) { return _.contains(skip, d._id); });
         };
-        var fetchGot = function() {
-          return _.reject(client.docs(p.coll), function(d) { return _.contains(skip, d._id); });
+        var fetchGot = async function() {
+          return _.reject(await client.docs(p.coll), function(d) { return _.contains(skip, d._id); });
         };
         // documents can still be changing (presence, the null publications
         // after login), so give the two sides a moment to agree
         var got, want;
-        dTest.waitFor(function() {
-          got = fetchGot();
-          want = fetchWant();
+        await dTest.waitFor(async function() {
+          got = await fetchGot();
+          want = await fetchWant();
           return _.pluck(got, '_id').join(',') == _.pluck(want, '_id').join(',');
         }, spec.pub ? 2000 : 3000);
         equal(_.pluck(got, '_id').join(','), _.pluck(want, '_id').join(','), label + ': documents (' + who + ')');
@@ -219,10 +218,10 @@ if (Meteor.isServer) {
   };
 
   // runs fn(client) with a client logged in as userId, and closes it after
-  dTest.ddp.as = function(userId, fn) {
-    var client = dTest.ddp.connect(userId);
+  dTest.ddp.as = async function(userId, fn) {
+    var client = await dTest.ddp.connect(userId);
     try {
-      return dTest.settle(fn(client));
+      return await fn(client);
     } finally {
       client.close();
     }

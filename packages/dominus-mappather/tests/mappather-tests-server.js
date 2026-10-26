@@ -1,21 +1,21 @@
-stubTestGame = function() {
-  Games.remove({});
+stubTestGame = async function() {
+  await Games.removeAsync({});
   let game = {
     _id: 'testgame',
     isSpeed: false,
     hasEnded: false,
     maxPlayers: 200
   }
-  game._id = Games.insert(game);
+  game._id = await Games.insertAsync(game);
   return game._id;
 }
 
 
-Tinytest.add('mappather.pathTo.multipleCountries', function(test) {
-  let gameId = stubTestGame();
+Tinytest.addAsync('mappather.pathTo.multipleCountries', async function(test) {
+  let gameId = await stubTestGame();
 
-  Hexes.remove({});
-  Countries.remove({});
+  await Hexes.removeAsync({});
+  await Countries.removeAsync({});
 
   var numCountries = 8;
   var numTests = 2;
@@ -24,11 +24,11 @@ Tinytest.add('mappather.pathTo.multipleCountries', function(test) {
 
   //Mapmaker.createNewMap(true);
   for (x=0;x<numCountries;x++) {
-    Promise.await(Mapmaker.addCountry(gameId, true));
+    await Mapmaker.addCountry(gameId, true);
   }
 
-  var numHexes = Hexes.find({gameId:gameId}).count();
-  var hexes = Hexes.find({gameId:gameId}).fetch();
+  var numHexes = await Hexes.find({gameId:gameId}).countAsync();
+  var hexes = await Hexes.find({gameId:gameId}).fetchAsync();
 
   for (n=0;n<numTests;n++) {
     var startNum = Math.floor(Math.random() * numHexes);
@@ -52,7 +52,7 @@ Tinytest.add('mappather.pathTo.multipleCountries', function(test) {
     test.equal(Hx.hexDistance(startHex.x, startHex.y, path[0].x, path[0].y), 1, 'to end, path[0] is next to startHex');
 
     // check that path[0] exists
-    test.equal(Hexes.find({x:startHex.x, y:startHex.y}).count(), 1, 'to end, path[0] exists');
+    test.equal(await Hexes.find({x:startHex.x, y:startHex.y}).countAsync(), 1, 'to end, path[0] exists');
 
     // check that end of path is at endHex
     test.equal(path[path.length-1].x, endHex.x, 'to end, end of pat is at endHex');
@@ -68,16 +68,16 @@ Tinytest.add('mappather.pathTo.multipleCountries', function(test) {
     test.equal(Hx.hexDistance(startHex.x, startHex.y, path[0].x, path[0].y), 1, 'to border, path[0] is next to startHex');
 
     // check that path[0] exists
-    test.equal(Hexes.find({x:startHex.x, y:startHex.y}).count(), 1, 'to border, path[0] exists');
+    test.equal(await Hexes.find({x:startHex.x, y:startHex.y}).countAsync(), 1, 'to border, path[0] exists');
 
     // check that end is border
     var endX = path[path.length-1].x;
     var endY = path[path.length-1].y;
-    test.isTrue(Hexes.findOne({x:endX, y:endY}).isBorder);
+    test.isTrue((await Hexes.findOneAsync({x:endX, y:endY})).isBorder);
 
     // check that country is either same or neightbor
-    var startCountry = Countries.findOne(startHex.countryId, {fields:{neighbors:1}});
-    var endCountry = Countries.findOne({gameId:gameId, hexes: {$elemMatch: {x:endX, y:endY}}}, {fields:{_id:1}});
+    var startCountry = await Countries.findOneAsync(startHex.countryId, {fields:{neighbors:1}});
+    var endCountry = await Countries.findOneAsync({gameId:gameId, hexes: {$elemMatch: {x:endX, y:endY}}}, {fields:{_id:1}});
 
     var sameCountry = startCountry._id == endCountry._id;
     if (!sameCountry) {

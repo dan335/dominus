@@ -11,7 +11,7 @@
 if (Meteor.isServer) {
 
   Meteor.startup(function() {
-    dTest.addSuite('game clock and random source (server/clockTests.js)', function(run, t) {
+    dTest.addSuite('game clock and random source (server/clockTests.js)', async function(run, t) {
       var assert = t.assert;
       var equal = t.equal;
 
@@ -35,7 +35,7 @@ if (Meteor.isServer) {
 
       // --- dClock ---
 
-      run('dClock: untouched, it is the real clock', function() {
+      await run('dClock: untouched, it is the real clock', function() {
         assert(!dClock.isFixed(), 'not fixed');
         var before = Date.now();
         var now = dClock.now();
@@ -47,13 +47,13 @@ if (Meteor.isServer) {
         assert(dClock.now() !== dClock.now(), 'a new Date each call');
       });
 
-      run('dClock: set fixes the time, advance moves it forward, reset goes back to the real clock', function() {
+      await run('dClock: set fixes the time, advance moves it forward, reset goes back to the real clock', async function() {
         var start = new Date(Date.UTC(2026, 0, 1, 12, 0, 0));
         dClock.set(start);
         assert(dClock.isFixed(), 'fixed');
         equal(dClock.now().getTime(), start.getTime(), 'now() is the set time');
         equal(dClock.nowMs(), start.getTime(), 'nowMs() too');
-        dTest.sleep(20);
+        await dTest.sleep(20);
         equal(dClock.nowMs(), start.getTime(), 'it does not move on its own');
 
         var now = dClock.now();
@@ -72,21 +72,21 @@ if (Meteor.isServer) {
         assert(Math.abs(dClock.nowMs() - Date.now()) < 1000, 'reset: the real time again');
       });
 
-      run('dClock: refuses bad input, advancing a clock that is not fixed, and fixing time in production', function() {
-        assert(dTest.throws(function() { dClock.advance(1000); }), 'advance without set');
-        assert(dTest.throws(function() { dClock.set('tomorrow'); }), 'set with a string');
-        assert(dTest.throws(function() { dClock.set(NaN); }), 'set with NaN');
+      await run('dClock: refuses bad input, advancing a clock that is not fixed, and fixing time in production', async function() {
+        assert(await dTest.throws(function() { dClock.advance(1000); }), 'advance without set');
+        assert(await dTest.throws(function() { dClock.set('tomorrow'); }), 'set with a string');
+        assert(await dTest.throws(function() { dClock.set(NaN); }), 'set with NaN');
         dClock.set(0);
-        assert(dTest.throws(function() { dClock.advance(-1); }), 'advance backwards');
-        assert(dTest.throws(function() { dClock.advance('1'); }), 'advance with a string');
+        assert(await dTest.throws(function() { dClock.advance(-1); }), 'advance backwards');
+        assert(await dTest.throws(function() { dClock.advance('1'); }), 'advance with a string');
         equal(dClock.nowMs(), 0, 'clock unchanged by the refused calls');
         dClock.reset();
 
         var isProduction = Meteor.isProduction;
         Meteor.isProduction = true;
         try {
-          assert(dTest.throws(function() { dClock.set(0); }), 'set refused in production');
-          assert(dTest.throws(function() { dRandom.seed('x'); }), 'seed refused in production');
+          assert(await dTest.throws(function() { dClock.set(0); }), 'set refused in production');
+          assert(await dTest.throws(function() { dRandom.seed('x'); }), 'seed refused in production');
           dClock.reset();
           dRandom.reset();
         } finally {
@@ -98,7 +98,7 @@ if (Meteor.isServer) {
 
       // --- dRandom ---
 
-      run('dRandom: unseeded, each call is the call it replaced', function() {
+      await run('dRandom: unseeded, each call is the call it replaced', function() {
         assert(!dRandom.isSeeded(), 'not seeded');
         equal(counting(Math, 'random', function() { dRandom.fraction(); }), 1, 'fraction() calls Math.random');
         equal(counting(_, 'random', function() { dRandom.random(5); }), 1, 'random() calls _.random');
@@ -116,7 +116,7 @@ if (Meteor.isServer) {
         equal(JSON.stringify(_.sortBy(dRandom.shuffle(list), _.identity)), JSON.stringify(list), 'shuffle keeps every item');
       });
 
-      run('dRandom: seeded, the same seed gives the same numbers, without touching Math.random', function() {
+      await run('dRandom: seeded, the same seed gives the same numbers, without touching Math.random', function() {
         function draw() {
           return [sequence(5, function() { return dRandom.fraction(); }),
             sequence(5, function() { return dRandom.random(9); }),
@@ -150,7 +150,7 @@ if (Meteor.isServer) {
         equal(counting(Math, 'random', function() { dRandom.fraction(); }), 1, 'reset: Math.random again');
       });
 
-      run('dRandom.id: unseeded it is Random.id(), seeded the same seed gives the same ids', function() {
+      await run('dRandom.id: unseeded it is Random.id(), seeded the same seed gives the same ids', function() {
         equal(counting(Random, 'id', function() { dRandom.id(); }), 1, 'unseeded: calls Random.id');
         assert(/^[23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz]{17}$/.test(dRandom.id()), 'unseeded: a 17 character id');
 
@@ -169,50 +169,50 @@ if (Meteor.isServer) {
 
       // --- game code uses them ---
 
-      run('game code: with the clock fixed, new armies, moves and income use the game time', function() {
-        var w = dTest.buildGameWorld({players: 1});
+      await run('game code: with the clock fixed, new armies, moves and income use the game time', async function() {
+        var w = await dTest.buildGameWorld({players: 1});
         try {
           var future = moment().add(10, 'days').toDate();
           dClock.set(future);
 
           var army;
-          dTest.recordJobs(function() { army = dTest.settle(dArmies.create(w.players[0]._id, {footmen: 2}, w.castle(0).x, w.castle(0).y)); });
-          army = Armies.findOne(army._id);
+          await dTest.recordJobs(async function() { army = await dArmies.create(w.players[0]._id, {footmen: 2}, (await w.castle(0)).x, (await w.castle(0)).y); });
+          army = await Armies.findOneAsync(army._id);
           equal(army.created_at.getTime(), future.getTime(), 'army created_at');
           equal(army.last_move_at.getTime(), future.getTime(), 'army last_move_at');
 
           // paid in real time only a moment ago, but due by the game clock
-          Players.update(w.players[0]._id, {$set: {lastIncomeUpdate: new Date()}});
-          var gold = w.player(0).gold;
-          dTest.settle(dIncome.collectCastleIncome());
-          var p = w.player(0);
+          await Players.updateAsync(w.players[0]._id, {$set: {lastIncomeUpdate: new Date()}});
+          var gold = (await w.player(0)).gold;
+          await dIncome.collectCastleIncome();
+          var p = await w.player(0);
           assert(p.gold > gold, 'castle income paid, since the game clock says it is due');
           equal(p.lastIncomeUpdate.getTime(), future.getTime(), 'lastIncomeUpdate is the game time');
           gold = p.gold;
-          dTest.settle(dIncome.collectCastleIncome());
-          equal(w.player(0).gold, gold, 'not paid again at the same game time');
+          await dIncome.collectCastleIncome();
+          equal((await w.player(0)).gold, gold, 'not paid again at the same game time');
           dClock.advance(_gs.castles(w.gameId, 'incomeInterval') + 1);
-          dTest.settle(dIncome.collectCastleIncome());
-          assert(w.player(0).gold > gold, 'paid again once the interval has passed in game time');
+          await dIncome.collectCastleIncome();
+          assert((await w.player(0)).gold > gold, 'paid again once the interval has passed in game time');
 
           // a path that moved a minute ago by the game clock is not due yet
-          Armypaths.insert({gameId: w.gameId, armyId: army._id, user_id: army.user_id, index: 0, x: army.x + 1, y: army.y,
+          await Armypaths.insertAsync({gameId: w.gameId, armyId: army._id, user_id: army.user_id, index: 0, x: army.x + 1, y: army.y,
             paused: false, speed: 5, hexes: [{x: army.x + 1, y: army.y}], countryIds: ['c'], distance: 1, time: 1,
             last_move_at: moment(dClock.now()).subtract(1, 'minute').toDate()});
-          dTest.settle(dArmies.moveArmiesJob());
-          equal(Armies.findOne(army._id).x, army.x, 'not moved before its time');
+          await dArmies.moveArmiesJob();
+          equal((await Armies.findOneAsync(army._id)).x, army.x, 'not moved before its time');
           dClock.advance(5 * 60 * 1000);
-          dTest.recordJobs(function() { dTest.settle(dArmies.moveArmiesJob()); });
-          var moved = Armies.findOne(army._id);
+          await dTest.recordJobs(async function() { await dArmies.moveArmiesJob(); });
+          var moved = await Armies.findOneAsync(army._id);
           equal(moved.x, army.x + 1, 'moved once its time passed in game time');
           equal(moved.last_move_at.getTime(), dClock.nowMs(), 'last_move_at is the game time');
         } finally {
           dClock.reset();
-          w.cleanup();
+          await w.cleanup();
         }
       });
 
-      run('game code: with the random source seeded, generated names repeat', function() {
+      await run('game code: with the random source seeded, generated names repeat', function() {
         function names() {
           return [dCastles.createName(), dArmies.createName(), dCapitals.createName()].join(', ');
         }

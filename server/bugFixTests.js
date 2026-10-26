@@ -4,7 +4,7 @@
 
 if (Meteor.isServer) {
 
-  _bugFixTests = function(run, t) {
+  _bugFixTests = async function(run, t) {
     var assert = t.assert;
     var equal = t.equal;
 
@@ -44,13 +44,13 @@ if (Meteor.isServer) {
     }
 
     // poll for an observer-driven result
-    function waitFor(fn, ms) {
+    async function waitFor(fn, ms) {
       var end = Date.now() + (ms || 10000);
       while (Date.now() < end) {
-        if (fn()) return true;
-        Meteor._sleepForMs(100);
+        if (await fn()) return true;
+        await dTest.sleep(100);
       }
-      return !!fn();
+      return !!(await fn());
     }
 
     function near(a, b, message) {
@@ -63,15 +63,15 @@ if (Meteor.isServer) {
     }
 
     // invoke a method handler as a given user, optionally as a client simulation
-    function callAs(userId, method, args, simulate) {
+    async function callAs(userId, method, args, simulate) {
       var inv = {userId: userId, isSimulation: !!simulate, connection: null, unblock: function() {}, setUserId: function() {}};
-      return DDP._CurrentInvocation.withValue(inv, function() {
-        return dTest.settle(Meteor.server.method_handlers[method].apply(inv, args));
+      return await DDP._CurrentInvocation.withValue(inv, async function() {
+        return await Meteor.server.method_handlers[method].apply(inv, args);
       });
     }
 
     // run a publication handler against a recording stub subscription
-    function runPublication(name, userId, args) {
+    async function runPublication(name, userId, args) {
       var out = {ready: 0, docs: {}, cursor: null, error: null};
       var stops = [];
       var sub = {
@@ -91,7 +91,7 @@ if (Meteor.isServer) {
         stop: function() {}
       };
       try {
-        var result = dTest.settle(Meteor.server.publish_handlers[name].apply(sub, args || []));
+        var result = await Meteor.server.publish_handlers[name].apply(sub, args || []);
         if (result && typeof result._publishCursor === 'function') {
           // Meteor publishes a returned cursor and then marks the sub ready itself
           out.cursor = result;
@@ -121,105 +121,105 @@ if (Meteor.isServer) {
 
     // --- #1 Dailystats _id (dGraphs.dailystatsNumVassalsEveryone) ---
 
-    run('dailystatsNumVassalsEveryone: a new row gets a string _id and the right fields', function() {
-      let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
+    await run('dailystatsNumVassalsEveryone: a new row gets a string _id and the right fields', async function() {
+      let game = await t.createTestGame({hasStarted: true, startedAt: new Date()});
       try {
         let userId = 'u_' + Random.id(5);
-        let pid = Players.insert({gameId: game._id, userId: userId, num_allies_below: 3});
+        let pid = await Players.insertAsync({gameId: game._id, userId: userId, num_allies_below: 3});
 
-        dTest.settle(dGraphs.dailystatsNumVassalsEveryone(game._id));
+        await dGraphs.dailystatsNumVassalsEveryone(game._id);
 
-        let rows = Dailystats.find({playerId: pid}).fetch();
+        let rows = await Dailystats.find({playerId: pid}).fetchAsync();
         equal(rows.length, 1, 'one row created');
         equal(typeof rows[0]._id, 'string', 'row _id is a string');
         equal(rows[0].gameId, game._id, 'gameId');
         equal(rows[0].user_id, userId, 'user_id');
         equal(rows[0].numVassals, 3, 'numVassals is num_allies_below');
       } finally {
-        Dailystats.remove({gameId: game._id});
-        t.cleanup(game._id);
+        await Dailystats.removeAsync({gameId: game._id});
+        await t.cleanup(game._id);
       }
     });
 
-    run('dailystatsNumVassalsEveryone: existing rows are updated in place, missing counts are 0', function() {
-      let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
+    await run('dailystatsNumVassalsEveryone: existing rows are updated in place, missing counts are 0', async function() {
+      let game = await t.createTestGame({hasStarted: true, startedAt: new Date()});
       try {
-        let withRow = Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), num_allies_below: 2});
-        let noCount = Players.insert({gameId: game._id, userId: 'u_' + Random.id(5)});
-        let noRow = Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), num_allies_below: 1});
-        let rowId = Dailystats.insert({gameId: game._id, playerId: withRow, created_at: new Date(), numVassals: 0});
+        let withRow = await Players.insertAsync({gameId: game._id, userId: 'u_' + Random.id(5), num_allies_below: 2});
+        let noCount = await Players.insertAsync({gameId: game._id, userId: 'u_' + Random.id(5)});
+        let noRow = await Players.insertAsync({gameId: game._id, userId: 'u_' + Random.id(5), num_allies_below: 1});
+        let rowId = await Dailystats.insertAsync({gameId: game._id, playerId: withRow, created_at: new Date(), numVassals: 0});
 
-        dTest.settle(dGraphs.dailystatsNumVassalsEveryone(game._id));
+        await dGraphs.dailystatsNumVassalsEveryone(game._id);
 
-        let row = Dailystats.findOne({playerId: withRow});
+        let row = await Dailystats.findOneAsync({playerId: withRow});
         equal(row._id, rowId, 'existing row keeps its _id');
         equal(row.numVassals, 2, 'existing row updated');
-        equal(Dailystats.find({playerId: noCount}).count(), 1, 'one row for player without a count');
-        equal(Dailystats.findOne({playerId: noCount}).numVassals, 0, 'missing num_allies_below counts as 0');
-        equal(Dailystats.find({playerId: noRow}).count(), 1, 'one row for player without a row');
-        equal(Dailystats.find({playerId: withRow}).count(), 1, 'no duplicate row');
+        equal(await Dailystats.find({playerId: noCount}).countAsync(), 1, 'one row for player without a count');
+        equal((await Dailystats.findOneAsync({playerId: noCount})).numVassals, 0, 'missing num_allies_below counts as 0');
+        equal(await Dailystats.find({playerId: noRow}).countAsync(), 1, 'one row for player without a row');
+        equal(await Dailystats.find({playerId: withRow}).countAsync(), 1, 'no duplicate row');
       } finally {
-        Dailystats.remove({gameId: game._id});
-        t.cleanup(game._id);
+        await Dailystats.removeAsync({gameId: game._id});
+        await t.cleanup(game._id);
       }
     });
 
-    run('dailystatsNumVassalsEveryone: a game with no players writes nothing', function() {
-      let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
+    await run('dailystatsNumVassalsEveryone: a game with no players writes nothing', async function() {
+      let game = await t.createTestGame({hasStarted: true, startedAt: new Date()});
       try {
-        dTest.settle(dGraphs.dailystatsNumVassalsEveryone(game._id));
-        equal(Dailystats.find({gameId: game._id}).count(), 0, 'no rows');
+        await dGraphs.dailystatsNumVassalsEveryone(game._id);
+        equal(await Dailystats.find({gameId: game._id}).countAsync(), 0, 'no rows');
       } finally {
-        t.cleanup(game._id);
+        await t.cleanup(game._id);
       }
     });
 
 
     // --- #2 num_vassals (dInit.updateVassalAllyCountMultiple) ---
 
-    run('updateVassalAllyCountMultiple counts direct vassals and keeps the other counts', function() {
-      let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
+    await run('updateVassalAllyCountMultiple counts direct vassals and keeps the other counts', async function() {
+      let game = await t.createTestGame({hasStarted: true, startedAt: new Date()});
       try {
-        let a = Players.insert({gameId: game._id, userId: 'u_' + Random.id(5),
+        let a = await Players.insertAsync({gameId: game._id, userId: 'u_' + Random.id(5),
           vassals: ['x', 'y'], allies_above: ['p'], allies_below: ['x', 'y', 'z'], team: ['a', 'b', 'c', 'd']});
-        let b = Players.insert({gameId: game._id, userId: 'u_' + Random.id(5),
+        let b = await Players.insertAsync({gameId: game._id, userId: 'u_' + Random.id(5),
           allies_above: [], allies_below: [], team: []});
 
-        dTest.settle(dInit.updateVassalAllyCountMultiple([a, b]));
+        await dInit.updateVassalAllyCountMultiple([a, b]);
 
-        let pa = Players.findOne(a);
+        let pa = await Players.findOneAsync(a);
         equal(pa.num_vassals, 2, 'num_vassals counts direct vassals');
         equal(pa.num_allies_above, 1, 'num_allies_above');
         equal(pa.num_allies_below, 3, 'num_allies_below');
         equal(pa.num_team, 4, 'num_team');
-        equal(Dailystats.findOne({playerId: a}).numVassals, 3, 'Dailystats numVassals is still allies_below');
+        equal((await Dailystats.findOneAsync({playerId: a})).numVassals, 3, 'Dailystats numVassals is still allies_below');
 
-        let pb = Players.findOne(b);
+        let pb = await Players.findOneAsync(b);
         equal(pb.num_vassals, 0, 'no vassals field counts as 0');
         equal(pb.num_allies_below, 0, 'empty allies_below');
 
-        dTest.settle(dInit.updateVassalAllyCountMultiple([]));
+        await dInit.updateVassalAllyCountMultiple([]);
       } finally {
-        Dailystats.remove({gameId: game._id});
-        t.cleanup(game._id);
+        await Dailystats.removeAsync({gameId: game._id});
+        await t.cleanup(game._id);
       }
     });
 
-    run('updateVassalAllyCountMultiple matches a tree built by set_lord_and_vassal', function() {
-      let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
+    await run('updateVassalAllyCountMultiple matches a tree built by set_lord_and_vassal', async function() {
+      let game = await t.createTestGame({hasStarted: true, startedAt: new Date()});
       let restores = [stub(Queues, 'addAsync', async function() { return true; })];
       try {
-        let mk = function() {
-          return Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), username: 'p_' + Random.id(3),
+        let mk = async function() {
+          return await Players.insertAsync({gameId: game._id, userId: 'u_' + Random.id(5), username: 'p_' + Random.id(3),
             is_king: true, king: null, lord: null, vassals: [], allies_above: [], allies_below: [], team: []});
         };
-        let lord = mk(), vassal = mk(), sub = mk();
-        dTest.settle(dInit.set_lord_and_vassal(lord, vassal));
-        dTest.settle(dInit.set_lord_and_vassal(vassal, sub));
+        let lord = await mk(), vassal = await mk(), sub = await mk();
+        await dInit.set_lord_and_vassal(lord, vassal);
+        await dInit.set_lord_and_vassal(vassal, sub);
 
-        dTest.settle(dInit.updateVassalAllyCountMultiple([lord, vassal, sub]));
+        await dInit.updateVassalAllyCountMultiple([lord, vassal, sub]);
 
-        let l = Players.findOne(lord), v = Players.findOne(vassal), s = Players.findOne(sub);
+        let l = await Players.findOneAsync(lord), v = await Players.findOneAsync(vassal), s = await Players.findOneAsync(sub);
         equal(l.num_vassals, 1, 'lord has one direct vassal');
         equal(l.num_allies_below, 2, 'lord has two below');
         equal(v.num_vassals, 1, 'vassal has one direct vassal');
@@ -227,10 +227,10 @@ if (Meteor.isServer) {
         equal(s.num_vassals, 0, 'bottom player has no vassals');
       } finally {
         restoreAll(restores);
-        Alerts.remove({gameId: game._id});
-        GlobalAlerts.remove({gameId: game._id});
-        Dailystats.remove({gameId: game._id});
-        t.cleanup(game._id);
+        await Alerts.removeAsync({gameId: game._id});
+        await GlobalAlerts.removeAsync({gameId: game._id});
+        await Dailystats.removeAsync({gameId: game._id});
+        await t.cleanup(game._id);
       }
     });
 
@@ -245,8 +245,8 @@ if (Meteor.isServer) {
     // The nightly rebuild (relation_finder) works the tree out again from each
     // player's lord. After any run of conquests it should find what the
     // conquests left. Both became async in upgrade PR 12.
-    run('random conquests: the nightly rebuild finds the tree the conquests left', function() {
-      let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
+    await run('random conquests: the nightly rebuild finds the tree the conquests left', async function() {
+      let game = await t.createTestGame({hasStarted: true, startedAt: new Date()});
       let restores = [stub(Queues, 'addAsync', async function() { return true; })];
       let first = null;
       let sorted = function(list) { return JSON.stringify(_.sortBy(list || [], _.identity)); };
@@ -254,47 +254,47 @@ if (Meteor.isServer) {
         for (let seed = 1; seed <= 60 && !first; seed++) {
           let r = seed;
           let rand = function(n) { r = (r * 1103515245 + 12345) % 2147483648; return r % n; };
-          let ids = _.range(6).map(function(i) {
-            return Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), username: 'p' + i,
+          let ids = await dTest.mapAsync(_.range(6), async function(i) {
+            return await Players.insertAsync({gameId: game._id, userId: 'u_' + Random.id(5), username: 'p' + i,
               is_king: true, king: null, lord: null, vassals: [], allies_above: [], allies_below: [], team: []});
           });
           let name = function(id) { return 'p' + ids.indexOf(id); };
-          let tree = function() {
-            return Players.find({_id: {$in: ids}}, {sort: {username: 1}}).map(function(p) {
+          let tree = async function() {
+            return (await Players.find({_id: {$in: ids}}, {sort: {username: 1}}).mapAsync(function(p) {
               // a king's own king field is left as it was by a conquest (null, or itself)
               return [p.username, p.lord ? name(p.lord) : null, p.is_king, p.is_king ? null : name(p.king),
                 sorted(_.map(p.vassals, name)), sorted(_.map(p.allies_above, name)), sorted(_.map(p.allies_below, name))].join(' ');
-            }).join('\n');
+            })).join('\n');
           };
           let steps = [];
           for (let step = 0; step < 15; step++) {
             let w = ids[rand(ids.length)], l = ids[rand(ids.length)];
-            if (w == l || _.contains(Players.findOne(w).allies_below, l)) continue;
+            if (w == l || _.contains((await Players.findOneAsync(w)).allies_below, l)) continue;
             steps.push(name(w) + '>' + name(l));
-            dTest.settle(dInit.set_lord_and_vassal(w, l));
+            await dInit.set_lord_and_vassal(w, l);
           }
-          let afterConquests = tree();
+          let afterConquests = await tree();
           // scramble everything but the lords, so the rebuild has to work it out
-          Players.update({_id: {$in: ids}}, {$set: {is_king: false, king: null, vassals: [], allies_above: ['x'], allies_below: ['y'], team: []}}, {multi: true});
-          Players.update({_id: {$in: ids}, lord: null}, {$set: {is_king: true}}, {multi: true});
-          dTest.settle(dInit.rebuildRelationships(game._id));
-          let rebuilt = tree();
+          await Players.updateAsync({_id: {$in: ids}}, {$set: {is_king: false, king: null, vassals: [], allies_above: ['x'], allies_below: ['y'], team: []}}, {multi: true});
+          await Players.updateAsync({_id: {$in: ids}, lord: null}, {$set: {is_king: true}}, {multi: true});
+          await dInit.rebuildRelationships(game._id);
+          let rebuilt = await tree();
           if (rebuilt != afterConquests) {
             first = 'seed ' + seed + ', after ' + steps.join(' ') + ':\n' + afterConquests + '\nrebuilt:\n' + rebuilt;
           }
-          Players.remove({_id: {$in: ids}});
+          await Players.removeAsync({_id: {$in: ids}});
         }
         equal(first, null, 'the same tree');
       } finally {
         restoreAll(restores);
-        Alerts.remove({gameId: game._id});
-        GlobalAlerts.remove({gameId: game._id});
-        t.cleanup(game._id);
+        await Alerts.removeAsync({gameId: game._id});
+        await GlobalAlerts.removeAsync({gameId: game._id});
+        await t.cleanup(game._id);
       }
     });
 
-    run('random conquests keep the relationship lists and their counts in step', function() {
-      let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
+    await run('random conquests keep the relationship lists and their counts in step', async function() {
+      let game = await t.createTestGame({hasStarted: true, startedAt: new Date()});
       let queued = [];
       let restores = [stub(Queues, 'addAsync', async function(name, data) {
         if (name == 'updateVassalAllyCountMultiple') queued.push(data.playerIds);
@@ -305,24 +305,24 @@ if (Meteor.isServer) {
         for (let seed = 1; seed <= 200; seed++) {
           let r = seed;
           let rand = function(n) { r = (r * 1103515245 + 12345) % 2147483648; return r % n; };
-          let ids = _.range(6).map(function(i) {
-            return Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), username: 'p' + i,
+          let ids = await dTest.mapAsync(_.range(6), async function(i) {
+            return await Players.insertAsync({gameId: game._id, userId: 'u_' + Random.id(5), username: 'p' + i,
               is_king: true, king: null, lord: null, vassals: [], allies_above: [], allies_below: [], team: []});
           });
           let name = function(id) { return 'p' + ids.indexOf(id); };
           let steps = [];
           for (let step = 0; step < 25; step++) {
             let w = ids[rand(ids.length)], l = ids[rand(ids.length)];
-            let winner = Players.findOne(w);
+            let winner = await Players.findOneAsync(w);
             // you can't attack yourself or your own vassals
             if (w == l || _.contains(winner.allies_below, l)) continue;
             steps.push(name(w) + '>' + name(l));
             queued = [];
-            dTest.settle(dInit.set_lord_and_vassal(w, l));
-            queued.forEach(function(playerIds) { dTest.settle(dInit.updateVassalAllyCountMultiple(playerIds)); });
+            await dInit.set_lord_and_vassal(w, l);
+            await dTest.eachAsync(queued, async function(playerIds) { await dInit.updateVassalAllyCountMultiple(playerIds); });
 
             let problems = [];
-            let players = Players.find({_id: {$in: ids}}).fetch();
+            let players = await Players.find({_id: {$in: ids}}).fetchAsync();
             players.forEach(function(p) {
               let above = players.filter(function(o) { return _.contains(o.allies_below, p._id); }).map(function(o) { return o._id; });
               if (_.difference(above, p.allies_above).length || _.difference(p.allies_above, above).length) {
@@ -338,197 +338,197 @@ if (Meteor.isServer) {
               first[pr[0]] = first[pr[0]] || 'seed ' + seed + ', after ' + steps.join(' ') + ': ' + pr[1];
             });
           }
-          Players.remove({_id: {$in: ids}});
+          await Players.removeAsync({_id: {$in: ids}});
         }
         equal(_.map(first, function(v, k) { return k + ': ' + v; }).join('; '), '', 'no problems');
       } finally {
         restoreAll(restores);
-        Alerts.remove({gameId: game._id});
-        GlobalAlerts.remove({gameId: game._id});
-        Dailystats.remove({gameId: game._id});
-        t.cleanup(game._id);
+        await Alerts.removeAsync({gameId: game._id});
+        await GlobalAlerts.removeAsync({gameId: game._id});
+        await Dailystats.removeAsync({gameId: game._id});
+        await t.cleanup(game._id);
       }
     });
 
     // --- #3 Village income lord share (dIncome.collectVillageIncome) ---
 
     // one village at (vx, vy) owned by a vassal with numLords lords, surrounded by resource hexes
-    function villageFixture(game, vx, vy, lordIds) {
-      let ownerId = Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), allies_above: lordIds});
+    async function villageFixture(game, vx, vy, lordIds) {
+      let ownerId = await Players.insertAsync({gameId: game._id, userId: 'u_' + Random.id(5), allies_above: lordIds});
       let i = 0;
-      Hx.getSurroundingHexes(vx, vy, _s.villages.num_rings_village).forEach(function(h) {
+      await dTest.eachAsync(Hx.getSurroundingHexes(vx, vy, _s.villages.num_rings_village), async function(h) {
         if (h.x == vx && h.y == vy) return;
-        Hexes.insert({gameId: game._id, x: h.x, y: h.y, type: _s.market.types[i % _s.market.types.length], large: false});
+        await Hexes.insertAsync({gameId: game._id, x: h.x, y: h.y, type: _s.market.types[i % _s.market.types.length], large: false});
         i++;
       });
-      let villageId = Villages.insert({gameId: game._id, playerId: ownerId, x: vx, y: vy, level: 1,
+      let villageId = await Villages.insertAsync({gameId: game._id, playerId: ownerId, x: vx, y: vy, level: 1,
         under_construction: false, lastIncomeUpdate: new Date(0)});
       return {ownerId: ownerId, villageId: villageId};
     }
 
-    function makeLords(game, n) {
-      return _.range(n).map(function() {
-        return Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), allies_above: []});
+    async function makeLords(game, n) {
+      return await dTest.mapAsync(_.range(n), async function() {
+        return await Players.insertAsync({gameId: game._id, userId: 'u_' + Random.id(5), allies_above: []});
       });
     }
 
-    function cleanVillageGame(game) {
-      Villages.remove({gameId: game._id});
-      t.cleanup(game._id);
+    async function cleanVillageGame(game) {
+      await Villages.removeAsync({gameId: game._id});
+      await t.cleanup(game._id);
     }
 
-    [[1, 0.06], [5, 0.3 / 5], [6, 0.3 / 6]].forEach(function(c) {
+    await dTest.eachAsync([[1, 0.06], [5, 0.3 / 5], [6, 0.3 / 6]], async function(c) {
       let numLords = c[0], pct = c[1];
-      run('collectVillageIncome pays each of ' + numLords + ' lords ' + pct + ' of the village income', function() {
-        Games.remove({}); Players.remove({}); Villages.remove({});
-        let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
+      await run('collectVillageIncome pays each of ' + numLords + ' lords ' + pct + ' of the village income', async function() {
+        await Games.removeAsync({}); await Players.removeAsync({}); await Villages.removeAsync({});
+        let game = await t.createTestGame({hasStarted: true, startedAt: new Date()});
         try {
-          let lords = makeLords(game, numLords);
-          let f = villageFixture(game, 0, 0, lords);
+          let lords = await makeLords(game, numLords);
+          let f = await villageFixture(game, 0, 0, lords);
 
-          dTest.settle(dIncome.collectVillageIncome());
+          await dIncome.collectVillageIncome();
 
-          let income = Villages.findOne(f.villageId).income;
+          let income = (await Villages.findOneAsync(f.villageId)).income;
           assert(income && income.grain > 0, 'village collected some income');
-          let owner = Players.findOne(f.ownerId);
+          let owner = await Players.findOneAsync(f.ownerId);
           _s.market.types_plus_gold.forEach(function(type) {
             near(owner.incomeFromVillages[type], income[type], 'owner incomeFromVillages.' + type);
             near(owner[type], income[type], 'owner ' + type);
           });
-          lords.forEach(function(lordId) {
-            let lord = Players.findOne(lordId);
+          await dTest.eachAsync(lords, async function(lordId) {
+            let lord = await Players.findOneAsync(lordId);
             _s.market.types_plus_gold.forEach(function(type) {
               near(lord.incomeFromVassals[type], income[type] * pct, 'lord incomeFromVassals.' + type);
             });
           });
         } finally {
-          cleanVillageGame(game);
+          await cleanVillageGame(game);
         }
       });
     });
 
-    run('collectVillageIncome: no lords pays only the owner, a shared lord gets the sum', function() {
-      Games.remove({}); Players.remove({}); Villages.remove({});
-      let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
+    await run('collectVillageIncome: no lords pays only the owner, a shared lord gets the sum', async function() {
+      await Games.removeAsync({}); await Players.removeAsync({}); await Villages.removeAsync({});
+      let game = await t.createTestGame({hasStarted: true, startedAt: new Date()});
       try {
-        let bystander = Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), allies_above: []});
-        let lone = villageFixture(game, 0, 0, []);
-        let lords = makeLords(game, 1);
-        let v1 = villageFixture(game, 10, 10, lords);
-        let v2 = villageFixture(game, 20, 20, lords);
+        let bystander = await Players.insertAsync({gameId: game._id, userId: 'u_' + Random.id(5), allies_above: []});
+        let lone = await villageFixture(game, 0, 0, []);
+        let lords = await makeLords(game, 1);
+        let v1 = await villageFixture(game, 10, 10, lords);
+        let v2 = await villageFixture(game, 20, 20, lords);
 
-        dTest.settle(dIncome.collectVillageIncome());
+        await dIncome.collectVillageIncome();
 
-        let b = Players.findOne(bystander);
+        let b = await Players.findOneAsync(bystander);
         assert(!b.incomeFromVassals && !b.incomeFromVillages, 'player without a village or vassals is untouched');
-        assert(Players.findOne(lone.ownerId).incomeFromVillages.grain > 0, 'owner without lords is paid');
+        assert((await Players.findOneAsync(lone.ownerId)).incomeFromVillages.grain > 0, 'owner without lords is paid');
 
-        let i1 = Villages.findOne(v1.villageId).income, i2 = Villages.findOne(v2.villageId).income;
-        let lord = Players.findOne(lords[0]);
+        let i1 = (await Villages.findOneAsync(v1.villageId)).income, i2 = (await Villages.findOneAsync(v2.villageId)).income;
+        let lord = await Players.findOneAsync(lords[0]);
         _s.market.types_plus_gold.forEach(function(type) {
           near(lord.incomeFromVassals[type], (i1[type] + i2[type]) * 0.06, 'shared lord gets both shares of ' + type);
         });
       } finally {
-        cleanVillageGame(game);
+        await cleanVillageGame(game);
       }
     });
 
-    run('collectVillageIncome skips villages under construction or recently paid', function() {
-      Games.remove({}); Players.remove({}); Villages.remove({});
-      let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
+    await run('collectVillageIncome skips villages under construction or recently paid', async function() {
+      await Games.removeAsync({}); await Players.removeAsync({}); await Villages.removeAsync({});
+      let game = await t.createTestGame({hasStarted: true, startedAt: new Date()});
       try {
-        let lords = makeLords(game, 1);
-        let building = villageFixture(game, 0, 0, lords);
-        Villages.update(building.villageId, {$set: {under_construction: true}});
-        let recent = villageFixture(game, 10, 10, lords);
+        let lords = await makeLords(game, 1);
+        let building = await villageFixture(game, 0, 0, lords);
+        await Villages.updateAsync(building.villageId, {$set: {under_construction: true}});
+        let recent = await villageFixture(game, 10, 10, lords);
         let recentDate = new Date();
-        Villages.update(recent.villageId, {$set: {lastIncomeUpdate: recentDate}});
+        await Villages.updateAsync(recent.villageId, {$set: {lastIncomeUpdate: recentDate}});
 
-        dTest.settle(dIncome.collectVillageIncome());
+        await dIncome.collectVillageIncome();
 
-        assert(!Villages.findOne(building.villageId).income, 'village under construction not paid');
-        equal(time(Villages.findOne(recent.villageId).lastIncomeUpdate), recentDate.getTime(), 'recent village not paid again');
-        assert(!Players.findOne(lords[0]).incomeFromVassals, 'lord gets nothing');
-        assert(!Players.findOne(building.ownerId).incomeFromVillages, 'owner gets nothing');
+        assert(!(await Villages.findOneAsync(building.villageId)).income, 'village under construction not paid');
+        equal(time((await Villages.findOneAsync(recent.villageId)).lastIncomeUpdate), recentDate.getTime(), 'recent village not paid again');
+        assert(!(await Players.findOneAsync(lords[0])).incomeFromVassals, 'lord gets nothing');
+        assert(!(await Players.findOneAsync(building.ownerId)).incomeFromVillages, 'owner gets nothing');
       } finally {
-        cleanVillageGame(game);
+        await cleanVillageGame(game);
       }
     });
 
-    run('collectVillageIncome does not leak percentPerLord as a global', function() {
-      Games.remove({}); Players.remove({}); Villages.remove({});
-      let game = t.createTestGame({hasStarted: true, startedAt: new Date()});
+    await run('collectVillageIncome does not leak percentPerLord as a global', async function() {
+      await Games.removeAsync({}); await Players.removeAsync({}); await Villages.removeAsync({});
+      let game = await t.createTestGame({hasStarted: true, startedAt: new Date()});
       try {
         delete global.percentPerLord;
-        villageFixture(game, 0, 0, makeLords(game, 1));
-        dTest.settle(dIncome.collectVillageIncome());
+        await villageFixture(game, 0, 0, await makeLords(game, 1));
+        await dIncome.collectVillageIncome();
         equal(typeof global.percentPerLord, 'undefined', 'no global percentPerLord');
       } finally {
         delete global.percentPerLord;
-        cleanVillageGame(game);
+        await cleanVillageGame(game);
       }
     });
 
 
     // --- #4 Recentchats cleanup when a room is deleted ---
 
-    function roomFixture(gameId, fields) {
-      let roomId = Rooms.insert(_.extend({gameId: gameId, name: 'bf_' + Random.id(4), type: 'normal',
+    async function roomFixture(gameId, fields) {
+      let roomId = await Rooms.insertAsync(_.extend({gameId: gameId, name: 'bf_' + Random.id(4), type: 'normal',
         members: [], owner: 'bf_owner', created_at: new Date()}, fields || {}));
-      Recentchats.insert({room_id: roomId, gameId: gameId, updated_at: new Date()});
+      await Recentchats.insertAsync({room_id: roomId, gameId: gameId, updated_at: new Date()});
       return roomId;
     }
 
-    run('deleting a room removes its recentchats on the worker (skipped unless DOMINUS_WORKER=true)', function() {
+    await run('deleting a room removes its recentchats on the worker (skipped unless DOMINUS_WORKER=true)', async function() {
       if (process.env.DOMINUS_WORKER != 'true') return 'skip';
       let gameId = 'bf_' + Random.id();
       try {
-        let gone = roomFixture(gameId), kept = roomFixture(gameId);
-        Rooms.remove(gone);
-        assert(waitFor(function() { return Recentchats.find({room_id: gone}).count() === 0; }),
+        let gone = await roomFixture(gameId), kept = await roomFixture(gameId);
+        await Rooms.removeAsync(gone);
+        assert(await waitFor(async function() { return await Recentchats.find({room_id: gone}).countAsync() === 0; }),
           'recentchat of the deleted room is removed');
-        equal(Recentchats.find({room_id: kept}).count(), 1, 'other room keeps its recentchat');
+        equal(await Recentchats.find({room_id: kept}).countAsync(), 1, 'other room keeps its recentchat');
       } finally {
-        Rooms.remove({gameId: gameId});
-        Recentchats.remove({gameId: gameId});
+        await Rooms.removeAsync({gameId: gameId});
+        await Recentchats.removeAsync({gameId: gameId});
       }
     });
 
-    run('destroyKingChatroom removes the room recentchat on the worker (skipped unless DOMINUS_WORKER=true)', function() {
+    await run('destroyKingChatroom removes the room recentchat on the worker (skipped unless DOMINUS_WORKER=true)', async function() {
       if (process.env.DOMINUS_WORKER != 'true') return 'skip';
-      let game = t.createTestGame({hasStarted: true});
+      let game = await t.createTestGame({hasStarted: true});
       try {
-        let king = Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), is_king: true});
-        let roomId = roomFixture(game._id, {type: 'king', owner: king, members: [king]});
-        dTest.settle(dChat.destroyKingChatroom(king));
-        equal(Rooms.find(roomId).count(), 0, 'king room deleted');
-        assert(waitFor(function() { return Recentchats.find({room_id: roomId}).count() === 0; }),
+        let king = await Players.insertAsync({gameId: game._id, userId: 'u_' + Random.id(5), is_king: true});
+        let roomId = await roomFixture(game._id, {type: 'king', owner: king, members: [king]});
+        await dChat.destroyKingChatroom(king);
+        equal(await Rooms.find(roomId).countAsync(), 0, 'king room deleted');
+        assert(await waitFor(async function() { return await Recentchats.find({room_id: roomId}).countAsync() === 0; }),
           'recentchat of the king room is removed');
       } finally {
-        Rooms.remove({gameId: game._id});
-        Recentchats.remove({gameId: game._id});
-        Roomchats.remove({gameId: game._id});
-        t.cleanup(game._id);
+        await Rooms.removeAsync({gameId: game._id});
+        await Recentchats.removeAsync({gameId: game._id});
+        await Roomchats.removeAsync({gameId: game._id});
+        await t.cleanup(game._id);
       }
     });
 
-    run('starting a rooms observer never deletes recentchats of existing rooms', function() {
+    await run('starting a rooms observer never deletes recentchats of existing rooms', async function() {
       // what the worker does on every deploy: observe() only calls removed for
       // rooms deleted after it starts
       let gameId = 'bf_' + Random.id();
       let handle = null;
       try {
-        let rooms = [roomFixture(gameId), roomFixture(gameId), roomFixture(gameId)];
+        let rooms = [await roomFixture(gameId), await roomFixture(gameId), await roomFixture(gameId)];
         // as packages/dominus-chat/server/recentChats.js does
-        handle = dTest.settle(Rooms.find({gameId: gameId}, {fields: {_id: 1}}).observeAsync({
+        handle = await Rooms.find({gameId: gameId}, {fields: {_id: 1}}).observeAsync({
           removed: function(room) { void Recentchats.removeAsync({room_id: room._id}); }
-        }));
-        Meteor._sleepForMs(2000);
-        equal(Recentchats.find({room_id: {$in: rooms}}).count(), 3, 'all recentchats still there');
+        });
+        await dTest.sleep(2000);
+        equal(await Recentchats.find({room_id: {$in: rooms}}).countAsync(), 3, 'all recentchats still there');
       } finally {
         if (handle) handle.stop();
-        Rooms.remove({gameId: gameId});
-        Recentchats.remove({gameId: gameId});
+        await Rooms.removeAsync({gameId: gameId});
+        await Recentchats.removeAsync({gameId: gameId});
       }
     });
 
@@ -537,30 +537,30 @@ if (Meteor.isServer) {
 
     // Since upgrade PR 6 every game is cached, not only running ones (see
     // packages/dominus-settings/namespace.js), so an ended game stays.
-    run('settings cache follows a game from start to end and removal', function() {
-      let ended = t.createTestGame({hasStarted: true, hasEnded: false, isSpeed: false});
-      let removed = t.createTestGame({hasStarted: true, hasEnded: false});
+    await run('settings cache follows a game from start to end and removal', async function() {
+      let ended = await t.createTestGame({hasStarted: true, hasEnded: false, isSpeed: false});
+      let removed = await t.createTestGame({hasStarted: true, hasEnded: false});
       try {
-        assert(waitFor(function() { return !!_gs._cachedGames[ended._id]; }), 'started game is cached');
-        Games.update(ended._id, {$set: {isSpeed: true}});
-        assert(waitFor(function() { return _gs._cachedGames[ended._id] && _gs._cachedGames[ended._id].isSpeed === true; }),
+        assert(await waitFor(function() { return !!_gs._cachedGames[ended._id]; }), 'started game is cached');
+        await Games.updateAsync(ended._id, {$set: {isSpeed: true}});
+        assert(await waitFor(function() { return _gs._cachedGames[ended._id] && _gs._cachedGames[ended._id].isSpeed === true; }),
           'cache picks up a changed flag');
 
-        Games.update(ended._id, {$set: {hasEnded: true, isSpeed: false}});
-        assert(waitFor(function() { return _gs._cachedGames[ended._id] && _gs._cachedGames[ended._id].isSpeed === false; }),
+        await Games.updateAsync(ended._id, {$set: {hasEnded: true, isSpeed: false}});
+        assert(await waitFor(function() { return _gs._cachedGames[ended._id] && _gs._cachedGames[ended._id].isSpeed === false; }),
           'ended game stays cached and follows its changes');
         equal(_gs.getGame(ended._id).isSpeed, false, 'ended game settings still readable');
 
-        assert(waitFor(function() { return !!_gs._cachedGames[removed._id]; }), 'second game is cached');
-        Games.remove(removed._id);
-        assert(waitFor(function() { return !_gs._cachedGames[removed._id]; }), 'removed game leaves the cache');
+        assert(await waitFor(function() { return !!_gs._cachedGames[removed._id]; }), 'second game is cached');
+        await Games.removeAsync(removed._id);
+        assert(await waitFor(function() { return !_gs._cachedGames[removed._id]; }), 'removed game leaves the cache');
       } finally {
-        t.cleanup(ended._id);
-        t.cleanup(removed._id);
+        await t.cleanup(ended._id);
+        await t.cleanup(removed._id);
       }
     });
 
-    run('every _gs setting is identical whether the game is cached or not, for all flag combinations', function() {
+    await run('every _gs setting is identical whether the game is cached or not, for all flag combinations', async function() {
       let flags = ['isRelaxed', 'isSpeed', 'isCrazyFast', 'isNoLargeResources'];
       let names = Object.keys(_gs).filter(function(name) {
         return typeof _gs[name] === 'function' && name !== 'getGame' && _s[name] && typeof _s[name] === 'object';
@@ -577,13 +577,13 @@ if (Meteor.isServer) {
         return out;
       };
 
-      let games = _.range(16).map(function(n) {
+      let games = await dTest.mapAsync(_.range(16), async function(n) {
         let overrides = {hasStarted: true, hasEnded: false};
         flags.forEach(function(flag, i) { overrides[flag] = !!(n & (1 << i)); });
-        return t.createTestGame(overrides);
+        return await t.createTestGame(overrides);
       });
       try {
-        assert(waitFor(function() { return games.every(function(g) { return !!_gs._cachedGames[g._id]; }); }),
+        assert(await waitFor(function() { return games.every(function(g) { return !!_gs._cachedGames[g._id]; }); }),
           'all games cached');
         let cached = games.map(function(g) { return snapshot(g._id); });
 
@@ -609,16 +609,16 @@ if (Meteor.isServer) {
           });
         });
       } finally {
-        games.forEach(function(g) { t.cleanup(g._id); });
+        await dTest.eachAsync(games, async function(g) { await t.cleanup(g._id); });
       }
     });
 
-    run('getGame reads only the settings fields, cached or not, and unknown ids give {}', function() {
-      let game = t.createTestGame({hasStarted: false, isSpeed: true, tree: {big: true}, minimap: {big: true}});
+    await run('getGame reads only the settings fields, cached or not, and unknown ids give {}', async function() {
+      let game = await t.createTestGame({hasStarted: false, isSpeed: true, tree: {big: true}, minimap: {big: true}});
       let error = console.error;
       console.error = function() {};
       try {
-        assert(waitFor(function() { return !!_gs._cachedGames[game._id]; }), 'cached');
+        assert(await waitFor(function() { return !!_gs._cachedGames[game._id]; }), 'cached');
         [true, false].forEach(function(cached) {
           if (!cached) delete _gs._cachedGames[game._id];
           let g = _gs.getGame(game._id);
@@ -630,7 +630,7 @@ if (Meteor.isServer) {
         equal(JSON.stringify(_gs.getGame(undefined)), '{}', 'no id');
       } finally {
         console.error = error;
-        t.cleanup(game._id);
+        await t.cleanup(game._id);
       }
     });
 
@@ -645,7 +645,7 @@ if (Meteor.isServer) {
     }
 
     // runs the job with every side effect stubbed and returns what it tried to do
-    function runBakeJob(opts) {
+    async function runBakeJob(opts) {
       let calls = {chmod: [], jpg: [], s3: [], queued: [], result: null, returnsPromise: false};
       let restores = [
         stub(Mapbaker, 'bakeCountry', function() { return opts.data; }),
@@ -665,40 +665,40 @@ if (Meteor.isServer) {
         let job = function() { return Mapbaker.processBakeCountryJob({data: {countryId: 'bf_c'}}); };
         let returned = job();
         calls.returnsPromise = dTest.isPromise(returned);
-        calls.result = dTest.settle(returned);
+        calls.result = await returned;
       } finally {
         restoreAll(restores);
       }
       return calls;
     }
 
-    run('bakeCountry job: no data from bakeCountry resolves and does nothing else', function() {
-      let c = runBakeJob({data: false});
+    await run('bakeCountry job: no data from bakeCountry resolves and does nothing else', async function() {
+      let c = await runBakeJob({data: false});
       assert(c.returnsPromise, 'returns a promise');
       equal(c.chmod.length, 0, 'no chmod');
       equal(c.jpg.length, 0, 'no jpg');
       equal(c.queued.length, 0, 'no finishImage');
     });
 
-    run('bakeCountry job: missing svg resolves and does nothing else', function() {
-      let c = runBakeJob({data: bakeData(), svgExists: false});
+    await run('bakeCountry job: missing svg resolves and does nothing else', async function() {
+      let c = await runBakeJob({data: bakeData(), svgExists: false});
       assert(c.returnsPromise, 'returns a promise');
       equal(c.chmod.length, 0, 'no chmod');
       equal(c.jpg.length, 0, 'no jpg');
       equal(c.queued.length, 0, 'no finishImage');
     });
 
-    run('bakeCountry job: failed jpg resolves without uploading or finishing', function() {
-      let c = runBakeJob({data: bakeData(), svgExists: true, jpgOk: false, s3: true, s3Ok: true});
+    await run('bakeCountry job: failed jpg resolves without uploading or finishing', async function() {
+      let c = await runBakeJob({data: bakeData(), svgExists: true, jpgOk: false, s3: true, s3Ok: true});
       assert(c.returnsPromise, 'returns a promise');
       equal(c.chmod.length, 2, 'both svgs chmodded');
       equal(c.s3.length, 0, 'no upload');
       equal(c.queued.length, 0, 'no finishImage');
     });
 
-    run('bakeCountry job: happy path queues finishImage for both images', function() {
-      [{s3: false}, {s3: true, s3Ok: true}, {s3: true, s3Ok: false}].forEach(function(o) {
-        let c = runBakeJob(_.extend({data: bakeData(), svgExists: true, jpgOk: true}, o));
+    await run('bakeCountry job: happy path queues finishImage for both images', async function() {
+      await dTest.eachAsync([{s3: false}, {s3: true, s3Ok: true}, {s3: true, s3Ok: false}], async function(o) {
+        let c = await runBakeJob(_.extend({data: bakeData(), svgExists: true, jpgOk: true}, o));
         let label = ' (s3 ' + o.s3 + ', upload ok ' + o.s3Ok + ')';
         assert(c.returnsPromise, 'returns a promise' + label);
         equal(c.chmod.length, 2, 'both svgs chmodded' + label);
@@ -714,60 +714,60 @@ if (Meteor.isServer) {
 
     // --- #7 forumTopics publication ---
 
-    run('forumTopics pastMonth filter works and the other filters are unchanged', function() {
-      let user = t.createTestUser({verifiedEmail: true});
-      let unverified = t.createTestUser({verifiedEmail: false});
-      let banned = t.createTestUser({verifiedEmail: true, banned: true});
+    await run('forumTopics pastMonth filter works and the other filters are unchanged', async function() {
+      let user = await t.createTestUser({verifiedEmail: true});
+      let unverified = await t.createTestUser({verifiedEmail: false});
+      let banned = await t.createTestUser({verifiedEmail: true, banned: true});
       let cat1 = 'bf_cat_' + Random.id(), cat2 = 'bf_cat_' + Random.id();
       let monthsAgo = moment().subtract(2, 'months').toDate();
-      let topic = function(fields) {
-        return Forumtopics.insert(_.extend({title: 't', numPosts: 1, numViews: 0, createdAt: new Date(),
+      let topic = async function(fields) {
+        return await Forumtopics.insertAsync(_.extend({title: 't', numPosts: 1, numViews: 0, createdAt: new Date(),
           updatedAt: new Date(), lastPostDate: new Date()}, fields));
       };
-      let recent = topic({categoryId: cat1});
-      let old = topic({categoryId: cat1, updatedAt: monthsAgo, createdAt: monthsAgo});
-      let pinned = topic({categoryId: cat1, isPinned: true});
-      let other = topic({categoryId: cat2});
+      let recent = await topic({categoryId: cat1});
+      let old = await topic({categoryId: cat1, updatedAt: monthsAgo, createdAt: monthsAgo});
+      let pinned = await topic({categoryId: cat1, isPinned: true});
+      let other = await topic({categoryId: cat2});
       let ours = [recent, old, pinned, other];
       let ids = function(out) { return _.intersection(allPublishedIds(out), ours); };
       try {
-        let month = runPublication('forumTopics', user._id, ['post', 50, 'all', 'pastMonth']);
+        let month = await runPublication('forumTopics', user._id, ['post', 50, 'all', 'pastMonth']);
         sameIds(ids(month), [recent, other], 'pastMonth: only recent, unpinned topics');
         let cutoff = month.cursor._cursorDescription.selector.updatedAt.$gte;
         assert(Math.abs(cutoff.getTime() - moment().subtract(1, 'months').valueOf()) < 60000, 'cutoff is one month ago');
 
-        sameIds(ids(runPublication('forumTopics', user._id, ['post', 50, 'all', 'all'])), [recent, old, other], 'all: every unpinned topic');
-        sameIds(ids(runPublication('forumTopics', user._id, ['post', 50, cat1, 'pastMonth'])), [recent], 'pastMonth + category');
-        sameIds(ids(runPublication('forumTopics', user._id, ['post', 50, cat1, 'all'])), [recent, old], 'category only');
-        equal(publishedIds(runPublication('forumTopics', user._id, ['topic', 1, cat1, 'all']), 'forumtopics').length, 1, 'numShow limit');
+        sameIds(ids(await runPublication('forumTopics', user._id, ['post', 50, 'all', 'all'])), [recent, old, other], 'all: every unpinned topic');
+        sameIds(ids(await runPublication('forumTopics', user._id, ['post', 50, cat1, 'pastMonth'])), [recent], 'pastMonth + category');
+        sameIds(ids(await runPublication('forumTopics', user._id, ['post', 50, cat1, 'all'])), [recent, old], 'category only');
+        equal(publishedIds(await runPublication('forumTopics', user._id, ['topic', 1, cat1, 'all']), 'forumtopics').length, 1, 'numShow limit');
 
-        [null, unverified._id, banned._id].forEach(function(userId) {
-          let out = runPublication('forumTopics', userId, ['post', 50, 'all', 'pastMonth']);
+        await dTest.eachAsync([null, unverified._id, banned._id], async function(userId) {
+          let out = await runPublication('forumTopics', userId, ['post', 50, 'all', 'pastMonth']);
           equal(out.ready, 1, 'ready for ' + userId);
           equal(allPublishedIds(out).length, 0, 'nothing published for ' + userId);
         });
       } finally {
-        Forumtopics.remove({_id: {$in: ours}});
-        [user, unverified, banned].forEach(function(u) { t.cleanupUser(u._id); });
+        await Forumtopics.removeAsync({_id: {$in: ours}});
+        await dTest.eachAsync([user, unverified, banned], async function(u) { await t.cleanupUser(u._id); });
       }
     });
 
 
     // --- #8a room_list publication ---
 
-    run('room_list: bad arguments are refused, null ones give an empty ready subscription, good ones the player rooms', function() {
+    await run('room_list: bad arguments are refused, null ones give an empty ready subscription, good ones the player rooms', async function() {
       let gameId = 'bf_' + Random.id();
       let p1 = 'bf_p_' + Random.id(), p2 = 'bf_p_' + Random.id(), p3 = 'bf_p_' + Random.id();
-      let r1 = Rooms.insert({gameId: gameId, members: [p1, p2], type: 'normal', name: 'a'});
-      let r2 = Rooms.insert({gameId: gameId, members: [p2], type: 'normal', name: 'b'});
-      let r3 = Rooms.insert({gameId: gameId, members: [p3], type: 'normal', name: 'c'});
+      let r1 = await Rooms.insertAsync({gameId: gameId, members: [p1, p2], type: 'normal', name: 'a'});
+      let r2 = await Rooms.insertAsync({gameId: gameId, members: [p2], type: 'normal', name: 'b'});
+      let r3 = await Rooms.insertAsync({gameId: gameId, members: [p3], type: 'normal', name: 'c'});
       try {
         // a missing argument, or one that isn't a string or null, is refused
         // (server/publicationGate.js and the check()s, see server/argumentCheckTests.js)
-        [[], [gameId], [gameId, {$exists: true}], [gameId, 5], [{$ne: null}, p2]].forEach(function(args) {
+        await dTest.eachAsync([[], [gameId], [gameId, {$exists: true}], [gameId, 5], [{$ne: null}, p2]], async function(args) {
           let error = null;
           try {
-            runPublication('room_list', 'bf_user', args);
+            await runPublication('room_list', 'bf_user', args);
           } catch (e) {
             error = e;
           }
@@ -775,38 +775,38 @@ if (Meteor.isServer) {
         });
 
         // the browser sends null for an id it doesn't have
-        [[gameId, null], [null, p2]].forEach(function(args) {
-          let out = runPublication('room_list', 'bf_user', args);
+        await dTest.eachAsync([[gameId, null], [null, p2]], async function(args) {
+          let out = await runPublication('room_list', 'bf_user', args);
           equal(out.ready, 1, 'ready once for ' + JSON.stringify(args));
           equal(allPublishedIds(out).length, 0, 'nothing published for ' + JSON.stringify(args));
         });
 
-        let out = runPublication('room_list', 'bf_user', [gameId, p2]);
+        let out = await runPublication('room_list', 'bf_user', [gameId, p2]);
         equal(out.ready, 1, 'ready once');
         sameIds(publishedIds(out, 'room_list'), [r1, r2], 'rooms the player is in');
         equal(Object.keys(out.docs.room_list[r1]).length, 0, 'only _id published');
         assert(publishedIds(out, 'room_list').indexOf(r3) === -1, 'no other rooms');
       } finally {
-        Rooms.remove({gameId: gameId});
+        await Rooms.removeAsync({gameId: gameId});
       }
     });
 
 
     // --- #8b rightPanelTree publication ---
 
-    run('rightPanelTree publishes the lords and is always ready', function() {
-      let game = t.createTestGame({hasStarted: true});
+    await run('rightPanelTree publishes the lords and is always ready', async function() {
+      let game = await t.createTestGame({hasStarted: true});
       try {
         let lordFields = function(n) {
           return {gameId: game._id, userId: 'u_' + Random.id(5), name: 'lord' + n, username: 'lord' + n,
             x: n, y: n, castle_id: 'c' + n, lord: null, income: 999};
         };
-        let l1 = Players.insert(lordFields(1)), l2 = Players.insert(lordFields(2));
-        let unrelated = Players.insert(lordFields(3));
-        let player = Players.insert({gameId: game._id, userId: 'u_' + Random.id(5), allies_above: [l1, l2]});
-        let noAllies = Players.insert({gameId: game._id, userId: 'u_' + Random.id(5)});
+        let l1 = await Players.insertAsync(lordFields(1)), l2 = await Players.insertAsync(lordFields(2));
+        let unrelated = await Players.insertAsync(lordFields(3));
+        let player = await Players.insertAsync({gameId: game._id, userId: 'u_' + Random.id(5), allies_above: [l1, l2]});
+        let noAllies = await Players.insertAsync({gameId: game._id, userId: 'u_' + Random.id(5)});
 
-        let out = runPublication('rightPanelTree', 'bf_user', [player]);
+        let out = await runPublication('rightPanelTree', 'bf_user', [player]);
         equal(out.ready, 1, 'ready once');
         sameIds(publishedIds(out, 'right_panel_tree_players'), [l1, l2], 'exactly the lords');
         assert(publishedIds(out, 'right_panel_tree_players').indexOf(unrelated) === -1, 'no other players');
@@ -815,25 +815,25 @@ if (Meteor.isServer) {
             'only the tree fields are published');
         });
 
-        [[noAllies, 'bf_user'], ['bf_missing_' + Random.id(), 'bf_user'], [null, null]].forEach(function(c) {
-          let o = runPublication('rightPanelTree', c[1], [c[0]]);
+        await dTest.eachAsync([[noAllies, 'bf_user'], ['bf_missing_' + Random.id(), 'bf_user'], [null, null]], async function(c) {
+          let o = await runPublication('rightPanelTree', c[1], [c[0]]);
           equal(o.ready, 1, 'ready once for ' + c[0] + ' as ' + c[1]);
           equal(allPublishedIds(o).length, 0, 'nothing published for ' + c[0] + ' as ' + c[1]);
         });
 
         let refused = null;
         try {
-          runPublication('rightPanelTree', null, [{$ne: null}]);
+          await runPublication('rightPanelTree', null, [{$ne: null}]);
         } catch (e) {
           refused = e;
         }
         assert(refused, 'an object for an id is refused');
 
         // public so logged out spectators can see the tree
-        let loggedOut = runPublication('rightPanelTree', null, [player]);
+        let loggedOut = await runPublication('rightPanelTree', null, [player]);
         sameIds(publishedIds(loggedOut, 'right_panel_tree_players'), [l1, l2], 'logged out viewers get the lords too');
       } finally {
-        t.cleanup(game._id);
+        await t.cleanup(game._id);
       }
     });
 
@@ -841,9 +841,9 @@ if (Meteor.isServer) {
     // --- #9 Waypoint reordering (decreasePathIndex / increasePathIndex) ---
 
     // paths for one army; times are ms ago for last_move_at, null for none
-    function insertPaths(gameId, userId, armyId, times, extra) {
-      return times.map(function(ago, index) {
-        return Armypaths.insert(_.extend({
+    async function insertPaths(gameId, userId, armyId, times, extra) {
+      return await dTest.mapAsync(times, async function(ago, index) {
+        return await Armypaths.insertAsync(_.extend({
           gameId: gameId, armyId: armyId, user_id: userId, index: index,
           x: index + 1, y: armyId.length + index, paused: false, speed: 10,
           hexes: [{x: 0, y: 0, countryId: 'bf'}], countryIds: ['bf'], distance: 1, time: 1000, dirtyMoveTotals: false,
@@ -853,169 +853,169 @@ if (Meteor.isServer) {
       });
     }
 
-    function armyState(armyId) {
-      return Armypaths.find({armyId: armyId}, {sort: {index: 1}}).fetch().map(function(p) {
+    async function armyState(armyId) {
+      return (await Armypaths.find({armyId: armyId}, {sort: {index: 1}}).fetchAsync()).map(function(p) {
         return {_id: p._id, index: p.index, x: p.x, y: p.y, last_move_at: time(p.last_move_at)};
       });
     }
 
     var HOURS_3 = 3 * 60 * 60 * 1000, MINUTE = 60 * 1000;
 
-    [['the same game', false], ['another game', true]].forEach(function(c) {
-      run('decreasePathIndex keeps the army own move time when another army is in ' + c[0], function() {
+    await dTest.eachAsync([['the same game', false], ['another game', true]], async function(c) {
+      await run('decreasePathIndex keeps the army own move time when another army is in ' + c[0], async function() {
         let userId = 'bf_u_' + Random.id();
         let gameB = 'bf_g_' + Random.id(), gameA = c[1] ? 'bf_g_' + Random.id() : gameB;
         let armyA = 'bf_a_' + Random.id(), armyB = 'bf_b_' + Random.id();
         try {
           // A is inserted first so a lookup without armyId finds A's path.
           // paused keeps the live moveArmiesJob (DOMINUS_WORKER) from moving A mid-test.
-          insertPaths(gameA, userId, armyA, [HOURS_3, HOURS_3], {paused: true});
-          let aBefore = Armypaths.find({armyId: armyA}).fetch();
-          let b = insertPaths(gameB, userId, armyB, [MINUTE, MINUTE]);
-          let bTime = time(Armypaths.findOne(b[0]).last_move_at);
+          await insertPaths(gameA, userId, armyA, [HOURS_3, HOURS_3], {paused: true});
+          let aBefore = await Armypaths.find({armyId: armyA}).fetchAsync();
+          let b = await insertPaths(gameB, userId, armyB, [MINUTE, MINUTE]);
+          let bTime = time((await Armypaths.findOneAsync(b[0])).last_move_at);
 
-          callAs(userId, 'decreasePathIndex', [b[1]]);
+          await callAs(userId, 'decreasePathIndex', [b[1]]);
 
-          let moved = Armypaths.findOne(b[1]);
+          let moved = await Armypaths.findOneAsync(b[1]);
           equal(moved.index, 0, 'waypoint moved to the front');
           equal(time(moved.last_move_at), bTime, 'it keeps army B own last_move_at');
-          equal(Armypaths.findOne(b[0]).index, 1, 'old first waypoint is now second');
-          equal(EJSON.stringify(Armypaths.find({armyId: armyA}).fetch()), EJSON.stringify(aBefore), 'army A paths untouched');
+          equal((await Armypaths.findOneAsync(b[0])).index, 1, 'old first waypoint is now second');
+          equal(EJSON.stringify(await Armypaths.find({armyId: armyA}).fetchAsync()), EJSON.stringify(aBefore), 'army A paths untouched');
         } finally {
-          Armypaths.remove({user_id: userId});
+          await Armypaths.removeAsync({user_id: userId});
         }
       });
     });
 
-    run('decreasePathIndex: the reordered army does not step early in moveArmiesJob', function() {
-      Armypaths.remove({});
+    await run('decreasePathIndex: the reordered army does not step early in moveArmiesJob', async function() {
+      await Armypaths.removeAsync({});
       let userId = 'bf_u_' + Random.id(), gameId = 'bf_g_' + Random.id();
       let armyA = 'bf_a_' + Random.id(), armyB = 'bf_b_' + Random.id();
       let restores = [stub(Queues, 'addAsync', async function() { return true; })];
       try {
         // A is idle (no hexes) with an old move time, B moved a minute ago
-        insertPaths(gameId, userId, armyA, [HOURS_3], {hexes: null});
-        let b = insertPaths(gameId, userId, armyB, [MINUTE, MINUTE]);
-        Armies.insert({_id: armyB, gameId: gameId, user_id: userId, playerId: 'bf_p', x: 0, y: 0,
+        await insertPaths(gameId, userId, armyA, [HOURS_3], {hexes: null});
+        let b = await insertPaths(gameId, userId, armyB, [MINUTE, MINUTE]);
+        await Armies.insertAsync({_id: armyB, gameId: gameId, user_id: userId, playerId: 'bf_p', x: 0, y: 0,
           last_move_at: new Date(Date.now() - MINUTE), moveDistance: 1});
 
-        callAs(userId, 'decreasePathIndex', [b[1]]);
+        await callAs(userId, 'decreasePathIndex', [b[1]]);
         // pathfinding would normally refill these
-        Armypaths.update(b[1], {$set: {hexes: [{x: 7, y: 7, countryId: 'bf'}], speed: 10}});
+        await Armypaths.updateAsync(b[1], {$set: {hexes: [{x: 7, y: 7, countryId: 'bf'}], speed: 10}});
 
-        dTest.settle(dArmies.moveArmiesJob());
+        await dArmies.moveArmiesJob();
 
-        let army = Armies.findOne(armyB);
+        let army = await Armies.findOneAsync(armyB);
         equal(army.x, 0, 'army has not moved (x)');
         equal(army.y, 0, 'army has not moved (y)');
-        equal(Armypaths.findOne(b[1]).hexes.length, 1, 'path not advanced');
+        equal((await Armypaths.findOneAsync(b[1])).hexes.length, 1, 'path not advanced');
       } finally {
         restoreAll(restores);
-        Armypaths.remove({user_id: userId});
-        Armies.remove({user_id: userId});
-        Markers.remove({unitId: armyB});
+        await Armypaths.removeAsync({user_id: userId});
+        await Armies.removeAsync({user_id: userId});
+        await Markers.removeAsync({unitId: armyB});
       }
     });
 
-    run('decreasePathIndex on a single army behaves as before', function() {
+    await run('decreasePathIndex on a single army behaves as before', async function() {
       let userId = 'bf_u_' + Random.id(), gameId = 'bf_g_' + Random.id(), army = 'bf_a_' + Random.id();
       try {
-        let p = insertPaths(gameId, userId, army, [MINUTE, MINUTE, MINUTE, MINUTE, MINUTE, MINUTE]);
-        let firstTime = time(Armypaths.findOne(p[0]).last_move_at);
+        let p = await insertPaths(gameId, userId, army, [MINUTE, MINUTE, MINUTE, MINUTE, MINUTE, MINUTE]);
+        let firstTime = time((await Armypaths.findOneAsync(p[0])).last_move_at);
 
         // 1 -> 0 takes the first waypoint's time
-        callAs(userId, 'decreasePathIndex', [p[1]]);
-        let s = armyState(army);
+        await callAs(userId, 'decreasePathIndex', [p[1]]);
+        let s = await armyState(army);
         equal(s.map(function(x) { return x._id; }).join(), [p[1], p[0], p[2], p[3], p[4], p[5]].join(), 'order after 1 -> 0');
         equal(s[0].last_move_at, firstTime, 'new first waypoint has the old first time');
         // re-path window is index -2..2 (path.index-3 .. path.index+1)
-        [p[1], p[0], p[2]].forEach(function(id) {
-          equal(Armypaths.findOne(id).hexes, null, 'waypoint in the re-path window is cleared');
+        await dTest.eachAsync([p[1], p[0], p[2]], async function(id) {
+          equal((await Armypaths.findOneAsync(id)).hexes, null, 'waypoint in the re-path window is cleared');
         });
-        [p[3], p[4], p[5]].forEach(function(id) {
-          assert(Armypaths.findOne(id).hexes !== null, 'waypoint outside the re-path window keeps its hexes');
+        await dTest.eachAsync([p[3], p[4], p[5]], async function(id) {
+          assert((await Armypaths.findOneAsync(id)).hexes !== null, 'waypoint outside the re-path window keeps its hexes');
         });
 
         // 4 -> 3 clears last_move_at on the moved waypoint, as it always has
-        callAs(userId, 'decreasePathIndex', [p[4]]);
-        s = armyState(army);
+        await callAs(userId, 'decreasePathIndex', [p[4]]);
+        s = await armyState(army);
         equal(s.map(function(x) { return x._id; }).join(), [p[1], p[0], p[2], p[4], p[3], p[5]].join(), 'order after 4 -> 3');
-        equal(Armypaths.findOne(p[4]).last_move_at, null, 'moved waypoint last_move_at is null');
+        equal((await Armypaths.findOneAsync(p[4])).last_move_at, null, 'moved waypoint last_move_at is null');
 
-        [p[4], p[3], p[5]].forEach(function(id) {
-          equal(Armypaths.findOne(id).hexes, null, 'waypoint in the second re-path window is cleared');
+        await dTest.eachAsync([p[4], p[3], p[5]], async function(id) {
+          equal((await Armypaths.findOneAsync(id)).hexes, null, 'waypoint in the second re-path window is cleared');
         });
 
         // index 0 is a no-op
-        let before = EJSON.stringify(armyState(army));
-        callAs(userId, 'decreasePathIndex', [p[1]]);
-        equal(EJSON.stringify(armyState(army)), before, 'index 0 does nothing');
+        let before = EJSON.stringify(await armyState(army));
+        await callAs(userId, 'decreasePathIndex', [p[1]]);
+        equal(EJSON.stringify(await armyState(army)), before, 'index 0 does nothing');
 
         // someone else's waypoint throws
         let threw = false;
-        try { callAs('bf_other_' + Random.id(), 'decreasePathIndex', [p[2]]); } catch (e) { threw = true; }
+        try { await callAs('bf_other_' + Random.id(), 'decreasePathIndex', [p[2]]); } catch (e) { threw = true; }
         assert(threw, 'other user cannot reorder');
-        equal(EJSON.stringify(armyState(army)), before, 'nothing changed');
+        equal(EJSON.stringify(await armyState(army)), before, 'nothing changed');
       } finally {
-        Armypaths.remove({user_id: userId});
+        await Armypaths.removeAsync({user_id: userId});
       }
     });
 
-    run('decreasePathIndex with no first waypoint for the army changes nothing', function() {
+    await run('decreasePathIndex with no first waypoint for the army changes nothing', async function() {
       let userId = 'bf_u_' + Random.id(), gameId = 'bf_g_' + Random.id();
       let armyA = 'bf_a_' + Random.id(), armyB = 'bf_b_' + Random.id();
       try {
         // paused keeps the live moveArmiesJob (DOMINUS_WORKER) from moving A mid-test
-        insertPaths(gameId, userId, armyA, [HOURS_3], {paused: true});
+        await insertPaths(gameId, userId, armyA, [HOURS_3], {paused: true});
         // B's only waypoint sits at index 1 (broken indexes)
-        let b = Armypaths.insert({gameId: gameId, armyId: armyB, user_id: userId, index: 1, x: 9, y: 9,
+        let b = await Armypaths.insertAsync({gameId: gameId, armyId: armyB, user_id: userId, index: 1, x: 9, y: 9,
           paused: false, speed: 10, hexes: null, countryIds: null, last_move_at: new Date(Date.now() - MINUTE)});
-        let before = EJSON.stringify(Armypaths.find({user_id: userId}, {sort: {_id: 1}}).fetch());
+        let before = EJSON.stringify(await Armypaths.find({user_id: userId}, {sort: {_id: 1}}).fetchAsync());
 
-        callAs(userId, 'decreasePathIndex', [b]);
+        await callAs(userId, 'decreasePathIndex', [b]);
 
-        equal(EJSON.stringify(Armypaths.find({user_id: userId}, {sort: {_id: 1}}).fetch()), before, 'nothing changed');
+        equal(EJSON.stringify(await Armypaths.find({user_id: userId}, {sort: {_id: 1}}).fetchAsync()), before, 'nothing changed');
       } finally {
-        Armypaths.remove({user_id: userId});
+        await Armypaths.removeAsync({user_id: userId});
       }
     });
 
-    run('increasePathIndex behaves as before', function() {
+    await run('increasePathIndex behaves as before', async function() {
       let userId = 'bf_u_' + Random.id(), gameId = 'bf_g_' + Random.id(), army = 'bf_a_' + Random.id();
       try {
-        let p = insertPaths(gameId, userId, army, [MINUTE, 2 * MINUTE, 3 * MINUTE]);
-        let firstTime = time(Armypaths.findOne(p[0]).last_move_at);
-        callAs(userId, 'increasePathIndex', [p[0]]);
-        let s = armyState(army);
+        let p = await insertPaths(gameId, userId, army, [MINUTE, 2 * MINUTE, 3 * MINUTE]);
+        let firstTime = time((await Armypaths.findOneAsync(p[0])).last_move_at);
+        await callAs(userId, 'increasePathIndex', [p[0]]);
+        let s = await armyState(army);
         equal(s.map(function(x) { return x._id; }).join(), [p[1], p[0], p[2]].join(), 'order after 0 -> 1');
         equal(s[0].last_move_at, firstTime, 'new first waypoint takes the old first time');
 
-        let before = EJSON.stringify(armyState(army));
-        callAs(userId, 'increasePathIndex', [p[2]]);
-        equal(EJSON.stringify(armyState(army)), before, 'last waypoint does nothing');
+        let before = EJSON.stringify(await armyState(army));
+        await callAs(userId, 'increasePathIndex', [p[2]]);
+        equal(EJSON.stringify(await armyState(army)), before, 'last waypoint does nothing');
       } finally {
-        Armypaths.remove({user_id: userId});
+        await Armypaths.removeAsync({user_id: userId});
       }
     });
 
-    run('client simulation of waypoint reordering ends in the same order as the server', function() {
+    await run('client simulation of waypoint reordering ends in the same order as the server', async function() {
       let userId = 'bf_u_' + Random.id(), gameId = 'bf_g_' + Random.id();
       let server = 'bf_s_' + Random.id(), sim = 'bf_m_' + Random.id();
       try {
-        let ps = insertPaths(gameId, userId, server, [MINUTE, MINUTE, MINUTE, MINUTE]);
-        let pm = insertPaths(gameId, userId, sim, [MINUTE, MINUTE, MINUTE, MINUTE]);
+        let ps = await insertPaths(gameId, userId, server, [MINUTE, MINUTE, MINUTE, MINUTE]);
+        let pm = await insertPaths(gameId, userId, sim, [MINUTE, MINUTE, MINUTE, MINUTE]);
         // same steps on both armies: by position in the original list
         let steps = [['decreasePathIndex', 2], ['increasePathIndex', 0], ['decreasePathIndex', 1], ['increasePathIndex', 3]];
-        let positions = function(army, ids) {
-          return armyState(army).map(function(p) { return p.index + ':' + ids.indexOf(p._id); }).join();
+        let positions = async function(army, ids) {
+          return await (await armyState(army)).map(function(p) { return p.index + ':' + ids.indexOf(p._id); }).join();
         };
-        steps.forEach(function(step) {
-          callAs(userId, step[0], [ps[step[1]]], false);
-          callAs(userId, step[0], [pm[step[1]]], true);
-          equal(positions(sim, pm), positions(server, ps), 'same order after ' + step[0] + ' ' + step[1]);
+        await dTest.eachAsync(steps, async function(step) {
+          await callAs(userId, step[0], [ps[step[1]]], false);
+          await callAs(userId, step[0], [pm[step[1]]], true);
+          equal(await positions(sim, pm), await positions(server, ps), 'same order after ' + step[0] + ' ' + step[1]);
         });
       } finally {
-        Armypaths.remove({user_id: userId});
+        await Armypaths.removeAsync({user_id: userId});
       }
     });
 
@@ -1023,7 +1023,7 @@ if (Meteor.isServer) {
     // Meteor 2.16 brings underscore@1.6.1, whose _.where is _.find. The
     // spectators' left menu used it and broke; it uses _.filter now.
     // underscore@1.6.4 (Meteor 3) fixes it, and this test then fails on purpose.
-    run('known bug: _.where returns only the first match in underscore ' + _.VERSION, function() {
+    await run('known bug: _.where returns only the first match in underscore ' + _.VERSION, function() {
       let panels = [{name: 'a', spectator: true}, {name: 'b'}, {name: 'c', spectator: true}];
       let found = _.where(panels, {spectator: true});
       assert(!Array.isArray(found), '_.where gives no array');

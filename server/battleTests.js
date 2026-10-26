@@ -39,7 +39,7 @@ if (Meteor.isServer) {
 
   // A free hex in a country, at least two hexes from every building, nearest
   // to (x, y) first, then by x and y. opts.type: only hexes of that type.
-  var freeHexNear = function(sim, x, y, opts) {
+  var freeHexNear = async function(sim, x, y, opts) {
     opts = opts || {};
     var buildings = [];
     [Castles, Villages, Capitals].forEach(function(c) {
@@ -47,9 +47,9 @@ if (Meteor.isServer) {
     });
     var find = {gameId: sim.gameId, hasBuilding: {$ne: true}};
     if (opts.type) find.type = opts.type;
-    var hexes = Hexes.find(find, {sort: {x: 1, y: 1}}).fetch();
-    hexes = _.filter(hexes, function(h) {
-      return dTest.settle(Mapmaker.coordsToCountryId(sim.gameId, h.x, h.y)) &&
+    var hexes = await Hexes.find(find, {sort: {x: 1, y: 1}}).fetchAsync();
+    hexes = await dTest.filterAsync(hexes, async function(h) {
+      return await Mapmaker.coordsToCountryId(sim.gameId, h.x, h.y) &&
         !_.some(buildings, function(b) { return hexDistance(b.x, b.y, h.x, h.y) < 2; }) &&
         !_.some(opts.not || [], function(n) { return n.x == h.x && n.y == h.y; });
     });
@@ -58,34 +58,34 @@ if (Meteor.isServer) {
     return {x: hex.x, y: hex.y};
   };
 
-  var armiesOf = function(sim, name) {
-    return Armies.find({gameId: sim.gameId, user_id: sim.users[name]._id}, {sort: {_id: 1}}).fetch();
+  var armiesOf = async function(sim, name) {
+    return await Armies.find({gameId: sim.gameId, user_id: sim.users[name]._id}, {sort: {_id: 1}}).fetchAsync();
   };
 
   // hires soldiers at the player's castle and marches them to (x, y); returns the army
-  var march = function(sim, name, values, to) {
-    var castle = sim.castle(name);
-    var before = _.pluck(armiesOf(sim, name), '_id');
-    sim.call(name, 'hireArmy', sim.gameId, soldiers(values), castle._id, 'castle');
-    sim.call(name, 'createArmyFromBuilding', sim.gameId, 'castle', castle._id, soldiers(values));
-    var army = _.find(armiesOf(sim, name), function(a) { return before.indexOf(a._id) == -1; });
+  var march = async function(sim, name, values, to) {
+    var castle = await sim.castle(name);
+    var before = _.pluck(await armiesOf(sim, name), '_id');
+    await sim.call(name, 'hireArmy', sim.gameId, soldiers(values), castle._id, 'castle');
+    await sim.call(name, 'createArmyFromBuilding', sim.gameId, 'castle', castle._id, soldiers(values));
+    var army = _.find(await armiesOf(sim, name), function(a) { return before.indexOf(a._id) == -1; });
     if (!army) throw new Error('FAIL: ' + name + '\'s army was not made');
-    if (to) sim.call(name, 'addArmyPath', sim.gameId, to.x, to.y, army._id);
+    if (to) await sim.call(name, 'addArmyPath', sim.gameId, to.x, to.y, army._id);
     return army;
   };
 
-  var arrived = function(armyId, to) {
-    var army = Armies.findOne(armyId);
-    return army && army.x == to.x && army.y == to.y && !Armypaths.findOne({armyId: armyId});
+  var arrived = async function(armyId, to) {
+    var army = await Armies.findOneAsync(armyId);
+    return army && army.x == to.x && army.y == to.y && !await Armypaths.findOneAsync({armyId: armyId});
   };
 
-  var battleAt = function(sim, at) {
-    return Battles2.findOne({gameId: sim.gameId, x: at.x, y: at.y}, {sort: {createdAt: -1}});
+  var battleAt = async function(sim, at) {
+    return await Battles2.findOneAsync({gameId: sim.gameId, x: at.x, y: at.y}, {sort: {createdAt: -1}});
   };
 
   // the battle at (at) is over
-  var battleOver = function(sim, at) {
-    var battle = battleAt(sim, at);
+  var battleOver = async function(sim, at) {
+    var battle = await battleAt(sim, at);
     return battle && battle.isOver;
   };
 
@@ -93,9 +93,9 @@ if (Meteor.isServer) {
 
   // What each step is about, in words, so the golden file can be read and a
   // change shows up as more than a hash.
-  var facts = function(sim) {
+  var facts = async function(sim) {
     var out = {battles: [], players: {}, capitals: []};
-    Battles2.find({gameId: sim.gameId}, {sort: {createdAt: 1, x: 1, y: 1}}).forEach(function(b) {
+    await Battles2.find({gameId: sim.gameId}, {sort: {createdAt: 1, x: 1, y: 1}}).forEachAsync(function(b) {
       out.battles.push({
         x: b.x, y: b.y, rounds: b.roundNumber, isOver: b.isOver, showBattle: b.showBattle,
         units: _.map(b.titleInfo && b.titleInfo.armies, function(a) {
@@ -106,24 +106,24 @@ if (Meteor.isServer) {
         })
       });
     });
-    Players.find({gameId: sim.gameId}, {sort: {username: 1}}).forEach(function(p) {
-      var castle = Castles.findOne(p.castle_id);
+    await Players.find({gameId: sim.gameId}, {sort: {username: 1}}).forEachAsync(async function(p) {
+      var castle = await Castles.findOneAsync(p.castle_id);
       var alerts = {};
-      Alerts.find({gameId: sim.gameId, 'playerIds.playerId': p._id}).forEach(function(a) { var type = a.type.replace(/^alert_/, ''); alerts[type] = (alerts[type] || 0) + 1; });
+      await Alerts.find({gameId: sim.gameId, 'playerIds.playerId': p._id}).forEachAsync(function(a) { var type = a.type.replace(/^alert_/, ''); alerts[type] = (alerts[type] || 0) + 1; });
       out.players[p.username] = {
-        lord: sim.nameOf(p.lord),
-        vassals: _.map(p.vassals, sim.nameOf).sort(),
+        lord: await sim.nameOf(p.lord),
+        vassals: (await dTest.mapAsync(p.vassals, sim.nameOf)).sort(),
         losses: p.losses,
         castle: castle && _.pick(castle, _s.armies.types),
-        armies: Armies.find({playerId: p._id}, {sort: {_id: 1}}).map(function(a) {
+        armies: await Armies.find({playerId: p._id}, {sort: {_id: 1}}).mapAsync(function(a) {
           return _.extend({x: a.x, y: a.y, onAllyBuilding: a.onAllyBuilding}, _.pick(a, _s.armies.types));
         }),
-        villages: Villages.find({playerId: p._id}, {sort: {_id: 1}}).map(function(v) { return _.extend({x: v.x, y: v.y}, _.pick(v, _s.armies.types)); }),
+        villages: await Villages.find({playerId: p._id}, {sort: {_id: 1}}).mapAsync(function(v) { return _.extend({x: v.x, y: v.y}, _.pick(v, _s.armies.types)); }),
         alerts: alerts
       };
     });
-    Capitals.find({gameId: sim.gameId}, {sort: {x: 1, y: 1}}).forEach(function(c) {
-      out.capitals.push(_.extend({x: c.x, y: c.y, owner: sim.nameOf(c.playerId)}, _.pick(c, _s.armies.types)));
+    await Capitals.find({gameId: sim.gameId}, {sort: {x: 1, y: 1}}).forEachAsync(async function(c) {
+      out.capitals.push(_.extend({x: c.x, y: c.y, owner: await sim.nameOf(c.playerId)}, _.pick(c, _s.armies.types)));
     });
     return out;
   };
@@ -133,111 +133,111 @@ if (Meteor.isServer) {
 
   var SCENARIO = [
 
-    {name: 'three players sign up and the game starts', run: function(sim) {
-      NAMES.forEach(function(name) {
-        sim.addUser(name, {emails: [{address: 'sim_' + name + '@example.com', verified: true}]});
+    {name: 'three players sign up and the game starts', run: async function(sim) {
+      await dTest.eachAsync(NAMES, async function(name) {
+        await sim.addUser(name, {emails: [{address: 'sim_' + name + '@example.com', verified: true}]});
       });
-      var game = dTest.helpers.createTestGame({name: 'Battles', startAt: dClock.now(), createdAt: dClock.now()});
+      var game = await dTest.helpers.createTestGame({name: 'Battles', startAt: dClock.now(), createdAt: dClock.now()});
       sim.gameId = game._id;
-      NAMES.forEach(function(name) {
+      await dTest.eachAsync(NAMES, async function(name) {
         var user = sim.users[name];
-        Gamesignups.insert({gameId: game._id, userId: user._id, username: user.username, createdAt: dClock.now(), usedToken: false});
+        await Gamesignups.insertAsync({gameId: game._id, userId: user._id, username: user.username, createdAt: dClock.now(), usedToken: false});
       });
-      sim.advance(2 * 60 * 1000);
-      NAMES.forEach(function(name) {
-        Players.update(sim.player(name)._id, {$inc: {gold: 5000, grain: 30000, lumber: 20000, ore: 50000, wool: 20000, clay: 5000, glass: 2000}});
+      await sim.advance(2 * 60 * 1000);
+      await dTest.eachAsync(NAMES, async function(name) {
+        await Players.updateAsync((await sim.player(name))._id, {$inc: {gold: 5000, grain: 30000, lumber: 20000, ore: 50000, wool: 20000, clay: 5000, glass: 2000}});
       });
     }},
 
-    {name: 'two armies meet in the open', run: function(sim) {
-      var hera = sim.castle('hera');
-      at.open = freeHexNear(sim, hera.x, hera.y);
-      var heras = march(sim, 'hera', {footmen: 60, archers: 20}, at.open);
-      sim.advance(3 * 60 * 60 * 1000, {waitingFor: 'hera\'s army reaching the field', until: function() { return arrived(heras._id, at.open); }});
-      march(sim, 'ares', {footmen: 100, archers: 30, cavalry: 30}, at.open);
-      sim.advance(6 * 60 * 60 * 1000, {waitingFor: 'the battle in the open', until: function() { return battleOver(sim, at.open); }});
-      sim.advance(5 * 60 * 1000);
+    {name: 'two armies meet in the open', run: async function(sim) {
+      var hera = await sim.castle('hera');
+      at.open = await freeHexNear(sim, hera.x, hera.y);
+      var heras = await march(sim, 'hera', {footmen: 60, archers: 20}, at.open);
+      await sim.advance(3 * 60 * 60 * 1000, {waitingFor: 'hera\'s army reaching the field', until: function() { return arrived(heras._id, at.open); }});
+      await march(sim, 'ares', {footmen: 100, archers: 30, cavalry: 30}, at.open);
+      await sim.advance(6 * 60 * 60 * 1000, {waitingFor: 'the battle in the open', until: function() { return battleOver(sim, at.open); }});
+      await sim.advance(5 * 60 * 1000);
     }},
 
-    {name: 'an army burns a village', run: function(sim) {
-      var hera = sim.castle('hera');
-      at.village = freeHexNear(sim, hera.x, hera.y, {type: 'grain', not: [at.open]});
-      var builder = march(sim, 'hera', {footmen: 10}, at.village);
-      sim.advance(3 * 60 * 60 * 1000, {waitingFor: 'hera reaching the grain hex', until: function() { return arrived(builder._id, at.village); }});
-      sim.call('hera', 'buildVillage', sim.gameId, at.village.x, at.village.y);
-      var built = function() { var v = Villages.findOne({playerId: sim.player('hera')._id}); return v && !v.under_construction; };
-      sim.advance(2 * 60 * 60 * 1000, {waitingFor: 'hera\'s village being built', until: built});
-      var attacker = _.max(armiesOf(sim, 'ares'), function(a) { return a.footmen; });
-      sim.call('ares', 'addArmyPath', sim.gameId, at.village.x, at.village.y, attacker._id);
-      sim.advance(6 * 60 * 60 * 1000, {waitingFor: 'the battle at the village', until: function() { return battleOver(sim, at.village); }});
-      sim.advance(5 * 60 * 1000);
+    {name: 'an army burns a village', run: async function(sim) {
+      var hera = await sim.castle('hera');
+      at.village = await freeHexNear(sim, hera.x, hera.y, {type: 'grain', not: [at.open]});
+      var builder = await march(sim, 'hera', {footmen: 10}, at.village);
+      await sim.advance(3 * 60 * 60 * 1000, {waitingFor: 'hera reaching the grain hex', until: function() { return arrived(builder._id, at.village); }});
+      await sim.call('hera', 'buildVillage', sim.gameId, at.village.x, at.village.y);
+      var built = async function() { var v = await Villages.findOneAsync({playerId: (await sim.player('hera'))._id}); return v && !v.under_construction; };
+      await sim.advance(2 * 60 * 60 * 1000, {waitingFor: 'hera\'s village being built', until: built});
+      var attacker = _.max(await armiesOf(sim, 'ares'), function(a) { return a.footmen; });
+      await sim.call('ares', 'addArmyPath', sim.gameId, at.village.x, at.village.y, attacker._id);
+      await sim.advance(6 * 60 * 60 * 1000, {waitingFor: 'the battle at the village', until: function() { return battleOver(sim, at.village); }});
+      await sim.advance(5 * 60 * 1000);
     }},
 
-    {name: 'an army takes a capital', run: function(sim) {
-      var ares = sim.castle('ares');
-      var capital = _.min(Capitals.find({gameId: sim.gameId}, {sort: {x: 1, y: 1}}).fetch(), function(c) { return hexDistance(ares.x, ares.y, c.x, c.y); });
+    {name: 'an army takes a capital', run: async function(sim) {
+      var ares = await sim.castle('ares');
+      var capital = _.min(await Capitals.find({gameId: sim.gameId}, {sort: {x: 1, y: 1}}).fetchAsync(), function(c) { return hexDistance(ares.x, ares.y, c.x, c.y); });
       at.capital = {x: capital.x, y: capital.y};
-      march(sim, 'ares', {footmen: 120, archers: 40, cavalry: 40}, at.capital);
-      sim.advance(8 * 60 * 60 * 1000, {waitingFor: 'the battle at the capital', until: function() { return battleOver(sim, at.capital); }});
-      sim.advance(5 * 60 * 1000);
+      await march(sim, 'ares', {footmen: 120, archers: 40, cavalry: 40}, at.capital);
+      await sim.advance(8 * 60 * 60 * 1000, {waitingFor: 'the battle at the capital', until: function() { return battleOver(sim, at.capital); }});
+      await sim.advance(5 * 60 * 1000);
     }},
 
-    {name: 'an army takes a castle', run: function(sim) {
-      var hera = sim.castle('hera');
+    {name: 'an army takes a castle', run: async function(sim) {
+      var hera = await sim.castle('hera');
       at.castle = {x: hera.x, y: hera.y};
       // made in her castle's hex, hera's army joins the castle
-      march(sim, 'hera', {footmen: 20, pikemen: 10});
-      march(sim, 'ares', {footmen: 150, archers: 50, cavalry: 60, catapults: 10}, at.castle);
-      sim.advance(8 * 60 * 60 * 1000, {waitingFor: 'ares taking hera\'s castle', until: function() {
-        var heraPlayer = sim.player('hera');
-        return heraPlayer && heraPlayer.lord == sim.player('ares')._id && battleOver(sim, at.castle);
+      await march(sim, 'hera', {footmen: 20, pikemen: 10});
+      await march(sim, 'ares', {footmen: 150, archers: 50, cavalry: 60, catapults: 10}, at.castle);
+      await sim.advance(8 * 60 * 60 * 1000, {waitingFor: 'ares taking hera\'s castle', until: async function() {
+        var heraPlayer = await sim.player('hera');
+        return heraPlayer && heraPlayer.lord == (await sim.player('ares'))._id && battleOver(sim, at.castle);
       }});
-      sim.advance(5 * 60 * 1000);
+      await sim.advance(5 * 60 * 1000);
     }},
 
-    {name: 'a lord\'s army defends its new vassal\'s castle', run: function(sim) {
-      march(sim, 'zeus', {footmen: 80, archers: 20, cavalry: 20}, at.castle);
-      sim.advance(8 * 60 * 60 * 1000, {waitingFor: 'the battle for hera\'s castle', until: function() {
-        var battles = Battles2.find({gameId: sim.gameId, x: at.castle.x, y: at.castle.y}).fetch();
+    {name: 'a lord\'s army defends its new vassal\'s castle', run: async function(sim) {
+      await march(sim, 'zeus', {footmen: 80, archers: 20, cavalry: 20}, at.castle);
+      await sim.advance(8 * 60 * 60 * 1000, {waitingFor: 'the battle for hera\'s castle', until: async function() {
+        var battles = await Battles2.find({gameId: sim.gameId, x: at.castle.x, y: at.castle.y}).fetchAsync();
         return battles.length == 2 && _.every(battles, function(b) { return b.isOver; });
       }});
-      sim.advance(5 * 60 * 1000);
+      await sim.advance(5 * 60 * 1000);
     }}
   ];
 
   var resultsDir = function() { return repoPath('.test-results/battles'); };
 
-  var play = function() {
+  var play = async function() {
     at = {};
-    var sim = dTest.simulation({seed: SEED, startAt: START_AT, dumpDir: resultsDir()});
+    var sim = await dTest.simulation({seed: SEED, startAt: START_AT, dumpDir: resultsDir()});
     try {
-      SCENARIO.forEach(function(step) {
-        step.run(sim);
-        sim.endStep(step.name, facts);
+      await dTest.eachAsync(SCENARIO, async function(step) {
+        await step.run(sim);
+        await sim.endStep(step.name, facts);
       });
       return {steps: sim.steps, at: _.clone(at)};
     } finally {
-      sim.finish();
+      await sim.finish();
     }
   };
 
   Meteor.startup(function() {
-    dTest.addSuite('battles (server/battleTests.js)', function(run, t) {
+    dTest.addSuite('battles (server/battleTests.js)', async function(run, t) {
       var assert = t.assert;
       var equal = t.equal;
 
       if (process.env.DOMINUS_WORKER != 'true') {
-        run('battles: needs the worker', function() { return 'skip'; });
+        await run('battles: needs the worker', function() { return 'skip'; });
         return;
       }
 
       var played = null;
       var playedError = null;
-      var playOnce = function() {
+      var playOnce = async function() {
         if (playedError) throw playedError;
         if (played) return played;
         try {
-          played = play();
+          played = await play();
           var record = {
             about: 'What the battles test (server/battleTests.js) left behind after each step. ' +
               'Recorded from the code before the battle job became async; see that file before recording it again.',
@@ -254,86 +254,86 @@ if (Meteor.isServer) {
         }
       };
 
-      var stepFacts = function(name) {
-        return _.findWhere(playOnce().steps, {step: name}).facts;
+      var stepFacts = async function(name) {
+        return _.findWhere((await playOnce()).steps, {step: name}).facts;
       };
-      var battleFacts = function(name, where) {
-        return _.findWhere(stepFacts(name).battles, {x: where.x, y: where.y});
+      var battleFacts = async function(name, where) {
+        return _.findWhere((await stepFacts(name)).battles, {x: where.x, y: where.y});
       };
 
-      run('battles: every battle plays out, no job fails and the invariants hold', function() {
-        var steps = playOnce().steps;
+      await run('battles: every battle plays out, no job fails and the invariants hold', async function() {
+        var steps = (await playOnce()).steps;
         equal(steps.length, SCENARIO.length, 'every step played');
         equal(_.flatten(_.map(steps, function(s) { return s.jobs.failed; })).join('; '), '', 'no job failed');
         equal(_.flatten(_.map(steps, function(s) { return s.invariantProblems; })).join('; '), '', 'invariant problems');
       });
 
-      run('battles: two armies in the open fight until one is destroyed', function() {
-        var where = playOnce().at.open;
-        var battle = battleFacts('two armies meet in the open', where);
+      await run('battles: two armies in the open fight until one is destroyed', async function() {
+        var where = (await playOnce()).at.open;
+        var battle = await battleFacts('two armies meet in the open', where);
         assert(battle && battle.isOver, 'the battle is over');
         assert(battle.rounds > 1, 'it took more than one round: ' + battle.rounds);
         equal(JSON.stringify(battle.units), JSON.stringify(['sim_hera army destroyed', 'sim_ares army']), 'hera\'s army was destroyed');
-        var players = stepFacts('two armies meet in the open').players;
+        var players = (await stepFacts('two armies meet in the open')).players;
         equal(_.filter(players.sim_hera.armies, function(a) { return a.x == where.x && a.y == where.y; }).length, 0, 'and is gone');
         assert(players.sim_hera.alerts.armyDestroyed >= 1, 'hera was told her army was destroyed');
         assert(players.sim_ares.alerts.battleStart >= 1 && players.sim_hera.alerts.battleStart >= 1, 'both were told the battle started');
         assert(_.reduce(_.values(players.sim_ares.losses), function(s, n) { return s + n; }, 0) > 0, 'ares lost soldiers too');
       });
 
-      run('battles: a village is destroyed', function() {
-        var where = playOnce().at.village;
-        var battle = battleFacts('an army burns a village', where);
+      await run('battles: a village is destroyed', async function() {
+        var where = (await playOnce()).at.village;
+        var battle = await battleFacts('an army burns a village', where);
         assert(battle && battle.isOver, 'the battle is over');
         equal(JSON.stringify(battle.units), JSON.stringify(['sim_hera village destroyed', 'sim_ares army']), 'the village was destroyed');
-        var players = stepFacts('an army burns a village').players;
+        var players = (await stepFacts('an army burns a village')).players;
         equal(players.sim_hera.villages.length, 0, 'hera has no village');
         assert(players.sim_hera.alerts.villageDestroyed == 1, 'hera was told her village was destroyed');
-        var hex = Hexes.findOne({x: where.x, y: where.y}, {fields: {hasBuilding: 1}});
+        var hex = await Hexes.findOneAsync({x: where.x, y: where.y}, {fields: {hasBuilding: 1}});
         assert(!hex || !hex.hasBuilding, 'its hex is free');
       });
 
-      run('battles: an army takes a capital', function() {
-        var where = playOnce().at.capital;
-        var battle = battleFacts('an army takes a capital', where);
+      await run('battles: an army takes a capital', async function() {
+        var where = (await playOnce()).at.capital;
+        var battle = await battleFacts('an army takes a capital', where);
         assert(battle && battle.isOver, 'the battle is over');
         assert(_.contains(battle.units, 'sim_ares army took the capital'), 'ares took the capital: ' + battle.units.join(', '));
-        var capital = _.findWhere(stepFacts('an army takes a capital').capitals, {x: where.x, y: where.y});
+        var capital = _.findWhere((await stepFacts('an army takes a capital')).capitals, {x: where.x, y: where.y});
         equal(capital.owner, 'sim_ares', 'the capital is ares\'s');
-        equal(stepFacts('an army takes a capital').players.sim_ares.alerts.capturedCapital, 1, 'and he was told');
+        equal((await stepFacts('an army takes a capital')).players.sim_ares.alerts.capturedCapital, 1, 'and he was told');
       });
 
-      run('battles: an army takes a castle, and its owner becomes a vassal', function() {
-        var where = playOnce().at.castle;
+      await run('battles: an army takes a castle, and its owner becomes a vassal', async function() {
+        var where = (await playOnce()).at.castle;
         var name = 'an army takes a castle';
-        var battle = battleFacts(name, where);
+        var battle = await battleFacts(name, where);
         assert(battle && battle.isOver, 'the battle is over');
         assert(_.contains(battle.units, 'sim_hera castle destroyed'), 'the castle fell: ' + battle.units.join(', '));
         assert(_.contains(battle.units, 'sim_ares army took the castle'), 'ares took it');
-        var players = stepFacts(name).players;
+        var players = (await stepFacts(name)).players;
         equal(players.sim_hera.lord, 'sim_ares', 'hera is ares\'s vassal');
         equal(JSON.stringify(players.sim_ares.vassals), JSON.stringify(['sim_hera']), 'and ares her lord');
         assert(_.some(players.sim_ares.armies, function(a) { return a.x == where.x && a.y == where.y && a.onAllyBuilding; }),
           'ares\'s army stays on the castle, an ally\'s building now');
       });
 
-      run('battles: a lord\'s army defends its vassal\'s castle, and the lord is told', function() {
-        var where = playOnce().at.castle;
+      await run('battles: a lord\'s army defends its vassal\'s castle, and the lord is told', async function() {
+        var where = (await playOnce()).at.castle;
         var name = 'a lord\'s army defends its new vassal\'s castle';
-        var battles = stepFacts(name).battles.filter(function(b) { return b.x == where.x && b.y == where.y; });
+        var battles = (await stepFacts(name)).battles.filter(function(b) { return b.x == where.x && b.y == where.y; });
         equal(battles.length, 2, 'a second battle at hera\'s castle');
         var battle = _.last(battles);
         assert(battle.isOver, 'it is over');
         assert(_.contains(battle.units, 'sim_ares army') || _.contains(battle.units, 'sim_ares army destroyed'), 'ares\'s army fought: ' + battle.units.join(', '));
         assert(_.contains(battle.units, 'sim_hera castle') || _.contains(battle.units, 'sim_hera castle destroyed'), 'with hera\'s castle: ' + battle.units.join(', '));
         assert(_.contains(battle.units, 'sim_zeus army destroyed'), 'and beat zeus: ' + battle.units.join(', '));
-        equal(stepFacts(name).players.sim_hera.lord, 'sim_ares', 'hera is still ares\'s vassal');
-        var before = stepFacts('an army takes a castle').players.sim_ares.alerts.vassalIsUnderAttack || 0;
-        assert((stepFacts(name).players.sim_ares.alerts.vassalIsUnderAttack || 0) > before, 'ares was told his vassal is under attack');
+        equal((await stepFacts(name)).players.sim_hera.lord, 'sim_ares', 'hera is still ares\'s vassal');
+        var before = (await stepFacts('an army takes a castle')).players.sim_ares.alerts.vassalIsUnderAttack || 0;
+        assert(((await stepFacts(name)).players.sim_ares.alerts.vassalIsUnderAttack || 0) > before, 'ares was told his vassal is under attack');
       });
 
-      run('battles: every step matches the battles recorded before (tests/golden/battles.json)', function() {
-        var result = playOnce();
+      await run('battles: every step matches the battles recorded before (tests/golden/battles.json)', async function() {
+        var result = await playOnce();
         var goldenFile = repoPath(GOLDEN);
         if (!fs.existsSync(goldenFile)) {
           throw new Error('FAIL: no ' + GOLDEN + ' to compare with (record it from ' + path.join(resultsDir(), 'actual.json') + ')');

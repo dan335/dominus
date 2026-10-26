@@ -7,7 +7,7 @@
 
 if (Meteor.isServer) {
 
-  dTest.addSuite('test runner (server/lib/testRunner.js)', function(run, t) {
+  dTest.addSuite('test runner (server/lib/testRunner.js)', async function(run, t) {
     var assert = t.assert;
     var equal = t.equal;
 
@@ -28,39 +28,39 @@ if (Meteor.isServer) {
       return _.findWhere(out.results, {name: name});
     }
 
-    run('runner: a failing test fails the run', function() {
+    await run('runner: a failing test fails the run', async function() {
       var runner = dTest.createRunner();
-      runner.run('fails', function() { throw new Error('FAIL: planted'); });
-      runner.run('passes', function() {});
+      await runner.run('fails', function() { throw new Error('FAIL: planted'); });
+      await runner.run('passes', function() {});
       equal(runner.failed, 1, 'one failure');
       equal(runner.passed, 1, 'one pass');
       equal(runner.results[0].error, 'FAIL: planted', 'error message kept');
     });
 
-    run('runner: a test whose promise rejects fails, and is waited for', function() {
+    await run('runner: a test whose promise rejects fails, and is waited for', async function() {
       var runner = dTest.createRunner();
-      runner.run('rejects now', function() { return Promise.reject(new Error('boom')); });
-      runner.run('rejects later', function() { return later(30, function() { throw new Error('late boom'); }); });
+      await runner.run('rejects now', function() { return Promise.reject(new Error('boom')); });
+      await runner.run('rejects later', function() { return later(30, function() { throw new Error('late boom'); }); });
       equal(runner.failed, 2, 'both fail');
       equal(runner.results[0].error, 'boom', 'first error');
       equal(runner.results[1].error, 'late boom', 'second error');
     });
 
-    run('runner: an async test that resolves passes only after it finishes', function() {
+    await run('runner: an async test that resolves passes only after it finishes', async function() {
       var runner = dTest.createRunner();
       var finished = false;
-      runner.run('resolves later', function() { return later(30, function() { finished = true; }); });
-      runner.run('skips later', function() { return later(10, function() { return 'skip'; }); });
+      await runner.run('resolves later', function() { return later(30, function() { finished = true; }); });
+      await runner.run('skips later', function() { return later(10, function() { return 'skip'; }); });
       assert(finished, 'the run waited for the promise');
       equal(runner.passed, 1, 'resolved test passes');
       equal(runner.skipped, 1, 'a promise of skip is a skip');
     });
 
-    run('runner: throws() reports a rejected promise and a rejecting async method', function() {
+    await run('runner: throws() reports a rejected promise and a rejecting async method', async function() {
       var error = new Error('rejected');
-      equal(dTest.throws(function() { return Promise.reject(error); }), error, 'rejection returned');
-      equal(dTest.throws(function() { return later(10, function() { return 1; }); }), null, 'resolved promise is not a throw');
-      equal(dTest.throws(function() { return 1; }), null, 'plain return is not a throw');
+      equal(await dTest.throws(function() { return Promise.reject(error); }), error, 'rejection returned');
+      equal(await dTest.throws(function() { return later(10, function() { return 1; }); }), null, 'resolved promise is not a throw');
+      equal(await dTest.throws(function() { return 1; }), null, 'plain return is not a throw');
 
       var name = 'testRunnerAsync_' + Random.id(4);
       Meteor.server.method_handlers[name] = function() {
@@ -68,9 +68,9 @@ if (Meteor.isServer) {
       };
       try {
         var inv = {userId: null, isSimulation: false, connection: null, unblock: function() {}, setUserId: function() {}};
-        var e = dTest.throws(function() {
-          return DDP._CurrentInvocation.withValue(inv, function() {
-            return dTest.settle(Meteor.server.method_handlers[name].apply(inv, []));
+        var e = await dTest.throws(function() {
+          return DDP._CurrentInvocation.withValue(inv, async function() {
+            return await Meteor.server.method_handlers[name].apply(inv, []);
           });
         });
         assert(e && e.error === 'async-refused', 'rejecting method reported');
@@ -79,9 +79,9 @@ if (Meteor.isServer) {
       }
     });
 
-    run('runner: an unhandled rejection fails the run and names the test', function() {
-      var out = runInner(function(run) {
-        run('leaks a rejection', function() {
+    await run('runner: an unhandled rejection fails the run and names the test', async function() {
+      var out = await runInner(async function(run) {
+        await run('leaks a rejection', function() {
           Promise.reject(new Error('leaked rejection'));
         });
       });
@@ -93,9 +93,9 @@ if (Meteor.isServer) {
       equal(out.failed, 1, 'one failure');
     });
 
-    run('runner: an uncaught exception fails the run', function() {
-      var out = runInner(function(run) {
-        run('throws from a timer', function() {
+    await run('runner: an uncaught exception fails the run', async function() {
+      var out = await runInner(async function(run) {
+        await run('throws from a timer', function() {
           setTimeout(function() { throw new Error('timer threw'); }, 0);
         });
       });
@@ -104,24 +104,24 @@ if (Meteor.isServer) {
       assert(check.error.indexOf('uncaught exception') !== -1 && check.error.indexOf('timer threw') !== -1, 'reported: ' + check.error);
     });
 
-    run('runner: a clean run passes its process check', function() {
-      var out = runInner(function(run) {
-        run('fine', function() { return later(5, function() {}); });
+    await run('runner: a clean run passes its process check', async function() {
+      var out = await runInner(async function(run) {
+        await run('fine', function() { return later(5, function() {}); });
       });
       equal(out.failed, 0, 'no failures');
       equal(out.passed, 2, 'the test and the process check pass');
     });
 
-    run('runner: a suite that throws outside run() is reported, and later suites still run', function() {
-      var out = dTest.runSuites([
+    await run('runner: a suite that throws outside run() is reported, and later suites still run', async function() {
+      var out = await dTest.runSuites([
         {name: 'broken', fn: function() { throw new Error('suite setup failed'); }},
-        {name: 'fine', fn: function(run) { run('still runs', function() {}); }}
+        {name: 'fine', fn: async function(run) { await run('still runs', function() {}); }}
       ], t);
       equal(find(out, 'suite broken finished').status, 'FAIL', 'broken suite reported');
       equal(find(out, 'still runs').status, 'PASS', 'next suite ran');
     });
 
-    run('runner: cron is paused during a run and resumed after', function() {
+    await run('runner: cron is paused during a run and resumed after', function() {
       var calls = [];
       var cron = {running: true, pause: function() { calls.push('pause'); this.running = false; }, start: function() { calls.push('start'); this.running = true; }};
       var resume = dTest.pauseBackground(cron);
@@ -138,13 +138,13 @@ if (Meteor.isServer) {
       }
     });
 
-    run('runner: refuses to run in production', function() {
+    await run('runner: refuses to run in production', async function() {
       var restore = Meteor.isProduction;
       Meteor.isProduction = true;
       try {
-        ['runAllTests', 'runGameCreationTests'].forEach(function(method) {
+        await dTest.eachAsync(['runAllTests', 'runGameCreationTests'], async function(method) {
           var inv = {userId: null, isSimulation: false, connection: null, unblock: function() {}, setUserId: function() {}};
-          var e = dTest.throws(function() {
+          var e = await dTest.throws(function() {
             return DDP._CurrentInvocation.withValue(inv, function() {
               return Meteor.server.method_handlers[method].apply(inv, []);
             });
@@ -156,9 +156,9 @@ if (Meteor.isServer) {
       }
     });
 
-    run('runner: a run never starts while another is in progress', function() {
+    await run('runner: a run never starts while another is in progress', async function() {
       var inv = {userId: null, isSimulation: false, connection: null, unblock: function() {}, setUserId: function() {}};
-      var e = dTest.throws(function() {
+      var e = await dTest.throws(function() {
         return DDP._CurrentInvocation.withValue(inv, function() {
           return Meteor.server.method_handlers.runAllTests.apply(inv, []);
         });
