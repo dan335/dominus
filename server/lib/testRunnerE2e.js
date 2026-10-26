@@ -190,6 +190,29 @@ if (Meteor.isServer) {
       return await Armypaths.updateAsync({gameId: gameId}, {$set: {last_move_at: past}}, {multi: true});
     },
 
+    // the stats the graphs panel draws (a player's daily stats and the
+    // game's stats) and the market history the market panel draws, one point
+    // every 6 hours up to now
+    makeStats: async function(gameId, playerId, points) {
+      refuseInProduction();
+      if (!/^E2E /.test((await Games.findOneAsync(gameId, {fields: {name: 1}}) || {}).name)) throw new Error('not an E2E game: ' + gameId);
+      var player = await Players.findOneAsync(playerId);
+      points = points || 8;
+      for (var i = 0; i < points; i++) {
+        var at = moment().subtract((points - 1 - i) * 6, 'hours').toDate();
+        await Dailystats.insertAsync({gameId: gameId, user_id: player.userId, playerId: playerId, created_at: at, updated_at: at,
+          totalIncome: 1000 + 100 * i, castleIncome: 600 + 50 * i, capitalIncome: 100, villageIncome: 200 + 50 * i, vassalIncome: 100,
+          incomeRank: 1 + (i % 3), vassalRank: 1, numVassals: i % 4});
+        var soldierWorth = {};
+        _s.armies.types.forEach(function(type, n) { soldierWorth[type] = 100 * (n + 1) + 10 * i; });
+        await Gamestats.insertAsync({gameId: gameId, created_at: at, num_users: 2 + i, soldierWorth: soldierWorth});
+        var price = {};
+        _s.market.types.forEach(function(type, n) { price[type] = 1 + n / 10 + i / 100; });
+        await Markethistory.insertAsync({gameId: gameId, created_at: at, price: price, quantity: 50 + 10 * i});
+      }
+      return points;
+    },
+
     // sets fields on an E2E game, e.g. {endDate: ...}
     setGame: async function(gameId, fields) {
       refuseInProduction();
