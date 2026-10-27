@@ -22,10 +22,12 @@ _gs.graphs = function(gameId, path) {
   return objectValueFromString(settings, path);
 }
 
+// periods start on the hour in UTC, whatever the server's timezone, so a
+// period is the same on every server and in the tests
 _gs.statsBegin = function(gameId) {
-	var currentHour = moment(dClock.now()).hour();
+	var currentHour = moment.utc(dClock.now()).hour();
 	var beginHour = currentHour - (currentHour % _gs.graphs(gameId, 'statsInverval'));
-	return moment(dClock.now()).startOf('day').add(beginHour, 'hours').toDate();
+	return moment.utc(dClock.now()).startOf('day').add(beginHour, 'hours').toDate();
 },
 
 _gs.statsEnd = function(gameId) {

@@ -304,12 +304,27 @@ if (Meteor.isServer) {
           }
         });
 
+        await test('stats periods start on the hour in UTC, whatever the server\'s timezone', async function() {
+          // 23:30 UTC is 18:30 or 19:30 in New York, a different day's period there
+          dClock.set(new Date(Date.UTC(2026, 0, 5, 23, 30, 0)));
+          try {
+            equal(_gs.graphs(w.gameId, 'statsInverval'), 6, 'a normal game\'s period is 6 hours');
+            equal(_gs.statsBegin(w.gameId).toISOString(), '2026-01-05T18:00:00.000Z', 'dailystats period begins');
+            equal(_gs.statsEnd(w.gameId).toISOString(), '2026-01-06T00:00:00.000Z', 'dailystats period ends');
+            equal(_s.init.gamestatsBegin().toISOString(), '2026-01-05T21:00:00.000Z', 'gamestats period begins');
+          } finally {
+            dClock.reset();
+          }
+        });
+
         await test('initDailystatsForNewUser: a zeroed Dailystats doc ranked last among the game\'s players', async function() {
+          // Games.numPlayers can lag behind the players that joined, so it isn't used
           await Games.updateAsync(w.gameId, {$set: {numPlayers: 7}});
           await runJob('initDailystatsForNewUser', {gameId: w.gameId, userId: w.users[0]._id, playerId: ids[0]});
           var doc = await Dailystats.findOneAsync({playerId: ids[0]});
           assert(doc, 'inserted');
-          equal(doc.incomeRank, 7, 'incomeRank is numPlayers');
+          equal(doc.incomeRank, await Players.find({gameId: w.gameId}).countAsync(), 'incomeRank is the number of players');
+          equal(doc.incomeRank, 3, 'three players');
           equal(doc.user_id, w.users[0]._id, 'user_id');
           equal(doc.numVassals, 0, 'numVassals');
           equal(doc.inc.gold, 0, 'inc.gold');
