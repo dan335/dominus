@@ -237,10 +237,9 @@ dGraphs.init_dailystats_for_new_user = async function(gameId, userId, playerId) 
 	check(gameId, String);
 	check(playerId, String);
 
-	let game = await Games.findOneAsync(gameId, {fields: {numPlayers:1}});
-	if (!game) {
-		game = {numPlayers:0};
-	}
+	// ranked last: count the players, since Games.numPlayers is written a
+	// second after a player joins and can still miss the new ones
+	let numPlayers = await Players.find({gameId:gameId}).countAsync();
 
 	var stat = {
 		user_id: userId,
@@ -278,7 +277,7 @@ dGraphs.init_dailystats_for_new_user = async function(gameId, userId, playerId) 
 		numVassals: 0,
 		losses_worth: 0,
 		losses_num: 0,
-		incomeRank: game.numPlayers
+		incomeRank: numPlayers
 	}
 	await Dailystats.insertAsync(stat)
 }
