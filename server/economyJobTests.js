@@ -357,6 +357,73 @@ if (Meteor.isServer) {
           await runJob('destroyVillage', {villageId: 'noSuchVillage'});
         });
 
+        // Runs the battle on the village's hex a round at a time, each round
+        // as soon as it is due, until the village is gone, the battle is over
+        // or `rounds` rounds were fought. The jobs a round adds are recorded.
+        async function fightAt(v, rounds) {
+          for (var round = 0; round < rounds && await Villages.findOneAsync(v._id); round++) {
+            await Battles2.updateAsync({gameId: w.gameId, x: v.x, y: v.y, isOver: false},
+              {$set: {updatedAt: moment().subtract(_gs.battles(w.gameId, 'battleInterval') + 1000, 'ms').toDate()}}, {multi: true});
+            await dTest.recordJobs(async function() {
+              await runJob('runBattle', {gameId: w.gameId, x: v.x, y: v.y});
+            });
+            if (!await Battles2.findOneAsync({gameId: w.gameId, x: v.x, y: v.y, isOver: false})) break;
+          }
+        }
+
+        async function removeBattlesAt(v) {
+          var ids = _.pluck(await Battles2.find({gameId: w.gameId, x: v.x, y: v.y}, {fields: {_id: 1}}).fetchAsync(), '_id');
+          await Rounds.removeAsync({battle_id: {$in: ids}});
+          await Battles2.removeAsync({_id: {$in: ids}});
+        }
+
+        // issue #19: a village destroyed in battle left its markers behind, on
+        // a hex whose panel has no marker button, so the map kept showing them
+        await test('runBattle: a village destroyed in battle takes every player\'s markers on it with it', async function() {
+          var v = await insertVillage(0, {footmen: 1});
+          var spot = await w.freeHex([v]);
+          var other = await insertVillage(0, {x: spot.x, y: spot.y});
+          var hex = await Hexes.findOneAsync({gameId: w.gameId, x: v.x, y: v.y}, {fields: {_id: 1}});
+          var marker = function(i, unitType, unitId, at) {
+            return Markers.insertAsync({gameId: w.gameId, user_id: w.users[i]._id, playerId: w.players[i]._id,
+              unitType: unitType, unitId: unitId, x: at.x, y: at.y, name: 'm', description: '', groupId: 0, order: 0});
+          };
+          var owners = await marker(0, 'village', v._id, v);
+          var attackers = await marker(1, 'village', v._id, v);
+          var onHex = await marker(0, 'hex', hex._id, v);
+          var onOther = await marker(0, 'village', other._id, other);
+          var attacker = await quietArmy(1, {footmen: 200}, v);
+          var onArmy = await marker(1, 'army', attacker._id, v);
+          try {
+            await fightAt(v, 20);
+            assert(!await Villages.findOneAsync(v._id), 'the village was destroyed');
+            assert(!await Markers.findOneAsync(owners), 'its owner\'s marker on it removed');
+            assert(!await Markers.findOneAsync(attackers), 'the attacker\'s marker on it removed');
+            assert(await Markers.findOneAsync(onHex), 'a marker on its hex stays');
+            assert(await Markers.findOneAsync(onOther), 'a marker on another village stays');
+            assert(await Armies.findOneAsync(attacker._id), 'the attacking army survived');
+            assert(await Markers.findOneAsync(onArmy), 'and its marker stays');
+            equal((await Hexes.findOneAsync(hex._id)).hasBuilding, false, 'hex free again');
+          } finally {
+            await removeBattlesAt(v);
+          }
+        });
+
+        await test('runBattle: a village that survives a battle keeps its markers', async function() {
+          var v = await insertVillage(0, {footmen: 300});
+          var marker = await Markers.insertAsync({gameId: w.gameId, user_id: w.users[0]._id, playerId: w.players[0]._id,
+            unitType: 'village', unitId: v._id, x: v.x, y: v.y, name: 'm', description: '', groupId: 0, order: 0});
+          await quietArmy(1, {footmen: 1}, v);
+          try {
+            await fightAt(v, 1);
+            assert(await Battles2.findOneAsync({gameId: w.gameId, x: v.x, y: v.y}), 'a battle was fought');
+            assert(await Villages.findOneAsync(v._id), 'the village is still there');
+            assert(await Markers.findOneAsync(marker), 'and so is its marker');
+          } finally {
+            await removeBattlesAt(v);
+          }
+        });
+
 
         // --- update_losses_worth, updateIncomeStats ---
 
